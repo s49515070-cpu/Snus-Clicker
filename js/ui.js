@@ -72,8 +72,11 @@ export function renderBuildings() {
         `;
 
         card.addEventListener("click", () => {
-            buyBuilding(building.id);
-        });
+    const success = buyBuilding(building.id);
+    if (success) {
+        renderBuildings();
+    }
+});
 
         if (building.side === "left") {
             leftColumn.appendChild(card);

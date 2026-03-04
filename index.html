@@ -1,54 +1,69 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Snus Clicker</title>
-
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css" />
 </head>
-
 <body>
 
-    <h1>🍪 SNUS CLICKER 🍪</h1>
+    <!-- Welt Transition Overlay -->
+    <div id="worldTransition"></div>
 
-    <div id="topBar">
-        <h2>Cookies: <span id="cookieCount">0</span></h2>
-        <h3>Produktion/s: <span id="production">0</span></h3>
-        <h3>Prestige: <span id="prestigeCount">0</span></h3>
+    <!-- Top Bar -->
+    <div class="top-bar glass">
+        <div class="world-section">
+            <span id="worldName">Golden Paradise</span>
+            <button id="worldButton">🌍 Welt wechseln</button>
+        </div>
+
+        <div class="stats">
+            <div>Cookies: <span id="cookieCount">0</span></div>
+            <div>Pro Sekunde: <span id="cps">0</span></div>
+            <div>Prestige Cookies: <span id="prestigeCount">0</span></div>
+        </div>
     </div>
 
-    <button id="cookie">🍪</button>
+    <!-- Hauptbereich -->
+    <div class="game-container">
 
-    <hr>
+        <!-- Gebäude links -->
+        <div id="leftBuildings" class="building-column"></div>
 
-    <h2>Gebäude</h2>
-    <div id="buildings"></div>
+        <!-- Cookie Mitte -->
+        <div class="cookie-container">
+            <div id="cookieClickArea">
+                <img id="mainCookie" src="assets/cookies/world1.png" alt="Cookie">
+                <div id="clickEffectContainer"></div>
+            </div>
+        </div>
 
-    <hr>
+        <!-- Gebäude rechts -->
+        <div id="rightBuildings" class="building-column"></div>
 
-    <h2>Welten</h2>
-    <div id="worlds"></div>
+    </div>
 
-    <hr>
+    <!-- Prestige Panel -->
+    <div class="prestige-panel glass">
+        <h3>💎 Prestige Upgrades</h3>
+        <div id="prestigeUpgrades"></div>
+        <button id="prestigeButton">Prestige Reset</button>
+    </div>
 
-    <h2>Prestige</h2>
-    <button id="prestigeButton">Prestige Reset</button>
+    <!-- Kauf Optionen -->
+    <div class="buy-options glass">
+        <button data-buy="1">x1</button>
+        <button data-buy="10">x10</button>
+        <button data-buy="100">x100</button>
+        <button data-buy="max">MAX</button>
+    </div>
 
-    <h3>Prestige Upgrades</h3>
-    <div id="prestigeUpgrades"></div>
+    <!-- Autosave Anzeige -->
+    <div id="autosaveIndicator">💾 Gespeichert</div>
 
-
-    <!-- SCRIPT REIHENFOLGE IST EXTREM WICHTIG -->
-    <script src="data/config.js"></script>
-    <script src="data/worlds.js"></script>
-
-    <script src="js/engine.js"></script>
-    <script src="js/buildings.js"></script>
-    <script src="js/worlds.js"></script>
-    <script src="js/prestige.js"></script>
-    <script src="js/save.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/main.js"></script>
+    <!-- Module Scripts -->
+    <script type="module" src="js/main.js"></script>
 
 </body>
 </html>

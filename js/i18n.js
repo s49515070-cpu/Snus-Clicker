@@ -7,7 +7,7 @@ const translations = {
         statsPrestigeSnus: "Prestige-Snus",
         worldSwitch: "🌍 Welt wechseln",
         worldLocked: "🔒 Diese Welt ist noch gesperrt!",
-        worldUnlockProgress: "Nächste Welt in {remaining} Prestige-Snus",
+       worldUnlockProgress: "Nächste Welt: {current}/{target} Prestige-Snus (noch {remaining})",
         worldAllUnlocked: "Alle Welten freigeschaltet",
         prestigeTitle: "💎 Prestige Upgrades",
         prestigeReset: "Prestige-Reset",
@@ -38,15 +38,18 @@ const translations = {
         maxReached: "MAX erreicht",
         levelShort: "Lvl",
         earnedPrestige: "✨ Du hast {amount} Prestige-Snus erhalten!",
-        notEnoughLifetime: "ℹ️ Noch nicht genug Lifetime-Snus für Prestige."
-    },
+        notEnoughLifetime: "ℹ️ Noch nicht genug Lifetime-Snus für Prestige.",
+        prestigeProgress: "Prestige bei {current}/{target} Lifetime-Snus (noch {remaining})",
+        prestigeReady: "✅ Prestige-Reset ist bereit!",
+        settingBackground: "Hintergrundfarbe",
+        backgroundUpdated: "🎨 Hintergrund aktualisiert."
     en: {
         statsSnus: "Snus",
         statsPerSecond: "Per second",
         statsPrestigeSnus: "Prestige Snus",
         worldSwitch: "🌍 Switch world",
         worldLocked: "🔒 This world is still locked!",
-        worldUnlockProgress: "Next world unlocks in {remaining} Prestige Snus",
+        worldUnlockProgress: "Next world: {current}/{target} Prestige Snus ({remaining} left)",
         worldAllUnlocked: "All worlds unlocked",
         prestigeTitle: "💎 Prestige Upgrades",
         prestigeReset: "Prestige Reset",
@@ -77,7 +80,11 @@ const translations = {
         maxReached: "MAX reached",
         levelShort: "Lvl",
         earnedPrestige: "✨ You received {amount} Prestige Snus!",
-        notEnoughLifetime: "ℹ️ Not enough lifetime snus for prestige yet."
+        notEnoughLifetime: "ℹ️ Not enough lifetime snus for prestige yet.",
+        prestigeProgress: "Prestige at {current}/{target} lifetime snus ({remaining} left)",
+        prestigeReady: "✅ Prestige reset is ready!",
+        settingBackground: "Background color",
+        backgroundUpdated: "🎨 Background updated."
     }
 };
 

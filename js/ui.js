@@ -269,9 +269,17 @@ function handleCookiePointer(event) {
     createClickEffectAt(x, y);
 }
 
-if (cookieClickArea && clickEffectContainer) {
-    cookieClickArea.addEventListener("pointerdown", handleCookiePointer);
-    
+  if (typeof window !== "undefined" && "PointerEvent" in window) {
+        cookieClickArea.addEventListener("pointerdown", handleCookiePointer);
+    } else {
+        cookieClickArea.addEventListener("click", (event) => {
+            if (!cookieClickArea) return;
+            const rect = cookieClickArea.getBoundingClientRect();
+            createClickEffectAt(event.clientX - rect.left, event.clientY - rect.top);
+        });
+    }
+
+
     cookieClickArea.addEventListener("keydown", (e) => {
         if (e.key !== "Enter" && e.key !== " ") return;
         e.preventDefault();

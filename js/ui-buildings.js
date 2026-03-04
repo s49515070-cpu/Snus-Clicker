@@ -1,4 +1,9 @@
-export function createBuildingsUIController({ gameState, buildings, getBuildingCost, getPurchaseCost, getMaxAffordableSummary, buyBuilding, formatNumber, leftColumn, rightColumn }) {
+export function createBuildingsUIController({ gameState, buildings, getBuildingCost, getPurchaseCost, getMaxAffordableSummary, buyBuilding, formatNumber, t, leftColumn, rightColumn }) {
+    const fallbackTranslations = {
+        purchase: "Kauf",
+        nextPrice: "Nächster Preis"
+    };
+    const translate = typeof t === "function" ? t : (key) => fallbackTranslations[key] || key;
     const buildingCardMap = new Map();
     let lastBuildingRenderKey = "";
 
@@ -36,7 +41,7 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
         card.dataset.buildingId = building.id;
         card.setAttribute("role", "button");
         card.setAttribute("tabindex", "0");
-        card.setAttribute("aria-label", `${building.name} kaufen`);
+        card.setAttribute("aria-label", `${building.name} ${translate("purchase")}`);;
 
         const details = document.createElement("div");
         details.className = "building-details";
@@ -72,9 +77,9 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
         const canAfford = purchase.quantity > 0 && gameState.cookies >= purchase.cost;
 
         entry.title.innerHTML = `<strong>${building.name}</strong> (${owned})`;
-        entry.nextPrice.textContent = `Nächster Preis: ${formatNumber(cost)}`;
-        entry.buyCost.textContent = `Kauf (${gameState.buyMode === "max" ? "MAX" : `x${purchase.quantity}`}): ${formatNumber(purchase.cost)}`;
-
+        entry.nextPrice.textContent = `${translate("nextPrice")}: ${formatNumber(cost)}`;
+        entry.buyCost.textContent = `${translate("purchase")} (${gameState.buyMode === "max" ? "MAX" : `x${purchase.quantity}`}): ${formatNumber(purchase.cost)}`;
+       
         entry.card.classList.toggle("is-affordable", canAfford);
         entry.card.classList.toggle("is-unaffordable", !canAfford);
     }

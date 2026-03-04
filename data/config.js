@@ -8,7 +8,8 @@ const DEFAULT_CONFIG = {
     autosaveIntervalMs: 5000,
     uiRefreshIntervalMs: 100,
     soundEnabled: true,
-    language: "de"
+    language: "de",
+    backgroundColor: ""
 };
 
 export const runtimeConfig = {
@@ -42,6 +43,7 @@ export function loadConfig() {
         runtimeConfig.uiRefreshIntervalMs = clampConfigNumber(parsed.uiRefreshIntervalMs, 16, 1000, DEFAULT_CONFIG.uiRefreshIntervalMs);
         runtimeConfig.soundEnabled = typeof parsed.soundEnabled === "boolean" ? parsed.soundEnabled : DEFAULT_CONFIG.soundEnabled;
         runtimeConfig.language = parsed.language === "en" ? "en" : "de";
+        runtimeConfig.backgroundColor = typeof parsed.backgroundColor === "string" ? parsed.backgroundColor : DEFAULT_CONFIG.backgroundColor;
     } catch {
         // Bei kaputter Config mit Defaults weiterlaufen
     }
@@ -73,6 +75,7 @@ export function resetRuntimeConfig() {
     runtimeConfig.uiRefreshIntervalMs = DEFAULT_CONFIG.uiRefreshIntervalMs;
     runtimeConfig.soundEnabled = DEFAULT_CONFIG.soundEnabled;
     runtimeConfig.language = DEFAULT_CONFIG.language;
+    runtimeConfig.backgroundColor = DEFAULT_CONFIG.backgroundColor;
     saveConfig();
 
     return { ...runtimeConfig };
@@ -92,6 +95,16 @@ export function updateLanguage(value) {
 
 export function getSoundEnabled() {
     return runtimeConfig.soundEnabled;
+}
+
+export function updateBackgroundColor(value) {
+    runtimeConfig.backgroundColor = typeof value === "string" ? value.trim() : "";
+    saveConfig();
+    return runtimeConfig.backgroundColor;
+}
+
+export function getBackgroundColor() {
+    return runtimeConfig.backgroundColor;
 }
 
 export function getLanguage() {

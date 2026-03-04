@@ -222,7 +222,7 @@ export function importSave() {
 // ===============================
 
 export function resetSave() {
-    const confirmed = confirm("Möchtest du den Spielstand wirklich löschen?");
+    const confirmed = confirm(t("resetSaveHint"));
     if (!confirmed) return;
 
     try {

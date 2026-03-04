@@ -10,6 +10,8 @@ import { worlds, getWorldById, isWorldUnlocked } from "./worlds.js";
 import { createBuildingsUIController } from "./ui-buildings.js";
 import { initToastSystem, showAutosave, showToast } from "./ui-toast.js";
 import { createPrestigeUIController } from "./ui-prestige.js";
+import { t } from "./i18n.js";
+import { playClickSound } from "./audio.js";
 
 // DOM Elemente
 const cookieCountEl = document.getElementById("cookieCount");
@@ -17,6 +19,7 @@ const cpsEl = document.getElementById("cps");
 const prestigeCountEl = document.getElementById("prestigeCount");
 const worldNameEl = document.getElementById("worldName");
 const worldButton = document.getElementById("worldButton");
+const nextWorldProgressEl = document.getElementById("nextWorldProgress");
 const prestigeButton = document.getElementById("prestigeButton");
 const prestigeUpgradesEl = document.getElementById("prestigeUpgrades");
 const prestigeSummaryEl = document.getElementById("prestigeSummary");
@@ -42,6 +45,7 @@ const {
     getMaxAffordableSummary,
     buyBuilding,
     formatNumber,
+    t,
     leftColumn,
     rightColumn
 });
@@ -62,6 +66,7 @@ const {
     buyPrestigeUpgrade,
     prestigeReset,
     showToast,
+    t,
     onUpgradePurchased: () => {
         renderBuildings();
     },
@@ -118,10 +123,10 @@ function renderMilestones() {
         const reward = document.createElement("div");
         reward.className = "milestone-reward";
         const rewardParts = [];
-        if (milestone.rewardCookies) rewardParts.push(`+${milestone.rewardCookies} Cookies`);
-        if (milestone.rewardPrestigeCookies) rewardParts.push(`+${milestone.rewardPrestigeCookies} Prestige`);
-        reward.textContent = rewardParts.length > 0 ? `Belohnung: ${rewardParts.join(" | ")}` : "Belohnung: —";
-
+        if (milestone.rewardCookies) rewardParts.push(`+${milestone.rewardCookies} ${t("snus")}`);
+        if (milestone.rewardPrestigeCookies) rewardParts.push(`+${milestone.rewardPrestigeCookies} ${t("prestigeSnus")}`);
+        reward.textContent = rewardParts.length > 0 ? `${t("reward")}: ${rewardParts.join(" | ")}` : `${t("reward")}: —`;
+        
         item.append(title, description, progress, reward);
         milestonesListEl.appendChild(item);
     });
@@ -148,6 +153,16 @@ const world = getWorldById(gameState.currentWorld);
     if (world) {
         worldNameEl.textContent = world.name;
     }
+    if (nextWorldProgressEl) {
+        const nextWorld = worlds.find((item) => item.id > gameState.currentWorld);
+        if (!nextWorld) {
+            nextWorldProgressEl.textContent = t("worldAllUnlocked");
+        } else {
+            const remaining = Math.max(0, nextWorld.unlockCost - gameState.prestigeCookies);
+            nextWorldProgressEl.textContent = t("worldUnlockProgress", { remaining: formatNumber(remaining) });
+        }
+    }
+
 
        
     refreshPrestigeUpgradesIfNeeded();
@@ -162,11 +177,57 @@ export { renderPrestigeUpgrades };
 
        
 export function refreshAllUI() {
+    applyStaticTranslations();
     applyWorldTheme();
     renderBuildings();
     renderPrestigeUpgrades();
     renderMilestones();
     renderUI();
+}
+export function applyStaticTranslations() {
+    const mapping = [
+        ["labelSnus", t("statsSnus")],
+        ["labelCps", t("statsPerSecond")],
+        ["labelPrestige", t("statsPrestigeSnus")],
+        ["worldButton", t("worldSwitch")],
+        ["settingsToggleButton", t("settingsOpen")],
+        ["settingsTitle", t("settingsTitle")],
+        ["settingsCloseButton", t("close")],
+        ["settingSoundLabel", t("settingSound")],
+        ["settingLanguageLabel", t("settingLanguage")],
+        ["exportSaveButton", t("exportSave")],
+        ["importSaveButton", t("importSave")],
+        ["resetSaveButton", t("resetSave")],
+        ["resetSaveHint", t("resetSaveHint")],
+        ["resetSettingsButton", t("resetSettings")]
+    ];
+
+    mapping.forEach(([id, text]) => {
+        const node = document.getElementById(id);
+        if (node) node.textContent = text;
+    });
+
+    const milestonesTitle = document.querySelector(".milestones-panel h3");
+    if (milestonesTitle) milestonesTitle.textContent = t("milestonesTitle");
+
+    const prestigeTitle = document.querySelector(".prestige-panel h3");
+    if (prestigeTitle) prestigeTitle.textContent = t("prestigeTitle");
+
+    const languageSelect = document.getElementById("languageInput");
+    if (languageSelect) {
+        const germanOption = languageSelect.querySelector('option[value="de"]');
+        const englishOption = languageSelect.querySelector('option[value="en"]');
+        if (germanOption) germanOption.textContent = t("languageGerman");
+        if (englishOption) englishOption.textContent = t("languageEnglish");
+    }
+
+    const soundSelect = document.getElementById("soundEnabledInput");
+    if (soundSelect) {
+        const onOption = soundSelect.querySelector('option[value="on"]');
+        const offOption = soundSelect.querySelector('option[value="off"]');
+        if (onOption) onOption.textContent = t("soundOn");
+        if (offOption) offOption.textContent = t("soundOff");
+    }
 }
 
 // ===============================
@@ -177,6 +238,7 @@ function createClickEffectAt(x, y) {
     if (!clickEffectContainer) return;
 
     const amount = clickCookie();
+    playClickSound();
 
     const effect = document.createElement("div");
     effect.className = "click-effect";
@@ -250,7 +312,8 @@ if (worldButton && worldTransition) {
     const world = getWorldById(nextWorld);
         
      if (!world || !isWorldUnlocked(world, gameState.prestigeCookies)) {
-            showToast("🔒 Diese Welt ist noch gesperrt!", 1800, "warning");
+         showToast(t("worldLocked"), 1800, "warning");
+            
             return;
         }
 

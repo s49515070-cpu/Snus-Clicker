@@ -31,7 +31,7 @@ export const milestones = [
     {
         id: "lifetime_10k",
         label: "Rookie Roller",
-        description: "Erreiche 10.000 Lifetime Cookies",
+        description: "Erreiche 10.000 Lifetime-Snus",
         target: 10_000,
         rewardCookies: 1_000,
         progress: (state) => state.lifetimeCookies
@@ -46,8 +46,8 @@ export const milestones = [
     },
     {
         id: "lifetime_1m",
-        label: "Cookie Tycoon",
-        description: "Erreiche 1.000.000 Lifetime Cookies",
+        label: "Snus Tycoon",
+        description: "Erreiche 1.000.000 Lifetime Snus",
         target: 1_000_000,
         rewardCookies: 100_000,
         rewardPrestigeCookies: 1,

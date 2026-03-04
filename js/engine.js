@@ -1,14 +1,5 @@
-// =====================================
-// GAME ENGINE – SNUS CLICKER
-// Core Logik & Game Loop
-// =====================================
-
 import { buildings, getBuildingCost, getBuildingCps, getMaxAffordable } from "./buildings.js";
-import { worlds, getWorldById } from "./worlds.js";
-
-// ===============================
-// GAME STATE
-// ===============================
+import { getWorldById } from "./worlds.js";
 
 export const gameState = {
     cookies: 0,
@@ -21,16 +12,9 @@ export const gameState = {
     clickPower: 1
 };
 
-// Initialisiere Gebäude
 buildings.forEach(b => {
-    gameState.buildingData[b.id] = {
-        owned: 0
-    };
+    gameState.buildingData[b.id] = { owned: 0 };
 });
-
-// ===============================
-// PRODUCTION BERECHNUNG
-// ===============================
 
 export function calculateCps() {
     let total = 0;
@@ -48,10 +32,6 @@ export function calculateCps() {
     return total;
 }
 
-// ===============================
-// GAME LOOP
-// ===============================
-
 let lastUpdate = Date.now();
 
 export function gameLoop() {
@@ -68,10 +48,6 @@ export function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// ===============================
-// CLICK SYSTEM
-// ===============================
-
 export function clickCookie() {
     const world = getWorldById(gameState.currentWorld);
 
@@ -83,12 +59,7 @@ export function clickCookie() {
     return amount;
 }
 
-// ===============================
-// BUILDING KAUF
-// ===============================
-
 export function buyBuilding(buildingId) {
-
     const building = buildings.find(b => b.id === buildingId);
     const data = gameState.buildingData[buildingId];
 
@@ -113,35 +84,20 @@ export function buyBuilding(buildingId) {
     return false;
 }
 
-// ===============================
-// BUY MODE SETZEN
-// ===============================
-
 export function setBuyMode(mode) {
     gameState.buyMode = mode;
 }
-
-// ===============================
-// WELT WECHSEL
-// ===============================
 
 export function changeWorld(worldId) {
     gameState.currentWorld = worldId;
 }
 
-// ===============================
-// PRESTIGE RESET
-// ===============================
-
 export function prestigeReset() {
-
     const earned = Math.floor(gameState.lifetimeCookies / 1000000);
-
     if (earned <= 0) return 0;
 
     gameState.prestigeCookies += earned;
-    
-    // Reset normale Werte
+
     gameState.cookies = 0;
     gameState.lifetimeCookies = 0;
 

@@ -135,7 +135,6 @@ body {
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    touch-action: manipulation;
 }
 
 #mainCookie {

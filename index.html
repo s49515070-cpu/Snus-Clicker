@@ -19,9 +19,10 @@
         </div>
 
         <div class="stats">
-            <div>Cookies: <span id="cookieCount" aria-live="polite">0</span></div>
-            <div>Pro Sekunde: <span id="cps" aria-live="polite">0</span></div>
-            <div>Prestige Cookies: <span id="prestigeCount" aria-live="polite">0</span></div>  
+            <div><span id="labelSnus">Snus</span>: <span id="cookieCount" aria-live="polite">0</span></div>
+            <div><span id="labelCps">Pro Sekunde</span>: <span id="cps" aria-live="polite">0</span></div>
+            <div><span id="labelPrestige">Prestige-Snus</span>: <span id="prestigeCount" aria-live="polite">0</span></div>
+            <div id="nextWorldProgress" class="next-world-progress" aria-live="polite"></div>
         </div>
     </div>
 
@@ -33,8 +34,8 @@
 
         <!-- Cookie Mitte -->
         <div class="cookie-container">
-            <div id="cookieClickArea" role="button" tabindex="0" aria-label="Cookie klicken">
-                <img id="mainCookie" src="assets/cookies/world1.png" alt="Cookie">
+            <div id="cookieClickArea" role="button" tabindex="0" aria-label="Snus klicken">
+                <img id="mainCookie" src="assets/cookies/world1.png" alt="Snus">
                 <div id="clickEffectContainer"></div>
             </div>
         </div>
@@ -71,22 +72,33 @@
     <div class="save-controls glass">
         <button id="exportSaveButton">📤 Save exportieren</button>
         <button id="importSaveButton">📥 Save importieren</button>
-        <button id="resetSaveButton">🗑️ Save zurücksetzen</button>
     </div>
 
+    <button id="settingsToggleButton" class="settings-toggle-button glass" type="button">⚙️ Einstellungen</button>
+
     <!-- Settings Controls -->
-    <div class="settings-controls glass">
+    <div id="settingsPanel" class="settings-panel glass" hidden>
+        <div class="settings-header">
+            <h3 id="settingsTitle">Einstellungen</h3>
+            <button id="settingsCloseButton" type="button">✕</button>
+        </div>
         <label>
-            Autosave (ms)
-            <input id="autosaveIntervalInput" type="number" min="1000" max="60000" step="500">
-            <small>1000–60000 ms</small>
+            <span id="settingSoundLabel">Sound</span>
+            <select id="soundEnabledInput">
+                <option value="on">An</option>
+                <option value="off">Aus</option>
+            </select>
         </label>
         <label>
-            UI Refresh (ms)
-            <input id="uiRefreshIntervalInput" type="number" min="16" max="1000" step="10">
-            <small>16–1000 ms</small>
+            <span id="settingLanguageLabel">Sprache</span>
+            <select id="languageInput">
+                <option value="de">Deutsch</option>
+                <option value="en">Englisch</option>
+            </select>
         </label>
-        <button id="resetSettingsButton" type="button">↺ Settings zurücksetzen</button>
+        <button id="resetSaveButton" type="button">🗑️ Save zurücksetzen</button>
+        <small id="resetSaveHint">Achtung: löscht den Spielstand.</small>
+        <button id="resetSettingsButton" type="button">↺ Einstellungen zurücksetzen</button>
     </div>
 
 

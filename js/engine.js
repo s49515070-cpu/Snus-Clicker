@@ -140,8 +140,7 @@ export function prestigeReset() {
     if (earned <= 0) return 0;
 
     gameState.prestigeCookies += earned;
-    gameState.prestigeMultiplier += earned * 0.1;
-
+    
     // Reset normale Werte
     gameState.cookies = 0;
     gameState.lifetimeCookies = 0;

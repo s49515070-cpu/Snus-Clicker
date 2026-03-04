@@ -6,7 +6,9 @@ const CONFIG_STORAGE_KEY = "snus_clicker_config";
 
 const DEFAULT_CONFIG = {
     autosaveIntervalMs: 5000,
-    uiRefreshIntervalMs: 100
+    uiRefreshIntervalMs: 100,
+    soundEnabled: true,
+    language: "de"
 };
 
 export const runtimeConfig = {
@@ -38,6 +40,8 @@ export function loadConfig() {
 
         runtimeConfig.autosaveIntervalMs = clampConfigNumber(parsed.autosaveIntervalMs, 1000, 60000, DEFAULT_CONFIG.autosaveIntervalMs);
         runtimeConfig.uiRefreshIntervalMs = clampConfigNumber(parsed.uiRefreshIntervalMs, 16, 1000, DEFAULT_CONFIG.uiRefreshIntervalMs);
+        runtimeConfig.soundEnabled = typeof parsed.soundEnabled === "boolean" ? parsed.soundEnabled : DEFAULT_CONFIG.soundEnabled;
+        runtimeConfig.language = parsed.language === "en" ? "en" : "de";
     } catch {
         // Bei kaputter Config mit Defaults weiterlaufen
     }
@@ -67,7 +71,29 @@ export function updateUiRefreshInterval(value) {
 export function resetRuntimeConfig() {
     runtimeConfig.autosaveIntervalMs = DEFAULT_CONFIG.autosaveIntervalMs;
     runtimeConfig.uiRefreshIntervalMs = DEFAULT_CONFIG.uiRefreshIntervalMs;
+    runtimeConfig.soundEnabled = DEFAULT_CONFIG.soundEnabled;
+    runtimeConfig.language = DEFAULT_CONFIG.language;
     saveConfig();
 
     return { ...runtimeConfig };
+}
+
+export function updateSoundEnabled(value) {
+    runtimeConfig.soundEnabled = Boolean(value);
+    saveConfig();
+    return runtimeConfig.soundEnabled;
+}
+
+export function updateLanguage(value) {
+    runtimeConfig.language = value === "en" ? "en" : "de";
+    saveConfig();
+    return runtimeConfig.language;
+}
+
+export function getSoundEnabled() {
+    return runtimeConfig.soundEnabled;
+}
+
+export function getLanguage() {
+    return runtimeConfig.language;
 }

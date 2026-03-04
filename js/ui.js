@@ -192,7 +192,6 @@ export function applyStaticTranslations() {
         ["worldButton", t("worldSwitch")],
         ["settingsToggleButton", t("settingsOpen")],
         ["settingsTitle", t("settingsTitle")],
-        ["settingsCloseButton", t("close")],
         ["settingSoundLabel", t("settingSound")],
         ["settingLanguageLabel", t("settingLanguage")],
         ["exportSaveButton", t("exportSave")],
@@ -206,6 +205,12 @@ export function applyStaticTranslations() {
         const node = document.getElementById(id);
         if (node) node.textContent = text;
     });
+    const closeButton = document.getElementById("settingsCloseButton");
+    if (closeButton) {
+        closeButton.textContent = "✕";
+        closeButton.setAttribute("aria-label", t("close"));
+        closeButton.setAttribute("title", t("close"));
+    }
 
     const milestonesTitle = document.querySelector(".milestones-panel h3");
     if (milestonesTitle) milestonesTitle.textContent = t("milestonesTitle");
@@ -255,11 +260,18 @@ function createClickEffectAt(x, y) {
     }, 1000);
 }
 
-if (cookieClickArea && clickEffectContainer) {
-    cookieClickArea.addEventListener("click", (e) => {
-        createClickEffectAt(e.offsetX, e.offsetY);
-    });
+function handleCookiePointer(event) {
+    if (!cookieClickArea) return;
 
+    const rect = cookieClickArea.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    createClickEffectAt(x, y);
+}
+
+if (cookieClickArea && clickEffectContainer) {
+    cookieClickArea.addEventListener("pointerdown", handleCookiePointer);
+    
     cookieClickArea.addEventListener("keydown", (e) => {
         if (e.key !== "Enter" && e.key !== " ") return;
         e.preventDefault();

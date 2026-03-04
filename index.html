@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snus Clicker</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="game">
+
+    <div id="topBar">
+        <h1>Snus Clicker</h1>
+        <div id="stats">
+            <div>Cookies: <span id="cookieCount">0</span></div>
+            <div>Pro Sekunde: <span id="cps">0</span></div>
+            <div>Ganze Cookies: <span id="prestigeCount">0</span></div>
+        </div>
+    </div>
+
+    <div id="worldDisplay">Welt 1: Classic Paradise</div>
+
+    <div id="centerArea">
+        <img id="cookie" src="assets/cookies/world1.png">
+        <div id="floatingNumbers"></div>
+    </div>
+
+    <div id="leftPanel">
+        <h2>Gebäude</h2>
+        <div id="buildings"></div>
+    </div>
+
+    <div id="rightPanel">
+        <h2>Prestige</h2>
+        <button id="prestigeBtn">Aufsteigen</button>
+        <div id="prestigeShop"></div>
+    </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

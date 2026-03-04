@@ -116,11 +116,7 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
     }
 
     function getBuildingIdFromEvent(event) {
-        const eventPath = typeof event.composedPath === "function" ? event.composedPath() : [];
-        const directTarget = event.target instanceof Element ? event.target : null;
-        const pathTarget = eventPath.find((node) => node instanceof Element) || null;
-        const target = directTarget || pathTarget;
-        const card = target?.closest(".building-card");
+        const target = event.target instanceof Element ? event.target : null;
         const card = target?.closest(".building-card");
 
         if (!card) return null;

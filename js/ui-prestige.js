@@ -10,9 +10,29 @@ export function createPrestigeUIController({
     buyPrestigeUpgrade,
     prestigeReset,
     showToast,
+    t,
     onUpgradePurchased,
     onPrestigeReset
 }) {
+    const fallbackTranslations = {
+        activeBonuses: "Aktive Boni",
+        levelShort: "Lvl",
+        maxReached: "MAX erreicht",
+        cost: "Kosten",
+        prestigeSnus: "Prestige-Snus",
+        prestigeReset: "Prestige-Reset",
+        earnedPrestige: "✨ Du hast {amount} Prestige-Snus erhalten!",
+        notEnoughLifetime: "ℹ️ Noch nicht genug Lifetime-Snus für Prestige."
+    };
+    const translate = typeof t === "function"
+        ? t
+        : (key, vars) => {
+            const template = fallbackTranslations[key] || key;
+            if (!vars) return template;
+            return template.replace(/\{(\w+)\}/g, (_, token) => String(vars[token] ?? ""));
+        };
+
+
     const prestigeUpgradeCardMap = new Map();
     let lastPrestigeRenderKey = "";
 
@@ -59,7 +79,7 @@ export function createPrestigeUIController({
         if (!prestigeSummaryEl) return;
 
         const effects = getPrestigeEffects();
-        prestigeSummaryEl.textContent = `Aktive Boni: Klick +${effects.clickBonusPercent}% | CPS +${effects.cpsBonusPercent}%`;
+        prestigeSummaryEl.textContent = `${translate("activeBonuses")}: Klick +${effects.clickBonusPercent}% | CPS +${effects.cpsBonusPercent}%`;
     }
 
     function updatePrestigeUpgradeCards() {
@@ -78,9 +98,9 @@ export function createPrestigeUIController({
             const cost = getPrestigeUpgradeCost(upgrade.id);
             const canAfford = !maxed && gameState.prestigeCookies >= cost;
 
-            entry.title.textContent = `${upgrade.name} (Lvl ${level}/${upgrade.maxLevel})`;
-            entry.meta.textContent = maxed ? "MAX erreicht" : `Kosten: ${cost} Prestige Cookies`;
-
+            entry.title.textContent = `${upgrade.name} (${translate("levelShort")} ${level}/${upgrade.maxLevel})`;
+            entry.meta.textContent = maxed ? translate("maxReached") : `${translate("cost")}: ${cost} ${translate("prestigeSnus")}`;
+            
             entry.card.classList.toggle("is-affordable", canAfford);
             entry.card.classList.toggle("is-unaffordable", !canAfford);
             entry.card.disabled = maxed;
@@ -95,9 +115,7 @@ export function createPrestigeUIController({
 
         const potential = getPotentialPrestigeGain();
         prestigeButton.disabled = potential <= 0;
-        prestigeButton.textContent = potential > 0 ? `Prestige Reset (+${potential})` : "Prestige Reset";
-    }
-
+        prestigeButton.textContent = potential > 0 ? `${translate("prestigeReset")} (+${potential})` : translate("prestigeReset");
     function refreshPrestigeUpgradesIfNeeded() {
         const key = getPrestigeRenderKey();
 
@@ -126,14 +144,14 @@ export function createPrestigeUIController({
         prestigeButton.addEventListener("click", () => {
             const earned = prestigeReset();
             if (earned > 0) {
-                showToast("✨ Du hast " + earned + " Prestige Cookies erhalten!", 1800, "success");
+                showToast(translate("earnedPrestige", { amount: earned }), 1800, "success");
                 updatePrestigeUpgradeCards();
                 updatePrestigeResetButtonState();
                 if (typeof onPrestigeReset === "function") {
                     onPrestigeReset(earned);
                 }
             } else {
-                showToast("ℹ️ Noch nicht genug Lifetime-Cookies für Prestige.", 1800, "warning");
+                showToast(translate("notEnoughLifetime"), 1800, "warning");
             }
         });
     }

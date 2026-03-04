@@ -7,6 +7,7 @@ import { gameState, prestigeUpgrades, milestones, resetGameState } from "./engin
 import { buildings } from "./buildings.js";
 import { worlds } from "./worlds.js";
 import { showAutosave, showToast } from "./ui.js";
+import { t } from "./i18n.js";
 
 const SAVE_KEY = "snus_clicker_save";
 

@@ -116,6 +116,8 @@ export function createPrestigeUIController({
         const potential = getPotentialPrestigeGain();
         prestigeButton.disabled = potential <= 0;
         prestigeButton.textContent = potential > 0 ? `${translate("prestigeReset")} (+${potential})` : translate("prestigeReset");
+   }
+
     function refreshPrestigeUpgradesIfNeeded() {
         const key = getPrestigeRenderKey();
 

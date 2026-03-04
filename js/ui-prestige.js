@@ -128,7 +128,10 @@ export function createPrestigeUIController({
 
     if (prestigeUpgradesEl) {
         prestigeUpgradesEl.addEventListener("click", (event) => {
-            const target = event.target instanceof Element ? event.target.closest(".prestige-upgrade") : null;
+            const eventPath = typeof event.composedPath === "function" ? event.composedPath() : [];
+            const directTarget = event.target instanceof Element ? event.target : null;
+            const pathTarget = eventPath.find((node) => node instanceof Element) || null;
+            const target = (directTarget || pathTarget)?.closest(".prestige-upgrade") || null;
             const upgradeId = target?.dataset.upgradeId;
             if (!upgradeId) return;
 

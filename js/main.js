@@ -28,9 +28,7 @@ function init() {
 
 function uiLoop() {
     renderUI();
-    renderBuildings();
     requestAnimationFrame(uiLoop);
-}
 }
 
 // ===============================

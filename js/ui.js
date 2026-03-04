@@ -59,9 +59,8 @@ export function renderBuildings() {
     buildings.forEach(building => {
 
         const owned = gameState.buildingData[building.id].owned;
-       if (gameState.cookies < cost) {
-    card.style.opacity = "0.5";
-}
+        const cost = Math.floor(building.baseCost * Math.pow(building.growth, owned));
+
         const card = document.createElement("div");
         card.className = "building-card";
         card.innerHTML = `
@@ -72,12 +71,9 @@ export function renderBuildings() {
             </div>
         `;
 
-       card.addEventListener("click", () => {
-    const success = buyBuilding(building.id);
-    if (success) {
-        renderBuildings();
-    }
-});
+        card.addEventListener("click", () => {
+            buyBuilding(building.id);
+        });
 
         if (building.side === "left") {
             leftColumn.appendChild(card);

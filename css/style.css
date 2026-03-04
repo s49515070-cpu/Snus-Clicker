@@ -446,3 +446,60 @@ body {
 #autosaveIndicator.toast-info {
     background: rgba(30, 64, 175, 0.88);
 }
+
+/* ===============================
+   MILESTONES
+=================================*/
+.milestones-panel {
+    position: fixed;
+    left: 20px;
+    top: 90px;
+    width: 280px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.milestones-panel h3 {
+    margin-bottom: 8px;
+}
+
+.milestones-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.milestone-item {
+    padding: 8px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.45);
+    border: 1px solid rgba(0,0,0,0.08);
+}
+
+.milestone-item.is-complete {
+    border-color: rgba(241, 196, 15, 0.65);
+}
+
+.milestone-item.is-claimed {
+    opacity: 0.75;
+}
+
+.milestone-title {
+    font-weight: 700;
+}
+
+.milestone-description,
+.milestone-progress,
+.milestone-reward {
+    font-size: 0.82rem;
+    color: #2d3748;
+}
+
+@media (max-width: 768px) {
+    .milestones-panel {
+        position: static;
+        width: calc(100% - 20px);
+        margin: 10px;
+        max-height: none;
+    }
+}

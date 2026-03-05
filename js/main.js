@@ -49,10 +49,27 @@ function initSettingsControls() {
     const languageInput = document.getElementById("languageInput");
     const backgroundColorInput = document.getElementById("backgroundColorInput");
     const resetSettingsButton = document.getElementById("resetSettingsButton");
+    
+    const collapseDurationMs = 220;
+
 
     const setPanelVisibility = (visible) => {
         if (!settingsPanel) return;
-        settingsPanel.hidden = !visible;
+        if (visible) {
+            settingsPanel.hidden = false;
+            requestAnimationFrame(() => {
+                settingsPanel.classList.remove("is-collapsed");
+            });
+        } else {
+            settingsPanel.classList.add("is-collapsed");
+            window.setTimeout(() => {
+                if (settingsPanel.classList.contains("is-collapsed")) {
+                    settingsPanel.hidden = true;
+                }
+            }, collapseDurationMs);
+        }
+
+    
         if (settingsToggleButton) {
             settingsToggleButton.setAttribute("aria-expanded", visible ? "true" : "false");
         }

@@ -397,7 +397,7 @@ body {
 .settings-toggle-button {
     position: fixed;
     right: 20px;
-    top: 125px;
+    top: 150px;
     border: none;
     border-radius: 12px;
     cursor: pointer;

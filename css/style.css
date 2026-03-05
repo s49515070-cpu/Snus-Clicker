@@ -397,7 +397,7 @@ body {
 .settings-toggle-button {
     position: fixed;
     right: 20px;
-    top: 100px;
+    top: 125px;
     border: none;
     border-radius: 12px;
     cursor: pointer;
@@ -407,7 +407,7 @@ body {
 .settings-panel {
     position: fixed;
     right: 20px;
-    top: 150px;
+    top: 175px;
     display: grid;
     gap: 8px;
     width: 240px;

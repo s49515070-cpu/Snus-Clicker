@@ -161,8 +161,10 @@ const world = getWorldById(gameState.currentWorld);
     if (nextWorldProgressEl) {
         const nextWorld = worlds.find((item) => item.id > gameState.currentWorld);
         if (!nextWorld) {
-            nextWorldProgressEl.textContent = t("worldAllUnlocked");
+            nextWorldProgressEl.textContent = "";
+            nextWorldProgressEl.hidden = true;
         } else {
+            nextWorldProgressEl.hidden = false;
             const progress = Math.min(gameState.cookies, nextWorld.unlockCost);
             const remaining = Math.max(0, nextWorld.unlockCost - gameState.cookies);
             nextWorldProgressEl.textContent = t("worldUnlockProgressSnus", {

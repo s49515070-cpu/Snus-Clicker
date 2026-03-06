@@ -1,4 +1,4 @@
-/* ===============================
+v/* ===============================
    GLOBAL RESET
 =================================*/
 * {
@@ -433,7 +433,7 @@ body {
 .settings-panel {
     position: fixed;
     right: 20px;
-    top: 185px;
+    top: 135px;
     display: grid;
     gap: 8px;
     width: 240px;

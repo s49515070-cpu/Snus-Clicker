@@ -388,6 +388,7 @@ async function testLoadGameNormalization() {
   localStorage.setItem('snus_clicker_save', JSON.stringify({
     cookies: -5,
     lifetimeCookies: -10,
+    lifetimeCookiesAtLastPrestige: 999, 
     prestigeCookies: 3,
     currentWorld: 999,
     buyMode: -2,
@@ -404,6 +405,7 @@ async function testLoadGameNormalization() {
   loadGame();
 
   assert.equal(gameState.cookies, 0, 'cookies should normalize to non-negative');
+  assert.equal(gameState.lifetimeCookiesAtLastPrestige, 0, 'last prestige lifetime should clamp to valid range');
   assert.equal(gameState.currentWorld, 1, 'invalid world should fallback to 1');
   assert.equal(gameState.buyMode, 1, 'invalid buy mode should fallback to 1');
   assert.equal(gameState.prestigeMultiplier, 1, 'prestige multiplier should clamp to min 1');
@@ -585,6 +587,7 @@ async function run() {
   testPrestigeCostsIncrease();
   testPrestigePurchaseRules();
   testPotentialPrestigeGain();
+  testPotentialPrestigeGainCannotBeClaimedTwice();
   testBuyModeSanitizing();
   testBuildingsControllerRendersAfterPurchase();
   testPrestigeControllerCallbacks();

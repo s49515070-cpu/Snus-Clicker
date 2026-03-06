@@ -1,4 +1,4 @@
-/* ===============================
+v(/* ===============================
    GLOBAL RESET
 =================================*/
 * {
@@ -170,9 +170,10 @@ body {
 =================================*/
 .prestige-panel {
     position: fixed;
-    right: 20px;
-    bottom: 70px;
+    left: 20px;
+    bottom: 20px;
     width: 250px;
+    z-index: 20;
 }
 
 .prestige-panel h3 {

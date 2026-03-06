@@ -4,7 +4,7 @@
 // =====================================
 
 
-import { gameState, clickCookie, buyBuilding, setBuyMode, calculateCps, changeWorld, prestigeUpgrades, buyPrestigeUpgrade, getPrestigeUpgradeCost, getPrestigeEffects, getPotentialPrestigeGain, prestigeReset, milestones, getMilestoneProgress } from "./engine.js";
+import { gameState, clickCookie, buyBuilding, setBuyMode, calculateCps, changeWorld, isWorldPurchased, buyWorld, prestigeUpgrades, buyPrestigeUpgrade, getPrestigeUpgradeCost, getPrestigeEffects, getPotentialPrestigeGain, prestigeReset, milestones, getMilestoneProgress } from "./engine.js";
 import { buildings, getBuildingCost, getPurchaseCost, getMaxAffordableSummary } from "./buildings.js";
 import { worlds, getWorldById, isWorldUnlocked } from "./worlds.js";
 import { createBuildingsUIController } from "./ui-buildings.js";
@@ -159,7 +159,7 @@ const world = getWorldById(gameState.currentWorld);
         worldNameEl.textContent = world.name;
     }
     if (nextWorldProgressEl) {
-        const nextWorld = worlds.find((item) => item.id > gameState.currentWorld);
+        const nextWorld = worlds.find((item) => !isWorldPurchased(item.id));
         if (!nextWorld) {
             nextWorldProgressEl.textContent = "";
             nextWorldProgressEl.hidden = true;
@@ -386,7 +386,8 @@ function renderWorldPicker() {
     worldPickerList.innerHTML = "";
 
     worlds.forEach((world) => {
-        const unlocked = isWorldUnlocked(world, gameState.cookies);
+        const purchased = isWorldPurchased(world.id);
+        const unlocked = purchased || isWorldUnlocked(world, gameState.cookies);
         const missing = Math.max(0, world.unlockCost - gameState.cookies);
 
         const button = document.createElement("button");
@@ -407,7 +408,7 @@ function renderWorldPicker() {
 
         const status = document.createElement("div");
         status.className = "world-picker-item-status";
-        status.textContent = unlocked
+        status.textContent = purchased
             ? world.id === gameState.currentWorld
                 ? t("worldCurrent")
                 : t("worldUnlocked")
@@ -418,11 +419,18 @@ function renderWorldPicker() {
         button.append(title, cost, status);
 
         button.addEventListener("click", () => {
-            if (!unlocked) {
-                showToast(t("worldLockedNeedSnus", {
-                    missing: formatNumber(missing)
-                }), 1800, "warning");
-                return;
+            if (!purchased) {
+                const bought = buyWorld(world.id);
+                if (!bought) {
+                    showToast(t("worldLockedNeedSnus", {
+                        missing: formatNumber(missing)
+                    }), 1800, "warning");
+                    return;
+                }
+
+                showToast(t("worldPurchased", {
+                    name: world.name
+                }), 1600, "success");
             }
 
             closeWorldPicker();

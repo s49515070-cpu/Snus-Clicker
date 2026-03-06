@@ -62,6 +62,7 @@ export const milestones = [
 export const gameState = {
     cookies: 0,
     lifetimeCookies: 0,
+    lifetimeCookiesAtLastPrestige: 0,
     prestigeCookies: 0,
     currentWorld: 1,
     buyMode: 1,
@@ -96,6 +97,7 @@ function resetMilestones() {
 export function resetGameState() {
     gameState.cookies = 0;
     gameState.lifetimeCookies = 0;
+    gameState.lifetimeCookiesAtLastPrestige = 0;
     gameState.prestigeCookies = 0;
     gameState.currentWorld = 1;
     gameState.buyMode = 1;
@@ -334,7 +336,11 @@ export function changeWorld(worldId) {
 // ===============================
 
 export function getPotentialPrestigeGain() {
-    return Math.floor(gameState.lifetimeCookies / 1000000);
+    const lifetime = Number(gameState.lifetimeCookies) || 0;
+    const lifetimeAtLastPrestige = Number(gameState.lifetimeCookiesAtLastPrestige) || 0;
+    const eligibleLifetime = Math.max(0, lifetime - lifetimeAtLastPrestige);
+
+    return Math.floor(eligibleLifetime / 1000000);
 }
 
 export function prestigeReset() {
@@ -346,6 +352,7 @@ export function prestigeReset() {
 
     gameState.prestigeCookies += earned;
     gameState.prestigeMultiplier += earned * 0.1;
+    gameState.lifetimeCookiesAtLastPrestige += earned * 1000000;
 
     // Reset normale Werte
     gameState.cookies = 0;

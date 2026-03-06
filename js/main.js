@@ -3,7 +3,7 @@
 // =====================================
 
 
-import { gameLoop, claimAvailableMilestones } from "./engine.js";
+import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress } from "./engine.js";
 import { renderUI, renderBuildings, renderPrestigeUpgrades, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
 import { loadConfig, getAutosaveInterval, getUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor } from "./config.js";
@@ -184,7 +184,14 @@ function initSaveSyncListener() {
 function init() {
 
     loadConfig();
-    loadGame();
+    const loaded = loadGame();
+    if (loaded && typeof localStorage !== "undefined") {
+        const lastSeen = Number(localStorage.getItem("snus_clicker_last_seen") || Date.now());
+        const offline = applyOfflineProgress(Date.now() - lastSeen);
+        if (offline.gained > 0) {
+            showToast(t("offlineProgress", { gained: Math.floor(offline.gained) }), 2000, "info");
+        }
+    }
     applyWorldTheme();
     renderBuildings();
     renderPrestigeUpgrades();
@@ -209,20 +216,23 @@ let lastUiUpdateAt = 0;
 function uiLoop(timestamp = 0) {
     if (timestamp - lastUiUpdateAt >= getUiRefreshInterval()) {
         const claimedMilestones = claimAvailableMilestones();
-        if (claimedMilestones.length > 0) {
-            claimedMilestones.forEach((milestone) => {
+        const claimedQuests = claimAvailableQuests();
+        if (claimedMilestones.length > 0 || claimedQuests.length > 0) {
+            [...claimedMilestones, ...claimedQuests].forEach((entry) => {
                 const rewards = [];
-                if (milestone.rewardCookies > 0) rewards.push(`+${milestone.rewardCookies} ${t("snus")}`);
-                if (milestone.rewardPrestigeCookies > 0) rewards.push(`+${milestone.rewardPrestigeCookies} ${t("prestigeSnus")}`);
-                showToast(`🏁 Milestone: ${milestone.label} (${rewards.join(" | ")})`, 1800, "success");
+                if (entry.rewardCookies > 0) rewards.push(`+${entry.rewardCookies} ${t("snus")}`);
+                if (entry.rewardPrestigeCookies > 0) rewards.push(`+${entry.rewardPrestigeCookies} ${t("prestigeSnus")}`);
+                showToast(`🏁 ${entry.label} (${rewards.join(" | ")})`, 1800, "success");
             });
             renderBuildings();
             renderPrestigeUpgrades();
         }
 
+        runAutoBuyerTick();
         renderUI();
         refreshBuildingsIfNeeded();
         lastUiUpdateAt = timestamp;
+        if (typeof localStorage !== "undefined") localStorage.setItem("snus_clicker_last_seen", String(Date.now()));
     }
 
     requestAnimationFrame(uiLoop);

@@ -4,7 +4,7 @@
 // =====================================
 
 import { buildings, getPurchaseCost, getBuildingCps, getMaxAffordableSummary } from "./buildings.js";
-import { getWorldById } from "./worlds.js";
+import { getWorldById, worlds } from "./worlds.js";
 
 export const prestigeUpgrades = [
     {
@@ -65,6 +65,7 @@ export const gameState = {
     lifetimeCookiesAtLastPrestige: 0,
     prestigeCookies: 0,
     currentWorld: 1,
+    unlockedWorldIds: [1],
     buyMode: 1,
     buildingData: {},
     prestigeMultiplier: 1,
@@ -100,6 +101,7 @@ export function resetGameState() {
     gameState.lifetimeCookiesAtLastPrestige = 0;
     gameState.prestigeCookies = 0;
     gameState.currentWorld = 1;
+    gameState.unlockedWorldIds = [1];
     gameState.buyMode = 1;
     gameState.prestigeMultiplier = 1;
     gameState.clickPower = 1;
@@ -322,14 +324,37 @@ export function setBuyMode(mode) {
 // ===============================
 // WELT WECHSEL
 // ===============================
-
 export function changeWorld(worldId) {
     const world = getWorldById(worldId);
     if (!world) return false;
+    if (!gameState.unlockedWorldIds.includes(worldId)) return false;
 
     gameState.currentWorld = worldId;
     return true;
 }
+
+export function isWorldPurchased(worldId) {
+    return gameState.unlockedWorldIds.includes(worldId);
+}
+
+export function buyWorld(worldId) {
+    const world = getWorldById(worldId);
+    if (!world) return false;
+    if (isWorldPurchased(worldId)) return true;
+
+    if (gameState.cookies < world.unlockCost) {
+        return false;
+    }
+
+    gameState.cookies -= world.unlockCost;
+    gameState.unlockedWorldIds.push(worldId);
+    gameState.unlockedWorldIds = Array.from(new Set(gameState.unlockedWorldIds))
+        .filter((id) => worlds.some((entry) => entry.id === id))
+        .sort((a, b) => a - b);
+
+    return true;
+}
+
 
 // ===============================
 // PRESTIGE RESET

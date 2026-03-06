@@ -237,6 +237,13 @@ export function applyStaticTranslations() {
     const milestonesTitle = document.querySelector(".milestones-panel h3");
     if (milestonesTitle) milestonesTitle.textContent = t("milestonesTitle");
 
+    const milestonesCloseButton = document.getElementById("milestonesCloseButton");
+    if (milestonesCloseButton) {
+        milestonesCloseButton.textContent = "✕";
+        milestonesCloseButton.setAttribute("aria-label", t("close"));
+        milestonesCloseButton.setAttribute("title", t("close"));
+    }
+
     const prestigeTitle = document.querySelector(".prestige-panel h3");
     if (prestigeTitle) prestigeTitle.textContent = t("prestigeTitle");
 

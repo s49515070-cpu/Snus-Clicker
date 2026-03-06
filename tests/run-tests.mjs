@@ -9,6 +9,9 @@ import {
   buyBuilding,
   getPotentialPrestigeGain,
   prestigeReset,
+  buyWorld,
+  changeWorld,
+  isWorldPurchased,
   claimAvailableMilestones,
   milestones,
 } from '../js/engine.js';
@@ -55,6 +58,7 @@ function resetEngineState() {
   gameState.prestigeCookies = 0;
   gameState.buyMode = 1;
   gameState.currentWorld = 1;
+  gameState.unlockedWorldIds = [1];
   gameState.prestigeMultiplier = 1;
   gameState.clickPower = 1;
 
@@ -279,6 +283,23 @@ function testPotentialPrestigeGainCannotBeClaimedTwice() {
   assert.equal(getPotentialPrestigeGain(), 0, 'prestige should not be re-claimable without new lifetime progress');
 }
 
+
+function testWorldMustBePurchasedBeforeSwitch() {
+  resetEngineState();
+
+  gameState.cookies = 4;
+  assert.equal(buyWorld(2), false, 'world purchase should fail when cookies are insufficient');
+  assert.equal(changeWorld(2), false, 'cannot switch to locked world without purchasing');
+
+  gameState.cookies = 10;
+  assert.equal(buyWorld(2), true, 'world purchase should succeed with enough cookies');
+  assert.equal(isWorldPurchased(2), true, 'purchased world should be persisted in unlocked list');
+  assert.equal(gameState.cookies, 5, 'buying a world should deduct unlock cost from current cookies');
+
+  assert.equal(changeWorld(2), true, 'can switch after world is purchased');
+  assert.equal(gameState.currentWorld, 2, 'current world should update after successful switch');
+}
+
 function testBuyModeSanitizing() {
   resetEngineState();
 
@@ -407,6 +428,7 @@ async function testLoadGameNormalization() {
   assert.equal(gameState.cookies, 0, 'cookies should normalize to non-negative');
   assert.equal(gameState.lifetimeCookiesAtLastPrestige, 0, 'last prestige lifetime should clamp to valid range');
   assert.equal(gameState.currentWorld, 1, 'invalid world should fallback to 1');
+  assert.deepEqual(gameState.unlockedWorldIds, [1], 'unlocked worlds should normalize and always keep world 1');
   assert.equal(gameState.buyMode, 1, 'invalid buy mode should fallback to 1');
   assert.equal(gameState.prestigeMultiplier, 1, 'prestige multiplier should clamp to min 1');
   assert.equal(gameState.clickPower, 1, 'click power should clamp to min 1');
@@ -588,6 +610,7 @@ async function run() {
   testPrestigePurchaseRules();
   testPotentialPrestigeGain();
   testPotentialPrestigeGainCannotBeClaimedTwice();
+  testWorldMustBePurchasedBeforeSwitch();
   testBuyModeSanitizing();
   testBuildingsControllerRendersAfterPurchase();
   testPrestigeControllerCallbacks();

@@ -88,7 +88,7 @@ function normalizeSavePayload(parsed) {
         ...parsed,
         cookies,
         lifetimeCookies,
-        lifetimeCookiesAtLastPrestige
+        lifetimeCookiesAtLastPrestige,
         prestigeCookies,
         currentWorld: worlds.some((world) => world.id === currentWorld) ? currentWorld : 1,
         buyMode: buyMode === "max" || (Number.isFinite(buyMode) && buyMode > 0) ? buyMode : 1,

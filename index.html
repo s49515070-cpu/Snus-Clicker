@@ -72,12 +72,6 @@
         </div>. 
         <div id="milestonesList" class="milestones-list"></div>
     </div>
-    
-     <!-- Save Controls -->
-    <div class="save-controls glass">
-        <button id="exportSaveButton">📤 Save exportieren</button>
-        <button id="importSaveButton">📥 Save importieren</button>
-    </div>
 
     <button id="settingsToggleButton" class="settings-toggle-button glass" type="button">⚙️ Einstellungen</button>
 
@@ -105,6 +99,10 @@
             <span id="settingBackgroundLabel">Hintergrundfarbe</span>
             <input id="backgroundColorInput" type="color" value="#dff6ff">
         </label>
+                <div class="settings-save-actions">
+            <button id="exportSaveButton" type="button">📤 Save exportieren</button>
+            <button id="importSaveButton" type="button">📥 Save importieren</button>
+        </div>
         <button id="resetSaveButton" type="button">🗑️ Save zurücksetzen</button>
         <small id="resetSaveHint">Achtung: löscht den Spielstand.</small>
         <button id="resetSettingsButton" type="button">↺ Einstellungen zurücksetzen</button>

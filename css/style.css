@@ -13,6 +13,10 @@ body {
     color: #222;
     overflow-x: hidden;
 }
+[hidden] {
+    display: none !important;
+}
+
 
 /* ===============================
    GLASS EFFECT

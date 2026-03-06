@@ -49,7 +49,20 @@ const translations = {
         prestigeProgress: "Prestige bei {current}/{target} Lifetime-Snus (noch {remaining})",
         prestigeReady: "✅ Prestige-Reset ist bereit!",
         settingBackground: "Hintergrundfarbe",
-        backgroundUpdated: "🎨 Hintergrund aktualisiert."
+        backgroundUpdated: "🎨 Hintergrund aktualisiert.",
+        boostActive: "⚡ Boost aktiv: {seconds}s",
+        boostCooldown: "⏳ Cooldown: {seconds}s",
+        boostReady: "⚡ Boost bereit",
+        boostActivated: "⚡ Produktions-Boost aktiviert!",
+        questTitle: "🧭 Quests",
+        dailySummary: "Heute: {clicks} Klicks | +{earned} Snus",
+        autoBuyerUnlock: "🤖 Auto-Buyer kaufen (50K)",
+        autoBuyerOn: "🤖 Auto-Buyer: AN",
+        autoBuyerOff: "🤖 Auto-Buyer: AUS",
+        autoBuyerUnlocked: "🤖 Auto-Buyer freigeschaltet.",
+        autoBuyerNeedSnus: "Es fehlen 50K Snus für Auto-Buyer.",
+        offlineProgress: "🕒 Offline-Fortschritt: +{gained} Snus",
+        prestigePreview: "Reset: -{lose} Snus | +{gain} Prestige"
     },
     en: {
         statsSnus: "Snus",
@@ -99,7 +112,20 @@ const translations = {
         prestigeProgress: "Prestige at {current}/{target} lifetime snus ({remaining} left)",
         prestigeReady: "✅ Prestige reset is ready!",
         settingBackground: "Background color",
-        backgroundUpdated: "🎨 Background updated."
+        backgroundUpdated: "🎨 Background updated.",
+        boostActive: "⚡ Boost active: {seconds}s",
+        boostCooldown: "⏳ Cooldown: {seconds}s",
+        boostReady: "⚡ Boost ready",
+        boostActivated: "⚡ Production boost activated!",
+        questTitle: "🧭 Quests",
+        dailySummary: "Today: {clicks} clicks | +{earned} snus",
+        autoBuyerUnlock: "🤖 Buy auto-buyer (50K)",
+        autoBuyerOn: "🤖 Auto-buyer: ON",
+        autoBuyerOff: "🤖 Auto-buyer: OFF",
+        autoBuyerUnlocked: "🤖 Auto-buyer unlocked.",
+        autoBuyerNeedSnus: "Need 50K snus for auto-buyer.",
+        offlineProgress: "🕒 Offline progress: +{gained} snus",
+        prestigePreview: "Reset: -{lose} snus | +{gain} prestige"
     }
 };
 

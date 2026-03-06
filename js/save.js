@@ -29,6 +29,33 @@ import { t } from "./i18n.js";
 
 const SAVE_KEY = "snus_clicker_save";
 
+function safeStorageGet(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch {
+        return null;
+    }
+}
+
+function safeStorageSet(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function safeStorageRemove(key) {
+    try {
+        localStorage.removeItem(key);
+    } catch {
+        // Ignore storage access failures (e.g. blocked browser storage)
+    }
+}
+
+
+
 function emitSaveApplied() {
     if (typeof window === "undefined") return;
     window.dispatchEvent(new CustomEvent("snus:save-applied"));

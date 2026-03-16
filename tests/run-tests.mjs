@@ -300,7 +300,8 @@ function testBuildingsControllerRoiUsesMaxQuantity() {
   assert.ok(farmCard, 'farm card should be rendered');
 
   const forecastNode = farmCard.children?.[1]?.children?.[5];
-  assert.ok(String(forecastNode?.textContent || '').startsWith('ROI:'), 'ROI forecast should be rendered for MAX mode');
+  assert.ok(String(forecastNode?.textContent || '').includes('ROI:'), 'ROI forecast should be rendered for MAX mode');
+  assert.ok(String(forecastNode?.textContent || '').includes('SPS: +'), 'SPS gain should be shown in building info');
   assert.equal(String(forecastNode?.textContent || '').includes('—'), false, 'ROI should be numeric in MAX mode when purchases are possible');
 }
 

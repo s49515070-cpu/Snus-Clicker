@@ -24,9 +24,13 @@ import {
     getQuestProgress,
     getActiveQuests,
     getBoostStatus,
+    getActiveBonuses,
     activateProductionBoost,
+    activateClickBurst,
+    activateDiscountBurst,
     unlockAutoBuyer,
     setAutoBuyerEnabled,
+    getAutoBuyerStatus,
     getPrestigePreview,
     PRESTIGE_THRESHOLD,
     AUTO_BUYER_UNLOCK_COST
@@ -37,7 +41,7 @@ import { createBuildingsUIController } from "./ui-buildings.js";
 import { initToastSystem, showAutosave, showToast } from "./ui-toast.js";
 import { createPrestigeUIController } from "./ui-prestige.js";
 import { t } from "./i18n.js";
-import { getBackgroundColor } from "./config.js";
+import { getBackgroundColor, getNumberFormat, getHighContrast, getReducedMotion } from "./config.js";
 import { playClickSound } from "./audio.js";
 
 const cookieCountEl = document.getElementById("cookieCount");
@@ -62,11 +66,15 @@ const worldPickerList = document.getElementById("worldPickerList");
 const worldPickerClose = document.getElementById("worldPickerClose");
 const autosaveIndicator = document.getElementById("autosaveIndicator");
 const boostButton = document.getElementById("boostButton");
+const clickBurstButton = document.getElementById("clickBurstButton");
+const discountBurstButton = document.getElementById("discountBurstButton");
 const boostStatusEl = document.getElementById("boostStatus");
 const questListEl = document.getElementById("questList");
 const dailySummaryEl = document.getElementById("dailySummary");
 const autoBuyerButton = document.getElementById("autoBuyerButton");
+const autoBuyerStatusEl = document.getElementById("autoBuyerStatus");
 const goalHintsEl = document.getElementById("goalHints");
+const activeBonusesPanelEl = document.getElementById("activeBonusesPanel");
 
 initToastSystem(autosaveIndicator);
 
@@ -102,6 +110,9 @@ const { renderPrestigeUpgrades, refreshPrestigeUpgradesIfNeeded, updatePrestigeR
 
 function formatNumber(num) {
     if (!Number.isFinite(num)) return "0";
+    if (getNumberFormat() === "full") {
+        return Math.floor(num).toLocaleString(getNumberFormat() === "full" ? "de-DE" : undefined);
+    }
     const sign = num < 0 ? "-" : "";
     const abs = Math.abs(num);
     if (abs < 1000) return sign + abs.toFixed(0);
@@ -125,11 +136,11 @@ function renderMilestones() {
 
         const title = document.createElement("div");
         title.className = "milestone-title";
-        title.textContent = milestone.label;
+        title.textContent = milestone.labelKey ? t(milestone.labelKey) : milestone.label;
 
         const description = document.createElement("div");
         description.className = "milestone-description";
-        description.textContent = milestone.description;
+        description.textContent = milestone.descriptionKey ? t(milestone.descriptionKey) : milestone.description;
 
         const progress = document.createElement("div");
         progress.className = "milestone-progress";
@@ -157,9 +168,11 @@ function renderQuests() {
         item.className = "quest-item";
         item.classList.toggle("is-complete", status.completed);
         item.classList.toggle("is-claimed", status.claimed);
+        const label = quest.labelKey ? t(quest.labelKey) : quest.label;
+        const description = quest.descriptionKey ? t(quest.descriptionKey) : quest.description;
         item.innerHTML = `
-            <div class="quest-title">${quest.label}</div>
-            <div class="quest-description">${quest.description}</div>
+            <div class="quest-title">${label}</div>
+            <div class="quest-description">${description}</div>
             <div class="quest-progress">${Math.floor(Math.min(status.current, status.target))}/${status.target}</div>
         `;
         questListEl.appendChild(item);
@@ -170,13 +183,18 @@ function renderBoostStatus() {
     if (!boostButton || !boostStatusEl) return;
     const status = getBoostStatus();
     boostButton.disabled = !status.ready;
+    if (clickBurstButton) clickBurstButton.disabled = status.clickBurstCooldownMs > 0;
+    if (discountBurstButton) discountBurstButton.disabled = status.discountBurstCooldownMs > 0;
 
     if (status.active) {
         boostStatusEl.textContent = t("boostActive", { seconds: Math.ceil(status.activeMs / 1000) });
     } else if (!status.ready) {
         boostStatusEl.textContent = t("boostCooldown", { seconds: Math.ceil(status.cooldownMs / 1000) });
     } else {
-        boostStatusEl.textContent = t("boostReady");
+        const extras = [];
+        if (status.clickBurstActiveMs > 0) extras.push(t("clickBurstActive", { seconds: Math.ceil(status.clickBurstActiveMs / 1000) }));
+        if (status.discountBurstActiveMs > 0) extras.push(t("discountBurstActive", { seconds: Math.ceil(status.discountBurstActiveMs / 1000) }));
+        boostStatusEl.textContent = extras.length ? extras.join(" · ") : t("boostReady");
     }
 }
 
@@ -191,6 +209,10 @@ function renderAutoBuyerState() {
 
     autoBuyerButton.textContent = gameState.autoBuyerEnabled ? t("autoBuyerOn") : t("autoBuyerOff");
     autoBuyerButton.classList.toggle("is-active", gameState.autoBuyerEnabled);
+    
+    if (autoBuyerStatusEl) {
+        autoBuyerStatusEl.textContent = t("autoBuyerDecision", { decision: getAutoBuyerStatus().decision });
+    }
 }
 
 function formatEta(seconds) {
@@ -214,7 +236,8 @@ function getNearestMilestoneGoal() {
         if (status.completed) return;
         const remaining = Math.max(0, status.target - status.current);
         if (!best || remaining < best.remaining) {
-            best = { remaining, text: `${milestone.label} (${formatNumber(remaining)} left)` };
+            const label = milestone.labelKey ? t(milestone.labelKey) : milestone.label;
+            best = { remaining, text: `${label} (${formatNumber(remaining)} left)` };
         }
     });
     return best?.text || null;
@@ -227,7 +250,8 @@ function getNearestQuestGoal() {
         if (status.completed) return;
         const remaining = Math.max(0, status.target - status.current);
         if (!best || remaining < best.remaining) {
-            best = { remaining, text: `${quest.label} (${formatNumber(remaining)} left)` };
+            const label = quest.labelKey ? t(quest.labelKey) : quest.label;
+            best = { remaining, text: `${label} (${formatNumber(remaining)} left)` };
         }
     });
     return best?.text || null;
@@ -271,6 +295,28 @@ function renderDailySummary() {
         clicks: formatNumber(gameState.todayStats.clicks),
         earned: formatNumber(gameState.todayStats.earned)
     });
+}
+
+function renderActiveBonusesPanel() {
+    if (!activeBonusesPanelEl) return;
+
+    const bonuses = getActiveBonuses();
+    const lines = [];
+
+    if (bonuses.worldClickBonusPercent > 0) lines.push(t("bonusWorldClick", { percent: bonuses.worldClickBonusPercent }));
+    if (bonuses.worldCpsBonusPercent > 0) lines.push(t("bonusWorldCps", { percent: bonuses.worldCpsBonusPercent }));
+    if (bonuses.worldDiscountPercent > 0) lines.push(t("bonusWorldDiscount", { percent: bonuses.worldDiscountPercent }));
+    if (bonuses.activeBoostMultiplier > 1) lines.push(t("bonusBoost", { value: bonuses.activeBoostMultiplier.toFixed(2) }));
+    if (bonuses.clickBurstMultiplier > 1) lines.push(t("bonusClickBurst", { value: bonuses.clickBurstMultiplier.toFixed(2) }));
+    if (bonuses.discountBurstActive) lines.push(t("bonusDiscountBurst"));
+    if (bonuses.streakBonusPercent > 0) lines.push(t("bonusDailyStreak", { percent: bonuses.streakBonusPercent }));
+    if (bonuses.skillPowerPercent > 0) lines.push(t("bonusSkillPower", { percent: bonuses.skillPowerPercent }));
+    if (bonuses.autoBuyerExtraPurchases > 0) lines.push(t("bonusAutoBuyerCap", { value: bonuses.autoBuyerExtraPurchases }));
+
+    activeBonusesPanelEl.innerHTML = `
+        <div class="goal-hints-title">${t("activeBonuses")}</div>
+        <div class="goal-hints-list">${(lines.length ? lines : [t("bonusNone")]).map((line) => `<div>${line}</div>`).join("")}</div>
+    `;
 }
 
 export function renderUI() {
@@ -354,6 +400,7 @@ export function renderUI() {
     renderQuests();
     renderDailySummary();
     renderGoalHints();
+    renderActiveBonusesPanel();
     renderAutoBuyerState();
     refreshPrestigeUpgradesIfNeeded();
     updatePrestigeResetButtonState();
@@ -389,6 +436,11 @@ export function applyStaticTranslations() {
         ["settingLanguageLabel", t("settingLanguage")],
         ["settingBackgroundLabel", t("settingBackground")],
         ["settingAutoBuyerStrategyLabel", t("settingAutoBuyerStrategy")],
+        ["settingAutoBuyerValueWeightLabel", t("settingAutoBuyerValueWeight")],
+        ["settingAutoBuyerCheapWeightLabel", t("settingAutoBuyerCheapWeight")],
+        ["settingNumberFormatLabel", t("settingNumberFormat")],
+        ["settingReducedMotionLabel", t("settingReducedMotion")],
+        ["settingHighContrastLabel", t("settingHighContrast")],
         ["exportSaveButton", t("exportSave")],
         ["importSaveButton", t("importSave")],
         ["resetSaveButton", t("resetSave")],
@@ -399,6 +451,11 @@ export function applyStaticTranslations() {
         const node = document.getElementById(id);
         if (node) node.textContent = text;
     });
+
+    const clickButton = document.getElementById("clickBurstButton");
+    const discountButton = document.getElementById("discountBurstButton");
+    if (clickButton) clickButton.textContent = t("clickBurstButton");
+    if (discountButton) discountButton.textContent = t("discountBurstButton");
 }
 
 function createClickEffectAt(x, y) {
@@ -557,6 +614,18 @@ if (boostButton) {
     });
 }
 
+if (clickBurstButton) {
+    clickBurstButton.addEventListener("click", () => {
+        if (activateClickBurst()) showToast(t("clickBurstActivated"), 1200, "success");
+    });
+}
+
+if (discountBurstButton) {
+    discountBurstButton.addEventListener("click", () => {
+        if (activateDiscountBurst()) showToast(t("discountBurstActivated"), 1200, "success");
+    });
+}
+
 if (autoBuyerButton) {
     autoBuyerButton.addEventListener("click", () => {
         if (!gameState.autoBuyerUnlocked) {
@@ -574,6 +643,8 @@ export function applyWorldTheme() {
 
     const customBackground = getBackgroundColor();
     document.body.style.background = customBackground || world.theme.background;
+    document.body.classList.toggle("reduced-motion", getReducedMotion());
+    document.body.classList.toggle("high-contrast", getHighContrast());
     mainCookie.src = world.cookieImage;
     mainCookie.style.filter = `drop-shadow(0 0 20px ${world.theme.glow})`;
 }

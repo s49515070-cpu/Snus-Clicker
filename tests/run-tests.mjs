@@ -295,6 +295,18 @@ function testBuildingsControllerRoiUsesMaxQuantity() {
   assert.equal(String(forecastNode?.textContent || '').includes('—'), false, 'ROI should be numeric in MAX mode when purchases are possible');
 }
 
+function testBuyModeSanitizesFractionalValues() {
+  resetEngineState();
+
+  gameState.cookies = 100;
+  setBuyMode(1.7);
+  const purchased = buyBuilding('cursor');
+
+  assert.equal(purchased, true, 'purchase should still succeed with fractional buy mode input');
+  assert.equal(gameState.buyMode, 1, 'setBuyMode should normalize fractional mode values to whole numbers');
+  assert.equal(gameState.buildingData.cursor.owned, 1, 'fractional buy mode must not create partial building ownership');
+}
+
 function testPrestigeControllerCallbacks() {
   resetEngineState();
   installControllerDocumentMock();
@@ -1095,9 +1107,10 @@ async function run() {
   testWorldThreeNeedsBuildingRequirement();
   testWorldUnlockDetailsReportsMissingProgress();
   testBuyModeSanitizing();
-  testBuildingsControllerRendersAfterPurchase();
-  testBuildingsControllerMarksBestBuy();
-  testBuildingsControllerRoiUsesMaxQuantity();
+testBuildingsControllerRendersAfterPurchase();
+testBuildingsControllerMarksBestBuy();
+testBuildingsControllerRoiUsesMaxQuantity();
+testBuyModeSanitizesFractionalValues();;
   testPrestigeControllerCallbacks();
   testBuyBuildingNormalizesOwnedType();
   testBuildingPurchaseNeedsValidId();

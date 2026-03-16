@@ -715,6 +715,12 @@ export function getAutoBuyerStatus() {
 }
 
 function getAutoBuyerChoice() {
+    const strategy = getAutoBuyerStrategy();
+    const availableBudget = strategy === "reserve"
+        ? Math.max(0, gameState.cookies * (1 - AUTO_BUYER_RESERVE_RATIO))
+        : gameState.cookies;
+
+    const baseCps = calculateCps();
     let best = null;
 
     buildings.forEach((building) => {
@@ -723,23 +729,23 @@ function getAutoBuyerChoice() {
 
         const rawOwned = Number(data.owned);
         const owned = Number.isFinite(rawOwned) && rawOwned >= 0 ? Math.floor(rawOwned) : 0;
-        const cost = getPurchaseCost(building, owned, 1);
-        if (cost <= 0 || cost > gameState.cookies) return;
+        const preview = getEffectivePurchasePreview(building, owned, 1, availableBudget);
+        const cost = Number(preview.totalCost || 0);
+        if (cost <= 0 || preview.quantity < 1 || cost > availableBudget) return;
 
-        const effectiveBaseCps = building.baseCps * getBuildingSynergyMultiplier(building.id);
-        const valueScore = effectiveBaseCps / cost;
-        const strategy = getAutoBuyerStrategy();
-        const availableBudget = strategy === "reserve"
-            ? Math.max(0, gameState.cookies * (1 - AUTO_BUYER_RESERVE_RATIO))
-            : gameState.cookies;
-        if (cost > availableBudget) return;
+        data.owned = owned + 1;
+        const cpsGain = Math.max(0, calculateCps() - baseCps);
+        data.owned = owned;
+
+        const valueScore = cpsGain / cost;
+        const affordabilityScore = 1 / cost;
 
         const score = strategy === "cheap"
-            ? -cost
+            ? affordabilityScore
             : strategy === "balanced"
-                ? (valueScore * 0.75 + (effectiveBaseCps / 1000) * 0.25)
+                ? (valueScore * 0.8 + affordabilityScore * 0.2)
                 : strategy === "custom"
-                    ? (valueScore * Number(gameState.autoBuyerWeights?.value || 0.75) + ((-cost / 10000) * Number(gameState.autoBuyerWeights?.cheap || 0.25)))
+                    ? (valueScore * Number(gameState.autoBuyerWeights?.value || 0.75) + affordabilityScore * Number(gameState.autoBuyerWeights?.cheap || 0.25))
                 : valueScore;
 
         if (!best || score > best.score || (score === best.score && cost < best.cost)) {

@@ -3,7 +3,7 @@
 // Core Logik & Game Loop
 // =====================================
 
-import { buildings, getPurchaseCost, getBuildingCps, getMaxAffordableSummary } from "./buildings.js";
+import { buildings, getPurchaseCost, getBuildingCps } from "./buildings.js";
 import { getWorldById, worlds, isWorldUnlocked } from "./worlds.js";
 
 export const PRESTIGE_THRESHOLD = 1_000_000;
@@ -12,6 +12,9 @@ const ACTIVE_BOOST_COOLDOWN_MS = 30_000;
 const ACTIVE_BOOST_MULTIPLIER = 3;
 const CLICK_BURST_MULTIPLIER = 4;
 const DISCOUNT_BURST_RATIO = 0.25;
+const GOLDEN_SNUS_DURATION_MS = 12_000;
+const GOLDEN_SNUS_BASE_COOLDOWN_MS = 50_000;
+const GOLDEN_SNUS_RANDOM_COOLDOWN_MS = 40_000;
 
 export const AUTO_BUYER_UNLOCK_COST = 30_000;
 const AUTO_BUYER_MAX_PURCHASES_PER_TICK = 3;
@@ -209,6 +212,16 @@ export const quests = [
     }
 ];
 
+
+export const buildingSynergies = [
+    { sourceId: "farm", targetId: "cursor", bonusPerSource: 0.005, maxBonus: 0.4 },
+    { sourceId: "factory", targetId: "farm", bonusPerSource: 0.004, maxBonus: 0.5 },
+    { sourceId: "temple", targetId: "factory", bonusPerSource: 0.0035, maxBonus: 0.45 },
+    { sourceId: "lab", targetId: "temple", bonusPerSource: 0.003, maxBonus: 0.4 },
+    { sourceId: "exchange", targetId: "lab", bonusPerSource: 0.0025, maxBonus: 0.35 },
+    { sourceId: "orbital", targetId: "exchange", bonusPerSource: 0.002, maxBonus: 0.3 }
+];
+
 export const gameState = {
     cookies: 0,
     lifetimeCookies: 0,
@@ -246,7 +259,10 @@ export const gameState = {
         earned: 0,
         resetWeekKey: ""
     },
-    milestonePerks: {}
+    milestonePerks: {},
+    goldenSnusAvailableUntil: 0,
+    goldenSnusCooldownUntil: 0,
+    goldenSnusReward: 0
 };
 
 function getTodayKey() {
@@ -330,6 +346,42 @@ function addCookies(amount) {
     gameState.weeklyStats.earned += amount;
 }
 
+function scheduleNextGoldenSnus(now = Date.now()) {
+    const randomPart = Math.floor(Math.random() * GOLDEN_SNUS_RANDOM_COOLDOWN_MS);
+    gameState.goldenSnusCooldownUntil = now + GOLDEN_SNUS_BASE_COOLDOWN_MS + randomPart;
+}
+
+function rollGoldenSnusReward() {
+    const cpsReward = calculateCps() * 25;
+    const lifetimeFactor = Math.max(250, gameState.lifetimeCookies * 0.0025);
+    const clickFactor = Math.max(180, gameState.clickPower * getClickUpgradeMultiplier() * 35);
+    return Math.max(200, Math.floor(cpsReward + lifetimeFactor + clickFactor));
+}
+
+function tickGoldenSnus(now = Date.now()) {
+    const availableUntil = Number(gameState.goldenSnusAvailableUntil || 0);
+    if (availableUntil > 0 && now > availableUntil) {
+        gameState.goldenSnusAvailableUntil = 0;
+        gameState.goldenSnusReward = 0;
+        scheduleNextGoldenSnus(now);
+        return;
+    }
+
+    if (availableUntil > now) return;
+
+    const cooldownUntil = Number(gameState.goldenSnusCooldownUntil || 0);
+    if (cooldownUntil <= 0) {
+        scheduleNextGoldenSnus(now);
+        return;
+    }
+
+    if (now >= cooldownUntil) {
+        gameState.goldenSnusReward = rollGoldenSnusReward();
+        gameState.goldenSnusAvailableUntil = now + GOLDEN_SNUS_DURATION_MS;
+        gameState.goldenSnusCooldownUntil = now + GOLDEN_SNUS_DURATION_MS;
+    }
+}
+
 function resetBuildingData() {
     buildings.forEach((building) => {
         gameState.buildingData[building.id] = {
@@ -390,6 +442,9 @@ export function resetGameState() {
         resetWeekKey: getWeekKey()
     };
     gameState.milestonePerks = {};
+    gameState.goldenSnusAvailableUntil = 0;
+    gameState.goldenSnusCooldownUntil = 0;
+    gameState.goldenSnusReward = 0;
     
     rotateDailyQuestsForToday();
     resetBuildingData();
@@ -413,6 +468,27 @@ function getCpsUpgradeMultiplier() {
 function getClickUpgradeMultiplier() {
     const level = getUpgradeLevel("clickMastery");
     return 1 + level * 0.25;
+}
+
+function getOwnedCount(buildingId) {
+    const raw = Number(gameState.buildingData?.[buildingId]?.owned || 0);
+    return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : 0;
+}
+
+export function getBuildingSynergyBonusPercent(targetId) {
+    return Math.round((getBuildingSynergyMultiplier(targetId) - 1) * 100);
+}
+
+function getBuildingSynergyMultiplier(targetId) {
+    const bonus = buildingSynergies
+        .filter((entry) => entry.targetId === targetId)
+        .reduce((sum, entry) => {
+            const sourceOwned = getOwnedCount(entry.sourceId);
+            const rawBonus = sourceOwned * Number(entry.bonusPerSource || 0);
+            return sum + Math.min(Number(entry.maxBonus || 0), Math.max(0, rawBonus));
+        }, 0);
+
+    return 1 + bonus;
 }
 
 function getWorldModifiers() {
@@ -460,6 +536,39 @@ function getBuildingDiscountMultiplier() {
     return Math.max(0.55, 1 - worldDiscount - burstDiscount - perkDiscount);
 }
 
+export function getEffectivePurchasePreview(building, owned, mode, cookies = gameState.cookies) {
+    const discountMultiplier = getBuildingDiscountMultiplier();
+
+    if (mode === "max") {
+        let count = 0;
+        let totalCost = 0;
+        let nextOwned = owned;
+
+        while (true) {
+            const baseCost = getPurchaseCost(building, nextOwned, 1);
+            const discountedCost = Math.floor(baseCost * discountMultiplier);
+            if (discountedCost <= 0 || totalCost + discountedCost > cookies) break;
+            totalCost += discountedCost;
+            count += 1;
+            nextOwned += 1;
+        }
+
+        return {
+            quantity: count,
+            totalCost,
+            discountPercent: Math.round((1 - discountMultiplier) * 100)
+        };
+    }
+
+    const quantity = Number.isFinite(mode) ? Math.max(0, Math.floor(mode)) : 0;
+    const baseCost = getPurchaseCost(building, owned, quantity);
+    return {
+        quantity,
+        totalCost: Math.floor(baseCost * discountMultiplier),
+        discountPercent: Math.round((1 - discountMultiplier) * 100)
+    };
+}
+
 export function getBoostStatus() {
     const now = Date.now();
     const activeMs = Math.max(0, Number(gameState.activeBoostUntil || 0) - now);
@@ -493,8 +602,34 @@ export function getActiveBonuses() {
         discountBurstActive: discountBurstNow,
         streakBonusPercent: Math.round(streakBonus * 100),
         skillPowerPercent: Math.round((getSkillPowerMultiplier() - 1) * 100),
-        autoBuyerExtraPurchases: getUpgradeLevel("automationCore") + (gameState.milestonePerks?.autobuyer_speed ? 1 : 0)
+        autoBuyerExtraPurchases: getUpgradeLevel("automationCore") + (gameState.milestonePerks?.autobuyer_speed ? 1 : 0),
+        goldenSnusAvailable: Date.now() < Number(gameState.goldenSnusAvailableUntil || 0),
+        goldenSnusReward: Math.max(0, Math.floor(Number(gameState.goldenSnusReward || 0)))
     };
+}
+
+export function getGoldenSnusState() {
+    const now = Date.now();
+    const availableUntil = Number(gameState.goldenSnusAvailableUntil || 0);
+    const available = availableUntil > now;
+    return {
+        available,
+        remainingMs: available ? Math.max(0, availableUntil - now) : 0,
+        reward: Math.max(0, Math.floor(Number(gameState.goldenSnusReward || 0)))
+    };
+}
+
+export function claimGoldenSnus() {
+    const now = Date.now();
+    const state = getGoldenSnusState();
+    if (!state.available || state.reward <= 0) return 0;
+
+    const reward = state.reward;
+    addCookies(reward);
+    gameState.goldenSnusAvailableUntil = 0;
+    gameState.goldenSnusReward = 0;
+    scheduleNextGoldenSnus(now);
+    return reward;
 }
 
 export function activateProductionBoost() {
@@ -592,6 +727,8 @@ function getAutoBuyerChoice() {
         if (cost <= 0 || cost > gameState.cookies) return;
 
         const valueScore = building.baseCps / cost;
+        const effectiveBaseCps = building.baseCps * getBuildingSynergyMultiplier(building.id);
+        const valueScore = effectiveBaseCps / cost;
         const strategy = getAutoBuyerStrategy();
         const availableBudget = strategy === "reserve"
             ? Math.max(0, gameState.cookies * (1 - AUTO_BUYER_RESERVE_RATIO))
@@ -601,7 +738,7 @@ function getAutoBuyerChoice() {
         const score = strategy === "cheap"
             ? -cost
             : strategy === "balanced"
-                ? (valueScore * 0.75 + (building.baseCps / 1000) * 0.25)
+                ? (valueScore * 0.75 + (effectiveBaseCps / 1000) * 0.25)
                 : strategy === "custom"
                     ? (valueScore * Number(gameState.autoBuyerWeights?.value || 0.75) + ((-cost / 10000) * Number(gameState.autoBuyerWeights?.cheap || 0.25)))
                 : valueScore;
@@ -699,6 +836,9 @@ export function prestigeReset() {
     gameState.autoBuyerEnabled = false;
     gameState.autoBuyerUnlocked = false;
     gameState.autoBuyerLastDecision = "";
+    gameState.goldenSnusAvailableUntil = 0;
+    gameState.goldenSnusCooldownUntil = 0;
+    gameState.goldenSnusReward = 0;
 
     resetBuildingData();
 
@@ -726,7 +866,8 @@ export function calculateCps() {
     buildings.forEach((b) => {
         const rawOwned = Number(gameState.buildingData[b.id]?.owned);
         const owned = Number.isFinite(rawOwned) && rawOwned >= 0 ? Math.floor(rawOwned) : 0;
-        total += getBuildingCps(b, owned);
+        const synergyMultiplier = getBuildingSynergyMultiplier(b.id);
+        total += getBuildingCps(b, owned) * synergyMultiplier;
     });
 
     const worldModifiers = getWorldModifiers();
@@ -836,6 +977,8 @@ export function gameLoop() {
     const delta = (now - lastUpdate) / 1000;
     lastUpdate = now;
 
+    tickGoldenSnus(now);
+
     const cps = calculateCps();
     const production = cps * delta;
 
@@ -877,20 +1020,10 @@ export function buyBuilding(buildingId) {
     const owned = Number.isFinite(rawOwned) && rawOwned >= 0 ? Math.floor(rawOwned) : 0;
     if (data.owned !== owned) data.owned = owned;
 
-    let quantity = gameState.buyMode;
-    let totalCost = 0;
-
-    if (quantity === "max") {
-        const summary = getMaxAffordableSummary(building, owned, gameState.cookies);
-        quantity = summary.count;
-        totalCost = summary.totalCost;
-    } else {
-        quantity = Number.isFinite(quantity) ? Math.floor(quantity) : 1;
-        totalCost = getPurchaseCost(building, owned, quantity);
-    }
-
-    totalCost = Math.floor(totalCost * getBuildingDiscountMultiplier());
-
+    const preview = getEffectivePurchasePreview(building, owned, gameState.buyMode, gameState.cookies);
+    const quantity = preview.quantity;
+    const totalCost = preview.totalCost;
+    
     if (gameState.cookies >= totalCost && quantity > 0) {
         gameState.cookies -= totalCost;
         data.owned = owned + quantity;

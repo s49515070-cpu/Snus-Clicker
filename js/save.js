@@ -608,7 +608,7 @@ export function importSave() {
     }
 }
 
-#export function restoreBackup(slotInput) {
+export function restoreBackup(slotInput) {
     const available = listSaveBackups();
     if (available.length === 0) {
         showToast("⚠️ Kein Backup gefunden.", 1700, "warning");

@@ -19,6 +19,10 @@ import {
   getActiveQuests,
   runAutoBuyerTick,
   setAutoBuyerStrategy,
+  setAutoBuyerWeights,
+  getAutoBuyerWeights,
+  getAutoBuyerStatus,
+  getActiveBonuses,
 } from '../js/engine.js';
 
 import { buildings, getMaxAffordable, getMaxAffordableSummary } from '../js/buildings.js';
@@ -56,6 +60,8 @@ const {
   getUiRefreshInterval,
   resetRuntimeConfig,
 } = configModule;
+const { updateLanguage, getLanguage } = configModule;
+const { t } = await import('../js/i18n.js');
 
 function resetEngineState() {
   gameState.cookies = 0;
@@ -239,6 +245,54 @@ function testBuildingsControllerMarksBestBuy() {
 
   const titleNode = farmCard.children?.[1]?.children?.[0];
   assert.ok(String(titleNode?.innerHTML || '').includes('Best Buy'), 'best value building should be marked in title');
+}
+
+function testBuildingsControllerRoiUsesMaxQuantity() {
+  resetEngineState();
+  installControllerDocumentMock();
+
+  const leftColumn = createMockElement('section');
+  const rightColumn = createMockElement('section');
+
+  const controller = createBuildingsUIController({
+    gameState,
+    buildings,
+    getBuildingCost: (building, owned) => Math.floor(building.baseCost * Math.pow(building.growth, owned)),
+    getPurchaseCost: (building, owned, quantity) => {
+      let total = 0;
+      for (let i = 0; i < quantity; i += 1) {
+        total += Math.floor(building.baseCost * Math.pow(building.growth, owned + i));
+      }
+      return total;
+    },
+    getMaxAffordableSummary: (building, owned, cookies) => {
+      let count = 0;
+      let totalCost = 0;
+      while (true) {
+        const cost = Math.floor(building.baseCost * Math.pow(building.growth, owned + count));
+        if (totalCost + cost > cookies) break;
+        totalCost += cost;
+        count += 1;
+      }
+      return { count, totalCost };
+    },
+    buyBuilding,
+    formatNumber: (n) => String(Math.floor(n)),
+    leftColumn,
+    rightColumn
+  });
+
+  gameState.cookies = 1000;
+  gameState.buyMode = 'max';
+
+  controller.renderBuildings();
+
+  const farmCard = rightColumn.children.find((card) => card.dataset?.buildingId === 'farm');
+  assert.ok(farmCard, 'farm card should be rendered');
+
+  const forecastNode = farmCard.children?.[1]?.children?.[3];
+  assert.ok(String(forecastNode?.textContent || '').startsWith('ROI:'), 'ROI forecast should be rendered for MAX mode');
+  assert.equal(String(forecastNode?.textContent || '').includes('—'), false, 'ROI should be numeric in MAX mode when purchases are possible');
 }
 
 function testPrestigeControllerCallbacks() {
@@ -503,6 +557,57 @@ function testAutoBuyerStrategyReserveKeepsSavings() {
   assert.ok(gameState.cookies >= 20, 'reserve strategy should keep about 20% of cookies unspent');
 }
 
+function testAutoBuyerStrategyCustomUsesWeightsAndPersistsDecision() {
+  resetEngineState();
+  gameState.cookies = 60;
+  gameState.autoBuyerUnlocked = true;
+  gameState.autoBuyerEnabled = true;
+  setAutoBuyerStrategy('custom');
+  setAutoBuyerWeights(0, 1);
+
+  const purchases = runAutoBuyerTick();
+  const weights = getAutoBuyerWeights();
+  const status = getAutoBuyerStatus();
+
+  assert.equal(purchases, 3, 'custom strategy should still run purchase loop');
+  assert.equal(gameState.buildingData.cursor.owned, 3, 'custom strategy with cheap weight should prefer cursor');
+  assert.ok(weights.value >= 0 && weights.value <= 1, 'custom value weight should be clamped to [0,1]');
+  assert.ok(weights.cheap >= 0 && weights.cheap <= 1, 'custom cheap weight should be clamped to [0,1]');
+  assert.ok(String(status.decision).includes('cursor'), 'auto-buyer should store last decision for UI transparency');
+}
+
+function testBuyBuildingAppliesWorldDiscountModifier() {
+  resetEngineState();
+  gameState.cookies = 100;
+  gameState.currentWorld = 2;
+  gameState.unlockedWorldIds = [1, 2];
+  gameState.buyMode = 1;
+
+  const before = gameState.cookies;
+  const purchased = buyBuilding('farm');
+
+  assert.equal(purchased, true, 'farm should be purchasable in world 2 with discount and 100 cookies');
+  assert.ok(gameState.cookies > before - 90, 'world discount should reduce effective building cost');
+}
+
+function testActiveBonusesExposeWorldAndAutomationState() {
+  resetEngineState();
+  gameState.currentWorld = 2;
+  gameState.unlockedWorldIds = [1, 2];
+  gameState.dailyStreak = 5;
+  gameState.autoBuyerUnlocked = true;
+  gameState.autoBuyerEnabled = true;
+  gameState.prestigeUpgradeLevels.automationCore = 2;
+  gameState.milestonePerks.autobuyer_speed = true;
+
+  const bonuses = getActiveBonuses();
+
+  assert.ok(bonuses.worldClickBonusPercent > 0, 'world click bonus should be surfaced in active bonuses');
+  assert.ok(bonuses.worldDiscountPercent > 0, 'world discount should be surfaced in active bonuses');
+  assert.equal(bonuses.streakBonusPercent, 5, 'daily streak bonus should be reflected in active bonuses');
+  assert.equal(bonuses.autoBuyerExtraPurchases, 3, 'automation level + perk should affect auto-buyer cap preview');
+}
+
 
 function testDailyQuestRotationMaintainsActiveSubset() {
   resetEngineState();
@@ -534,6 +639,20 @@ function testConfigReset() {
   assert.equal(getUiRefreshInterval(), 100, 'reset defaults should persist to storage');
 }
 
+function testLocalizedContentKeysForMilestonesAndQuests() {
+  updateLanguage('en');
+  assert.equal(t('questDailyClicks200Label'), 'Daily: 200 clicks', 'quest label should be translated in english');
+  assert.equal(t('milestoneRookieDescription'), 'Reach 10,000 lifetime snus', 'milestone description should be translated in english');
+  assert.equal(t('saveMigrated', { version: 3 }), '💾 Save was migrated to version 3.', 'save migration message should be translated in english');
+
+  updateLanguage('de');
+  assert.equal(t('questDailyClicks200Label'), 'Daily: 200 Klicks', 'quest label should be translated in german');
+  assert.equal(t('milestoneRookieDescription'), 'Erreiche 10.000 Lifetime-Snus', 'milestone description should be translated in german');
+  assert.equal(t('saveMigrated', { version: 3 }), '💾 Spielstand wurde auf Version 3 migriert.', 'save migration message should be translated in german');
+
+  assert.equal(getLanguage(), 'de', 'language should be reset to default test language after assertions');
+}
+
 function testConfigClampingAndPersistence() {
   localStorage.clear();
   runtimeConfig.autosaveIntervalMs = 5000;
@@ -560,6 +679,7 @@ async function testLoadGameNormalization() {
   const { loadGame } = await import('../js/save.js');
 
   localStorage.setItem('snus_clicker_save', JSON.stringify({
+    saveVersion: 1,
     cookies: -5,
     lifetimeCookies: -10,
     lifetimeCookiesAtLastPrestige: 999, 
@@ -573,6 +693,16 @@ async function testLoadGameNormalization() {
     },
     prestigeUpgradeLevels: {
       clickMastery: 999
+    },
+    dailyStats: {
+      clicks: 12,
+      earned: 345,
+      resetDayKey: 'old-day-key'
+    },
+    autoBuyerWeight: 0.6,
+    autoBuyerWeights: { value: 5, cheap: -3 },
+    milestonePeks: {
+      discount_3: true
     }
   }));
 
@@ -586,6 +716,17 @@ async function testLoadGameNormalization() {
   assert.equal(gameState.prestigeMultiplier, 1, 'prestige multiplier should clamp to min 1');
   assert.equal(gameState.clickPower, 1, 'click power should clamp to min 1');
   assert.equal(gameState.buildingData.cursor.owned, 0, 'negative owned building count should clamp to 0');
+  assert.equal(gameState.saveVersion, 3, 'save should be migrated to current save version');
+  assert.equal(gameState.milestonePerks.discount_3, true, 'legacy milestonePeks field should migrate to milestonePerks');
+  assert.equal(gameState.todayStats.clicks, 12, 'legacy dailyStats should migrate to todayStats');
+  assert.equal(gameState.autoBuyerWeights.value, 1, 'autoBuyerWeights value should clamp and normalize');
+  assert.equal(gameState.autoBuyerWeights.cheap, 0, 'autoBuyerWeights cheap should clamp and normalize');
+  assert.equal(Array.isArray(gameState.migrationMeta.steps), true, 'migration metadata should include migration steps');
+  assert.ok(gameState.migrationMeta.steps.includes('v1_to_v2'), 'migration metadata should record applied migration step');
+  assert.ok(gameState.migrationMeta.steps.includes('v2_to_v3'), 'migration metadata should record v2 to v3 migration step');
+  assert.ok(typeof gameState.migrationMeta.migratedAt === 'string' && gameState.migrationMeta.migratedAt.length > 0, 'migration metadata should include timestamp when migrated');
+  assert.equal(gameState.migrationMeta.futureVersionDetected, false, 'normal migration should not set future version flag');
+  assert.equal(gameState.migrationMeta.reason, 'migrated', 'normal migration should set migrated reason');
 
   const clickMastery = prestigeUpgrades.find((u) => u.id === 'clickMastery');
   assert.equal(
@@ -593,6 +734,63 @@ async function testLoadGameNormalization() {
     clickMastery.maxLevel,
     'prestige levels should clamp to max level'
   );
+  
+  const persisted = JSON.parse(localStorage.getItem('snus_clicker_save'));
+  assert.equal(persisted.saveVersion, 3, 'migrated save should be persisted with current save version');
+  assert.equal(persisted.migrationMeta.previousVersion, 1, 'persisted migration metadata should track previous version');
+  assert.equal(persisted.migrationMeta.noticeShown, true, 'migration notice should be marked as shown after first migrated load');
+  assert.equal('dailyStats' in persisted, false, 'migration should remove deprecated dailyStats field from persisted save');
+  assert.equal('autoBuyerWeight' in persisted, false, 'migration should remove deprecated autoBuyerWeight field from persisted save');
+  assert.equal('milestonePeks' in persisted, false, 'migration should remove deprecated milestonePeks field from persisted save');
+}
+
+
+async function testLoadGamePreservesFutureSaveVersion() {
+  resetEngineState();
+  mockDomForUiImports();
+
+  const { loadGame } = await import('../js/save.js');
+
+  localStorage.setItem('snus_clicker_save', JSON.stringify({
+    saveVersion: 99,
+    cookies: 10,
+    autoBuyerWeights: { value: 0.9, cheap: 0.1 }
+  }));
+
+  loadGame();
+
+  assert.equal(gameState.saveVersion, 99, 'future save versions should be preserved and not downgraded');
+
+  const persisted = JSON.parse(localStorage.getItem('snus_clicker_save'));
+  assert.equal(persisted.saveVersion, 99, 'persisted payload should keep future save version');
+  assert.equal(Array.isArray(persisted.migrationMeta.steps), true, 'future save metadata should include steps array');
+  assert.equal(persisted.migrationMeta.steps.length, 0, 'future save metadata should not report fake migration steps');
+  assert.equal(persisted.migrationMeta.currentVersion, 99, 'future save metadata should track current version as-is');
+  assert.equal(persisted.migrationMeta.futureVersionDetected, true, 'future save metadata should mark future version detection');
+  assert.equal(persisted.migrationMeta.reason, 'future_version', 'future save metadata should set future_version reason');
+  assert.equal(persisted.migrationMeta.migratedAt, '', 'future save metadata should not set migrated timestamp');
+  assert.equal(persisted.migrationMeta.noticeShown, undefined, 'future save flow should not mark migration notice as shown');
+}
+
+
+async function testLoadGameCurrentVersionHasNoMigrationSteps() {
+  resetEngineState();
+  mockDomForUiImports();
+
+  const { loadGame } = await import('../js/save.js');
+
+  localStorage.setItem('snus_clicker_save', JSON.stringify({
+    saveVersion: 3,
+    cookies: 55
+  }));
+
+  loadGame();
+
+  assert.equal(gameState.saveVersion, 3, 'current-version saves should keep current version');
+  assert.equal(gameState.migrationMeta.futureVersionDetected, false, 'current-version saves should not set future flag');
+  assert.equal(gameState.migrationMeta.reason, 'none', 'current-version saves should set reason none');
+  assert.equal(gameState.migrationMeta.migratedAt, '', 'current-version saves should not set migrated timestamp');
+  assert.equal(gameState.migrationMeta.steps.length, 0, 'current-version saves should not add migration steps');
 }
 
 async function testUiBuyModeButtonActiveState() {
@@ -721,11 +919,16 @@ async function testImportSaveUsesNormalization() {
   mockDomForUiImports();
 
   globalThis.prompt = () => JSON.stringify({
+    saveVersion: 1,
     cookies: -1,
     lifetimeCookies: 12345,
     currentWorld: 999,
     buyMode: -3,
-    buildingData: { cursor: { owned: -7 } }
+    buildingData: { cursor: { owned: -7 } },
+    dailyStats: { clicks: 5, earned: 55, resetDayKey: 'legacy-day' },
+    autoBuyerWeight: 0.25,
+    autoBuyerWeights: { value: 0.2, cheap: 0.2 },
+    milestonePeks: { skill_power: true }
   });
 
   const { importSave } = await import('../js/save.js');
@@ -736,9 +939,130 @@ async function testImportSaveUsesNormalization() {
   assert.equal(stored.currentWorld, 1, 'import should normalize invalid world to default');
   assert.equal(stored.buyMode, 1, 'import should normalize invalid buy mode');
   assert.equal(stored.buildingData.cursor.owned, 0, 'import should normalize negative building counts');
+  assert.equal(stored.saveVersion, 3, 'imported saves should be rewritten with current save version');
+  assert.equal(stored.milestonePerks.skill_power, true, 'import should migrate legacy milestonePeks field');
+  assert.equal(stored.todayStats.clicks, 5, 'import should migrate legacy dailyStats to todayStats');
+  assert.equal(stored.autoBuyerWeights.value, 0.5, 'import should normalize explicit autoBuyerWeights value share');
+  assert.equal(stored.autoBuyerWeights.cheap, 0.5, 'import should normalize explicit autoBuyerWeights cheap share');
+  assert.ok(stored.migrationMeta.steps.includes('v1_to_v2'), 'import migration metadata should contain applied migration step');
+  assert.ok(stored.migrationMeta.steps.includes('v2_to_v3'), 'import migration metadata should contain v2 to v3 migration step');
+  assert.equal(stored.migrationMeta.noticeShown, true, 'imported migrated save should mark notice as shown');
+  assert.equal(stored.migrationMeta.futureVersionDetected, false, 'normal import migration should not set future version flag');
+  assert.equal(stored.migrationMeta.reason, 'migrated', 'normal import migration should set migrated reason');
   assert.equal(gameState.cookies, 0, 'import should apply state immediately without reload');
   assert.equal(gameState.currentWorld, 1, 'applied imported world should be normalized');
 }
+
+async function testImportSavePreservesFutureSaveVersion() {
+  resetEngineState();
+  localStorage.clear();
+  mockDomForUiImports();
+
+  globalThis.prompt = () => JSON.stringify({
+    saveVersion: 77,
+    cookies: 42,
+    autoBuyerWeights: { value: 0.4, cheap: 0.6 }
+  });
+
+  const { importSave } = await import('../js/save.js');
+  importSave();
+
+  assert.equal(gameState.saveVersion, 77, 'future import should keep higher save version');
+
+  const stored = JSON.parse(localStorage.getItem('snus_clicker_save'));
+  assert.equal(stored.saveVersion, 77, 'persisted import should keep higher save version');
+  assert.equal(stored.migrationMeta.futureVersionDetected, true, 'future import should mark future version detection');
+  assert.equal(stored.migrationMeta.reason, 'future_version', 'future import should set future_version reason');
+  assert.equal(stored.migrationMeta.migratedAt, '', 'future import should not set migrated timestamp');
+  assert.equal(stored.migrationMeta.steps.length, 0, 'future import should not add fake migration steps');
+  assert.equal(stored.migrationMeta.noticeShown, undefined, 'future import flow should not mark migration notice as shown');
+}
+
+
+async function testImportSaveCanBeCancelledByPreviewConfirm() {
+  resetEngineState();
+  localStorage.clear();
+  mockDomForUiImports();
+
+  localStorage.setItem('snus_clicker_save', JSON.stringify({ saveVersion: 3, cookies: 7 }));
+
+  globalThis.prompt = () => JSON.stringify({ saveVersion: 3, cookies: 999 });
+  globalThis.confirm = () => false;
+
+  const { importSave } = await import('../js/save.js');
+  importSave();
+
+  const stored = JSON.parse(localStorage.getItem('snus_clicker_save'));
+  assert.equal(stored.cookies, 7, 'cancelled import should keep existing persisted save');
+  assert.equal(gameState.cookies, 0, 'cancelled import should not apply imported state');
+}
+
+async function testSaveBackupsRotateOnImportOverwrite() {
+  resetEngineState();
+  localStorage.clear();
+  mockDomForUiImports();
+
+  localStorage.setItem('snus_clicker_save', JSON.stringify({ saveVersion: 3, cookies: 10 }));
+
+  const { importSave } = await import('../js/save.js');
+
+  globalThis.confirm = () => true;
+  globalThis.prompt = () => JSON.stringify({ saveVersion: 3, cookies: 20 });
+  importSave();
+
+  let backup1 = JSON.parse(localStorage.getItem('snus_clicker_save_backup_1'));
+  assert.equal(backup1.cookies, 10, 'first overwrite should store previous save in backup slot 1');
+
+  globalThis.prompt = () => JSON.stringify({ saveVersion: 3, cookies: 30 });
+  importSave();
+
+  backup1 = JSON.parse(localStorage.getItem('snus_clicker_save_backup_1'));
+  const backup2 = JSON.parse(localStorage.getItem('snus_clicker_save_backup_2'));
+
+  assert.equal(backup1.cookies, 20, 'latest previous save should rotate into backup slot 1');
+  assert.equal(backup2.cookies, 10, 'older save should rotate into backup slot 2');
+}
+
+
+async function testRestoreBackupAppliesSelectedSlot() {
+  resetEngineState();
+  localStorage.clear();
+  mockDomForUiImports();
+
+  localStorage.setItem('snus_clicker_save_backup_1', JSON.stringify({ saveVersion: 3, cookies: 111 }));
+  localStorage.setItem('snus_clicker_save_backup_2', JSON.stringify({ saveVersion: 3, cookies: 222 }));
+
+  globalThis.confirm = () => true;
+
+  const { restoreBackup } = await import('../js/save.js');
+  const restored = restoreBackup(2);
+
+  assert.equal(restored, true, 'restoreBackup should return true on successful restore');
+  assert.equal(gameState.cookies, 222, 'restoreBackup should apply selected backup slot state');
+
+  const stored = JSON.parse(localStorage.getItem('snus_clicker_save'));
+  assert.equal(stored.cookies, 222, 'restoreBackup should persist restored state as current save');
+}
+
+async function testRestoreBackupCanBeCancelled() {
+  resetEngineState();
+  localStorage.clear();
+  mockDomForUiImports();
+
+  localStorage.setItem('snus_clicker_save', JSON.stringify({ saveVersion: 3, cookies: 50 }));
+  localStorage.setItem('snus_clicker_save_backup_1', JSON.stringify({ saveVersion: 3, cookies: 999 }));
+
+  globalThis.confirm = () => false;
+
+  const { restoreBackup } = await import('../js/save.js');
+  const restored = restoreBackup(1);
+
+  assert.equal(restored, false, 'restoreBackup should return false when user cancels');
+
+  const stored = JSON.parse(localStorage.getItem('snus_clicker_save'));
+  assert.equal(stored.cookies, 50, 'cancelled restore should keep existing current save');
+}
+
 
 async function testResetSaveAppliesWithoutReload() {
   resetEngineState();
@@ -747,6 +1071,8 @@ async function testResetSaveAppliesWithoutReload() {
   gameState.cookies = 1234;
   gameState.lifetimeCookies = 5678;
   localStorage.setItem('snus_clicker_save', JSON.stringify({ cookies: 999 }));
+  localStorage.setItem('snus_clicker_save_backup_1', JSON.stringify({ cookies: 123 }));
+  localStorage.setItem('snus_clicker_save_backup_2', JSON.stringify({ cookies: 456 }));
 
   globalThis.confirm = () => true;
 
@@ -756,6 +1082,8 @@ async function testResetSaveAppliesWithoutReload() {
   assert.equal(gameState.cookies, 0, 'reset should apply immediately without reloading');
   assert.equal(gameState.lifetimeCookies, 0, 'reset should clear lifetime cookies');
   assert.equal(localStorage.getItem('snus_clicker_save'), null, 'reset should remove persisted save');
+  assert.equal(localStorage.getItem('snus_clicker_save_backup_1'), null, 'reset should remove backup saves');
+  assert.equal(localStorage.getItem('snus_clicker_save_backup_2'), null, 'reset should remove all backup slots');
 }
 
 async function run() {
@@ -769,6 +1097,7 @@ async function run() {
   testBuyModeSanitizing();
   testBuildingsControllerRendersAfterPurchase();
   testBuildingsControllerMarksBestBuy();
+  testBuildingsControllerRoiUsesMaxQuantity();
   testPrestigeControllerCallbacks();
   testBuyBuildingNormalizesOwnedType();
   testBuildingPurchaseNeedsValidId();
@@ -779,11 +1108,22 @@ async function run() {
   testAutoBuyerPrioritizesBestValuePurchases();
   testAutoBuyerStrategyCheapPrefersLowCost();
   testAutoBuyerStrategyReserveKeepsSavings();
+  testAutoBuyerStrategyCustomUsesWeightsAndPersistsDecision();
+  testBuyBuildingAppliesWorldDiscountModifier();
+  testActiveBonusesExposeWorldAndAutomationState();
   testConfigClampingAndPersistence();
   testConfigReset();
+  testLocalizedContentKeysForMilestonesAndQuests();
   await testUiBuyModeButtonActiveState();
   await testLoadGameNormalization();
+  await testLoadGamePreservesFutureSaveVersion();
+  await testLoadGameCurrentVersionHasNoMigrationSteps();
   await testImportSaveUsesNormalization();
+  await testImportSavePreservesFutureSaveVersion();
+  await testImportSaveCanBeCancelledByPreviewConfirm();
+  await testSaveBackupsRotateOnImportOverwrite();
+  await testRestoreBackupAppliesSelectedSlot();
+  await testRestoreBackupCanBeCancelled();
   await testExportSaveFallbackCopyPath();
   await testResetSaveAppliesWithoutReload();
   

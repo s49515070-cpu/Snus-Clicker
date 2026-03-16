@@ -726,7 +726,6 @@ function getAutoBuyerChoice() {
         const cost = getPurchaseCost(building, owned, 1);
         if (cost <= 0 || cost > gameState.cookies) return;
 
-        const valueScore = building.baseCps / cost;
         const effectiveBaseCps = building.baseCps * getBuildingSynergyMultiplier(building.id);
         const valueScore = effectiveBaseCps / cost;
         const strategy = getAutoBuyerStrategy();

@@ -885,6 +885,7 @@ export function buyBuilding(buildingId) {
         quantity = summary.count;
         totalCost = summary.totalCost;
     } else {
+        quantity = Number.isFinite(quantity) ? Math.floor(quantity) : 1;
         totalCost = getPurchaseCost(building, owned, quantity);
     }
 
@@ -900,7 +901,13 @@ export function buyBuilding(buildingId) {
 }
 
 export function setBuyMode(mode) {
-    gameState.buyMode = mode === "max" ? "max" : Number.isFinite(mode) && mode > 0 ? mode : 1;
+    if (mode === "max") {
+        gameState.buyMode = "max";
+        return;
+    }
+
+    const normalizedMode = Number.isFinite(mode) ? Math.floor(mode) : 1;
+    gameState.buyMode = normalizedMode > 0 ? normalizedMode : 1;
 }
 
 export function buyWorld(worldId) {

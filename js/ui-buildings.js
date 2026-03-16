@@ -137,7 +137,12 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
         const addedCps = building.baseCps * synergyMultiplier * Math.max(0, quantity);
         const roi = addedCps > 0 ? purchase.cost / addedCps : NaN;
         const synergyText = synergyBonusPercent > 0 ? ` · SYNC +${synergyBonusPercent}%` : "";
-        entry.forecast.textContent = `ROI: ${Number.isFinite(roi) ? roi.toFixed(1) : "—"}s${synergyText}`;
+        const spsGain = Number.isFinite(addedCps)
+            ? addedCps >= 1000
+                ? formatNumber(addedCps)
+                : addedCps.toFixed(2)
+            : "0.00";
+        entry.forecast.textContent = `SPS: +${spsGain} · ROI: ${Number.isFinite(roi) ? roi.toFixed(1) : "—"}s${synergyText}`;
        
         entry.card.classList.toggle("is-affordable", canAfford);
         entry.card.classList.toggle("is-unaffordable", !canAfford);

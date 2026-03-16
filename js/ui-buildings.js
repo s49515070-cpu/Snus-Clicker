@@ -79,10 +79,13 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
         const buyCost = document.createElement("div");
         buyCost.className = "building-buy-cost";
 
-        details.append(title, nextPrice, buyCost);
+        const forecast = document.createElement("div");
+        forecast.className = "building-forecast";
+
+        details.append(title, nextPrice, buyCost, forecast);
         card.append(icon, details);
 
-        return { card, title, nextPrice, buyCost };
+        return { card, title, nextPrice, buyCost, forecast };
     }
 
     function updateBuildingCard(building, bestBuyBuildingId) {
@@ -101,6 +104,10 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
         entry.title.innerHTML = `<strong>${building.name}</strong> (${owned})${isBestBuy ? ` · ⭐ ${translate("bestBuy")}` : ""}`;
         entry.nextPrice.textContent = `${translate("nextPrice")}: ${formatNumber(cost)}`;
         entry.buyCost.textContent = `${translate("purchase")} (${gameState.buyMode === "max" ? "MAX" : `x${purchase.quantity}`}): ${formatNumber(purchase.cost)}`;
+        const quantity = Number.isFinite(Number(purchase.quantity)) ? Number(purchase.quantity) : 0;
+        const addedCps = building.baseCps * Math.max(0, quantity);
+        const roi = addedCps > 0 ? purchase.cost / addedCps : NaN;
+        entry.forecast.textContent = `ROI: ${Number.isFinite(roi) ? roi.toFixed(1) : "—"}s`;
        
         entry.card.classList.toggle("is-affordable", canAfford);
         entry.card.classList.toggle("is-unaffordable", !canAfford);

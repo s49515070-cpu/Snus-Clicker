@@ -324,6 +324,9 @@ function normalizeSavePayload(parsed) {
             resetWeekKey: typeof migrated.weeklyStats?.resetWeekKey === "string" ? migrated.weeklyStats.resetWeekKey : ""
         },
         milestonePerks: typeof migrated.milestonePerks === "object" && migrated.milestonePerks ? migrated.milestonePerks : {},
+        goldenSnusAvailableUntil: normalizeNumber(migrated.goldenSnusAvailableUntil, 0, 0),
+        goldenSnusCooldownUntil: normalizeNumber(migrated.goldenSnusCooldownUntil, 0, 0),
+        goldenSnusReward: normalizeNumber(migrated.goldenSnusReward, 0, 0),
         migrationMeta: migrationResult.migrationMeta
         
     };

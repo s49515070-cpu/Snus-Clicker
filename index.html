@@ -57,11 +57,18 @@
         <div id="rightBuildings" class="building-column"></div>
 
     </div>
+    
+    <button id="goldenSnusButton" class="golden-snus-button" type="button" hidden>🍀 Golden Snus</button>
+
+    <button id="prestigeToggleButton" class="prestige-toggle-button glass" type="button">💎 Prestige</button>
 
     <!-- Prestige Panel -->
-    <div class="prestige-panel glass">
-        <h3>💎 Prestige Upgrades</h3>
-         <div id="prestigeSummary" class="prestige-summary"></div>
+    <div id="prestigePanel" class="prestige-panel glass">
+        <div class="prestige-header">
+            <h3>💎 Prestige Upgrades</h3>
+            <button id="prestigeCloseButton" type="button" aria-label="Prestige schließen">✕</button>
+        </div>
+        <div id="prestigeSummary" class="prestige-summary"></div>
         <div id="prestigeUpgrades"></div>
         <button id="prestigeButton">Prestige Reset</button>
         <div id="prestigeResetProgress" class="prestige-reset-progress" aria-live="polite"></div>
@@ -75,14 +82,6 @@
         <div id="boostStatus" class="boost-status"></div>
         <div id="autoBuyerStatus" class="boost-status"></div>
         <button id="autoBuyerButton" type="button">🤖 Auto-Buyer (30K)</button>
-    </div>
-
-    <!-- Kauf Optionen -->
-    <div class="buy-options glass">
-        <button data-buy="1">x1</button>
-        <button data-buy="10">x10</button>
-        <button data-buy="100">x100</button>
-        <button data-buy="max">MAX</button>
     </div>
 
         <button id="milestonesToggleButton" class="milestones-toggle-button glass" type="button">🎯 Milestones</button>
@@ -104,8 +103,7 @@
         <div id="dailySummary" class="daily-summary"></div>
     </div>
 
-    <div id="goalHints" class="goal-hints glass" aria-live="polite"></div>
-    <div id="activeBonusesPanel" class="goal-hints glass" aria-live="polite"></div>
+    <div id="activeBonusesPanel" class="active-bonuses-panel" aria-live="polite"></div>
 
     <button id="settingsToggleButton" class="settings-toggle-button glass" type="button">⚙️ Einstellungen</button>
 

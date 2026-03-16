@@ -299,7 +299,7 @@ function testBuildingsControllerRoiUsesMaxQuantity() {
   const farmCard = rightColumn.children.find((card) => card.dataset?.buildingId === 'farm');
   assert.ok(farmCard, 'farm card should be rendered');
 
-  const forecastNode = farmCard.children?.[1]?.children?.[3];
+  const forecastNode = farmCard.children?.[1]?.children?.[5];
   assert.ok(String(forecastNode?.textContent || '').startsWith('ROI:'), 'ROI forecast should be rendered for MAX mode');
   assert.equal(String(forecastNode?.textContent || '').includes('—'), false, 'ROI should be numeric in MAX mode when purchases are possible');
 }

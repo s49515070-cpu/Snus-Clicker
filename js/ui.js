@@ -477,7 +477,11 @@ function handleCookiePointer(event) {
 }
 
 if (cookieClickArea && clickEffectContainer) {
-    cookieClickArea.addEventListener("pointerdown", handleCookiePointer);
+    if (typeof window !== "undefined" && typeof window.PointerEvent === "function") {
+        cookieClickArea.addEventListener("pointerdown", handleCookiePointer);
+    } else {
+        cookieClickArea.addEventListener("click", handleCookiePointer);
+    }
     cookieClickArea.addEventListener("keydown", (e) => {
         if (e.key !== "Enter" && e.key !== " ") return;
         e.preventDefault();

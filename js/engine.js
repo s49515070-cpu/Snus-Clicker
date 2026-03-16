@@ -662,6 +662,49 @@ export function getPrestigeUpgradeCost(upgradeId) {
     return Math.floor(upgrade.baseCost * Math.pow(upgrade.growth, level));
 }
 
+export function getPotentialPrestigeGain() {
+    const lifetimeSinceLastPrestige = Math.max(0, gameState.lifetimeCookies - gameState.lifetimeCookiesAtLastPrestige);
+    return Math.floor(lifetimeSinceLastPrestige / PRESTIGE_THRESHOLD);
+}
+
+export function getPrestigePreview() {
+    return {
+        lose: {
+            cookies: Math.floor(gameState.cookies)
+        },
+        gain: {
+            prestigeCookies: getPotentialPrestigeGain()
+        }
+    };
+}
+
+export function prestigeReset() {
+    const gained = getPotentialPrestigeGain();
+    if (gained <= 0) return 0;
+
+    gameState.prestigeCookies += gained;
+    gameState.lifetimeCookiesAtLastPrestige = gameState.lifetimeCookies;
+    gameState.prestigeMultiplier = 1 + gameState.prestigeCookies * 0.01;
+
+    gameState.cookies = 0;
+    gameState.currentWorld = 1;
+    gameState.unlockedWorldIds = [1];
+    gameState.buyMode = 1;
+    gameState.activeBoostUntil = 0;
+    gameState.activeBoostCooldownUntil = 0;
+    gameState.clickBurstUntil = 0;
+    gameState.clickBurstCooldownUntil = 0;
+    gameState.discountBurstUntil = 0;
+    gameState.discountBurstCooldownUntil = 0;
+    gameState.autoBuyerEnabled = false;
+    gameState.autoBuyerUnlocked = false;
+    gameState.autoBuyerLastDecision = "";
+
+    resetBuildingData();
+
+    return gained;
+}
+
 export function buyPrestigeUpgrade(upgradeId) {
     const upgrade = prestigeUpgrades.find((item) => item.id === upgradeId);
     if (!upgrade) return false;
@@ -858,6 +901,25 @@ export function buyBuilding(buildingId) {
 
 export function setBuyMode(mode) {
     gameState.buyMode = mode === "max" ? "max" : Number.isFinite(mode) && mode > 0 ? mode : 1;
+}
+
+export function buyWorld(worldId) {
+    const world = getWorldById(worldId);
+    if (!world) return false;
+    if (gameState.unlockedWorldIds.includes(worldId)) return true;
+
+    const canUnlock = isWorldUnlocked(world, gameState.cookies, {
+        lifetimeCookies: gameState.lifetimeCookies,
+        totalBuildings: getTotalBuildingsOwned()
+    });
+
+    if (!canUnlock) return false;
+
+    gameState.cookies -= world.unlockCost;
+    gameState.unlockedWorldIds.push(worldId);
+    gameState.unlockedWorldIds = Array.from(new Set(gameState.unlockedWorldIds));
+
+    return true;
 }
 
 export function changeWorld(worldId) {

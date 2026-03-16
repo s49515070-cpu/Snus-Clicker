@@ -1,10 +1,11 @@
-export function createBuildingsUIController({ gameState, buildings, getBuildingCost, getPurchaseCost, getMaxAffordableSummary, buyBuilding, formatNumber, t, leftColumn, rightColumn }) {
+export function createBuildingsUIController({ gameState, buildings, getBuildingCost, getPurchaseCost, getMaxAffordableSummary, getEffectivePurchasePreview, buyBuilding, formatNumber, t, leftColumn, rightColumn, getBuildingSynergyBonusPercent }) {
     const fallbackTranslations = {
         purchase: "Kauf",
         nextPrice: "Nächster Preis",
         bestBuy: "Best Buy"   
     };
     const translate = typeof t === "function" ? t : (key) => fallbackTranslations[key] || key;
+    const getSynergyBonus = typeof getBuildingSynergyBonusPercent === "function" ? getBuildingSynergyBonusPercent : () => 0;
     const buildingCardMap = new Map();
     let lastBuildingRenderKey = "";
 
@@ -20,19 +21,30 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
     }
 
     function getCurrentPurchaseCost(building, owned) {
+        if (typeof getEffectivePurchasePreview === "function") {
+            const preview = getEffectivePurchasePreview(building, owned, gameState.buyMode, gameState.cookies);
+            return {
+                cost: preview.totalCost,
+                quantity: preview.quantity,
+                discountPercent: preview.discountPercent
+            };
+        }
+
         const mode = gameState.buyMode;
 
         if (mode === "max") {
             const summary = getMaxAffordableSummary(building, owned, gameState.cookies);
             return {
                 cost: summary.totalCost,
-                quantity: summary.count
+                quantity: summary.count,
+                discountPercent: 0
             };
         }
 
         return {
             cost: getPurchaseCost(building, owned, mode),
-            quantity: mode
+            quantity: mode,
+            discountPercent: 0
         };
     }
 
@@ -103,11 +115,15 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
 
         entry.title.innerHTML = `<strong>${building.name}</strong> (${owned})${isBestBuy ? ` · ⭐ ${translate("bestBuy")}` : ""}`;
         entry.nextPrice.textContent = `${translate("nextPrice")}: ${formatNumber(cost)}`;
-        entry.buyCost.textContent = `${translate("purchase")} (${gameState.buyMode === "max" ? "MAX" : `x${purchase.quantity}`}): ${formatNumber(purchase.cost)}`;
+        const discountSuffix = purchase.discountPercent > 0 ? ` (-${purchase.discountPercent}%)` : "";
+        entry.buyCost.textContent = `${translate("purchase")} (${gameState.buyMode === "max" ? "MAX" : `x${purchase.quantity}`}): ${formatNumber(purchase.cost)}${discountSuffix}`;
         const quantity = Number.isFinite(Number(purchase.quantity)) ? Number(purchase.quantity) : 0;
-        const addedCps = building.baseCps * Math.max(0, quantity);
+        const synergyBonusPercent = getSynergyBonus(building.id);
+        const synergyMultiplier = 1 + Math.max(0, Number(synergyBonusPercent || 0)) / 100;
+        const addedCps = building.baseCps * synergyMultiplier * Math.max(0, quantity);
         const roi = addedCps > 0 ? purchase.cost / addedCps : NaN;
-        entry.forecast.textContent = `ROI: ${Number.isFinite(roi) ? roi.toFixed(1) : "—"}s`;
+        const synergyText = synergyBonusPercent > 0 ? ` · SYNC +${synergyBonusPercent}%` : "";
+        entry.forecast.textContent = `ROI: ${Number.isFinite(roi) ? roi.toFixed(1) : "—"}s${synergyText}`;
        
         entry.card.classList.toggle("is-affordable", canAfford);
         entry.card.classList.toggle("is-unaffordable", !canAfford);

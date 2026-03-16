@@ -41,3 +41,11 @@ Diese Vorschläge fokussieren stark auf **Flow**, **Motivation** und **Performan
 2. **Prestige-Baum (klein, 9 Talente) + klare Vorschau auf Gewinn**
 
 Diese beiden Punkte verändern das Spielgefühl meistens am stärksten bei relativ überschaubarem Aufwand.
+
+## 8) Nächster konkreter Schritt
+- Für die direkte Umsetzung liegt jetzt ein detaillierter Plan in
+  **`docs/top3-umsetzungsplan.md`** mit:
+  - Top-3 Priorisierung
+  - betroffenen Dateien
+  - Umsetzungsschritten in Reihenfolge
+  - Aufwandsschätzung in Stunden

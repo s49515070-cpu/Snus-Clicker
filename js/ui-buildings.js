@@ -2,7 +2,11 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
     const fallbackTranslations = {
         purchase: "Kauf",
         nextPrice: "Nächster Preis",
-        bestBuy: "Best Buy"   
+        bestBuy: "Best Buy",
+        info: "Info",
+        close: "Schließen",
+        owned: "Anzahl",
+        moreInfo: "Mehr Infos"
     };
     const translate = typeof t === "function" ? t : (key) => fallbackTranslations[key] || key;
     const getSynergyBonus = typeof getBuildingSynergyBonusPercent === "function" ? getBuildingSynergyBonusPercent : () => 0;
@@ -94,10 +98,16 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
         const forecast = document.createElement("div");
         forecast.className = "building-forecast";
 
-        details.append(title, nextPrice, buyCost, forecast);
+        const infoButton = document.createElement("button");
+        infoButton.type = "button";
+        infoButton.className = "building-info-button";
+        infoButton.setAttribute("aria-expanded", "false");
+        infoButton.textContent = `ℹ️ ${translate("moreInfo")}`;
+
+        details.append(title, nextPrice, buyCost, forecast, infoButton);
         card.append(icon, details);
 
-        return { card, title, nextPrice, buyCost, forecast };
+        return { card, title, nextPrice, buyCost, infoButton, forecast };
     }
 
     function updateBuildingCard(building, bestBuyBuildingId) {
@@ -113,7 +123,7 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
 
         const isBestBuy = building.id === bestBuyBuildingId;
 
-        entry.title.innerHTML = `<strong>${building.name}</strong> (${owned})${isBestBuy ? ` · ⭐ ${translate("bestBuy")}` : ""}`;
+        entry.title.innerHTML = `<strong>${building.name}</strong> · ${translate("owned")}: ${owned}${isBestBuy ? ` · ⭐ ${translate("bestBuy")}` : ""}`;
         entry.nextPrice.textContent = `${translate("nextPrice")}: ${formatNumber(cost)}`;
         const discountSuffix = purchase.discountPercent > 0 ? ` (-${purchase.discountPercent}%)` : "";
         entry.buyCost.textContent = `${translate("purchase")} (${gameState.buyMode === "max" ? "MAX" : `x${purchase.quantity}`}): ${formatNumber(purchase.cost)}${discountSuffix}`;
@@ -173,6 +183,21 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
     }
 
     function onBuildingColumnClick(event) {
+        const closestInfo = event.target instanceof Element ? event.target.closest(".building-info-button") : null;
+        const infoButton = closestInfo && closestInfo.classList?.contains("building-info-button") ? closestInfo : null;
+        if (infoButton) {
+            if (typeof event.stopPropagation === "function") event.stopPropagation();
+            const entry = Array.from(buildingCardMap.values()).find((item) => item.infoButton === infoButton);
+            if (!entry) return;
+
+            const isOpen = entry.card.classList.contains("show-extra-info");
+            entry.card.classList.toggle("show-extra-info", !isOpen);
+            infoButton.setAttribute("aria-expanded", String(!isOpen));
+            infoButton.textContent = isOpen ? `ℹ️ ${translate("moreInfo")}` : `✕ ${translate("close")}`;
+            return;
+        }
+
+
         const buildingId = getBuildingIdFromEvent(event);
         if (!buildingId) return;
 
@@ -185,6 +210,10 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
 
     function onBuildingColumnKeydown(event) {
         if (event.key !== "Enter" && event.key !== " ") return;
+
+        const closestInfo = event.target instanceof Element ? event.target.closest(".building-info-button") : null;
+        const infoButton = closestInfo && closestInfo.classList?.contains("building-info-button") ? closestInfo : null;
+        if (infoButton) return;
 
         const buildingId = getBuildingIdFromEvent(event);
         if (!buildingId) return;

@@ -32,6 +32,10 @@ import {
     setAutoBuyerEnabled,
     getAutoBuyerStatus,
     getPrestigePreview,
+    getBuildingSynergyBonusPercent,
+    getEffectivePurchasePreview,
+    getGoldenSnusState,
+    claimGoldenSnus,
     PRESTIGE_THRESHOLD,
     AUTO_BUYER_UNLOCK_COST
 } from "./engine.js";
@@ -73,10 +77,12 @@ const questListEl = document.getElementById("questList");
 const dailySummaryEl = document.getElementById("dailySummary");
 const autoBuyerButton = document.getElementById("autoBuyerButton");
 const autoBuyerStatusEl = document.getElementById("autoBuyerStatus");
-const goalHintsEl = document.getElementById("goalHints");
 const activeBonusesPanelEl = document.getElementById("activeBonusesPanel");
+const goldenSnusButton = document.getElementById("goldenSnusButton");
 
 initToastSystem(autosaveIndicator);
+
+let wasGoldenSnusAvailable = false;
 
 const { renderBuildings, refreshBuildingsIfNeeded } = createBuildingsUIController({
     gameState,
@@ -84,11 +90,13 @@ const { renderBuildings, refreshBuildingsIfNeeded } = createBuildingsUIControlle
     getBuildingCost,
     getPurchaseCost,
     getMaxAffordableSummary,
+    getEffectivePurchasePreview,
     buyBuilding,
     formatNumber,
     t,
     leftColumn,
-    rightColumn
+    rightColumn,
+    getBuildingSynergyBonusPercent
 });
 
 const { renderPrestigeUpgrades, refreshPrestigeUpgradesIfNeeded, updatePrestigeResetButtonState } = createPrestigeUIController({
@@ -183,9 +191,32 @@ function renderBoostStatus() {
     if (!boostButton || !boostStatusEl) return;
     const status = getBoostStatus();
     boostButton.disabled = !status.ready;
-    if (clickBurstButton) clickBurstButton.disabled = status.clickBurstCooldownMs > 0;
-    if (discountBurstButton) discountBurstButton.disabled = status.discountBurstCooldownMs > 0;
 
+    if (clickBurstButton) {
+        const clickActive = status.clickBurstActiveMs > 0;
+        const clickCooldown = status.clickBurstCooldownMs > 0;
+        clickBurstButton.disabled = clickCooldown;
+        if (clickActive) {
+            clickBurstButton.textContent = t("clickBurstButtonActive", { seconds: Math.ceil(status.clickBurstActiveMs / 1000) });
+        } else if (clickCooldown) {
+            clickBurstButton.textContent = t("clickBurstButtonCooldown", { seconds: Math.ceil(status.clickBurstCooldownMs / 1000) });
+        } else {
+            clickBurstButton.textContent = t("clickBurstButton");
+        }
+    }
+
+    if (discountBurstButton) {
+        const discountActive = status.discountBurstActiveMs > 0;
+        const discountCooldown = status.discountBurstCooldownMs > 0;
+        discountBurstButton.disabled = discountCooldown;
+        if (discountActive) {
+            discountBurstButton.textContent = t("discountBurstButtonActive", { seconds: Math.ceil(status.discountBurstActiveMs / 1000) });
+        } else if (discountCooldown) {
+            discountBurstButton.textContent = t("discountBurstButtonCooldown", { seconds: Math.ceil(status.discountBurstCooldownMs / 1000) });
+        } else {
+            discountBurstButton.textContent = t("discountBurstButton");
+        }
+    }
     if (status.active) {
         boostStatusEl.textContent = t("boostActive", { seconds: Math.ceil(status.activeMs / 1000) });
     } else if (!status.ready) {
@@ -229,72 +260,28 @@ function formatEta(seconds) {
     return `${secs}s`;
 }
 
-function getNearestMilestoneGoal() {
-    let best = null;
-    milestones.forEach((milestone) => {
-        const status = getMilestoneProgress(milestone.id);
-        if (status.completed) return;
-        const remaining = Math.max(0, status.target - status.current);
-        if (!best || remaining < best.remaining) {
-            const label = milestone.labelKey ? t(milestone.labelKey) : milestone.label;
-            best = { remaining, text: `${label} (${formatNumber(remaining)} left)` };
-        }
-    });
-    return best?.text || null;
-}
-
-function getNearestQuestGoal() {
-    let best = null;
-    quests.forEach((quest) => {
-        const status = getQuestProgress(quest.id);
-        if (status.completed) return;
-        const remaining = Math.max(0, status.target - status.current);
-        if (!best || remaining < best.remaining) {
-            const label = quest.labelKey ? t(quest.labelKey) : quest.label;
-            best = { remaining, text: `${label} (${formatNumber(remaining)} left)` };
-        }
-    });
-    return best?.text || null;
-}
-
-function renderGoalHints() {
-    if (!goalHintsEl) return;
-
-    const lines = [];
-    const nextWorld = worlds.find((item) => !isWorldPurchased(item.id));
-    if (nextWorld) {
-        const details = getWorldUnlockDetails(nextWorld, gameState.cookies, {
-            lifetimeCookies: gameState.lifetimeCookies,
-            totalBuildings: buildings.reduce((sum, b) => sum + Number(gameState.buildingData[b.id]?.owned || 0), 0)
-        });
-        const worldParts = [
-            details.missingCost > 0 ? `${formatNumber(details.missingCost)} snus` : null,
-            details.missingLifetime > 0 ? `${formatNumber(details.missingLifetime)} lifetime` : null,
-            details.missingBuildings > 0 ? `${formatNumber(details.missingBuildings)} buildings` : null
-        ].filter(Boolean);
-        const worldText = worldParts.length > 0 ? worldParts.join(' · ') : t('worldReadyToUnlock');
-        const worldEta = details.missingCost > 0 && calculateCps() > 0 ? ` · ETA ${formatEta(details.missingCost / calculateCps())}` : '';
-        lines.push(t('goalWorld', { text: `${worldText}${worldEta}` }));
-    }
-
-    const milestoneGoal = getNearestMilestoneGoal();
-    if (milestoneGoal) lines.push(t('goalMilestone', { text: milestoneGoal }));
-
-    const questGoal = getNearestQuestGoal();
-    if (questGoal) lines.push(t('goalQuest', { text: questGoal }));
-
-    goalHintsEl.innerHTML = `
-        <div class="goal-hints-title">${t('goalsTitle')}</div>
-        <div class="goal-hints-list">${lines.map((line) => `<div>${line}</div>`).join('')}</div>
-    `;
-}
-
 function renderDailySummary() {
     if (!dailySummaryEl) return;
     dailySummaryEl.textContent = t("dailySummary", {
         clicks: formatNumber(gameState.todayStats.clicks),
         earned: formatNumber(gameState.todayStats.earned)
     });
+}
+
+function renderGoldenSnusButton() {
+    if (!goldenSnusButton) return;
+
+    const state = getGoldenSnusState();
+    goldenSnusButton.hidden = !state.available;
+
+    if (state.available) {
+        goldenSnusButton.textContent = `🍀 +${formatNumber(state.reward)} (${Math.ceil(state.remainingMs / 1000)}s)`;
+    }
+
+     if (state.available && !wasGoldenSnusAvailable) {
+        showToast(t("goldenSnusSpawned"), 1400, "info");
+    }
+    wasGoldenSnusAvailable = state.available;
 }
 
 function renderActiveBonusesPanel() {
@@ -311,7 +298,8 @@ function renderActiveBonusesPanel() {
     if (bonuses.discountBurstActive) lines.push(t("bonusDiscountBurst"));
     if (bonuses.streakBonusPercent > 0) lines.push(t("bonusDailyStreak", { percent: bonuses.streakBonusPercent }));
     if (bonuses.skillPowerPercent > 0) lines.push(t("bonusSkillPower", { percent: bonuses.skillPowerPercent }));
-    if (bonuses.autoBuyerExtraPurchases > 0) lines.push(t("bonusAutoBuyerCap", { value: bonuses.autoBuyerExtraPurchases }));
+    if (bonuses.autoBuyerExtraPurchases > 0) lines.push(t("bonusAutoBuyerCap", { value: bonuses.autoBuyerExtraPurchases }));#
+    if (bonuses.goldenSnusAvailable && bonuses.goldenSnusReward > 0) lines.push(t("bonusGoldenSnusReady", { reward: formatNumber(bonuses.goldenSnusReward) }));
 
     activeBonusesPanelEl.innerHTML = `
         <div class="goal-hints-title">${t("activeBonuses")}</div>
@@ -396,10 +384,10 @@ export function renderUI() {
         }
     }
 
+    renderGoldenSnusButton();
     renderBoostStatus();
     renderQuests();
     renderDailySummary();
-    renderGoalHints();
     renderActiveBonusesPanel();
     renderAutoBuyerState();
     refreshPrestigeUpgradesIfNeeded();
@@ -634,6 +622,16 @@ if (autoBuyerButton) {
             return;
         }
         setAutoBuyerEnabled(!gameState.autoBuyerEnabled);
+    });
+}
+
+if (goldenSnusButton) {
+    goldenSnusButton.addEventListener("click", () => {
+        const reward = claimGoldenSnus();
+        if (reward > 0) {
+            showToast(t("goldenSnusClaimed", { reward: formatNumber(reward) }), 1500, "success");
+            renderUI();
+        }
     });
 }
 

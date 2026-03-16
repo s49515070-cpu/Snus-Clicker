@@ -9,7 +9,10 @@ const DEFAULT_CONFIG = {
     uiRefreshIntervalMs: 100,
     soundEnabled: true,
     language: "de",
-    backgroundColor: ""
+    backgroundColor: "",
+    reducedMotion: false,
+    highContrast: false,
+    numberFormat: "short"
 };
 
 export const runtimeConfig = {
@@ -44,6 +47,9 @@ export function loadConfig() {
         runtimeConfig.soundEnabled = typeof parsed.soundEnabled === "boolean" ? parsed.soundEnabled : DEFAULT_CONFIG.soundEnabled;
         runtimeConfig.language = parsed.language === "en" ? "en" : "de";
         runtimeConfig.backgroundColor = typeof parsed.backgroundColor === "string" ? parsed.backgroundColor : DEFAULT_CONFIG.backgroundColor;
+        runtimeConfig.reducedMotion = typeof parsed.reducedMotion === "boolean" ? parsed.reducedMotion : DEFAULT_CONFIG.reducedMotion;
+        runtimeConfig.highContrast = typeof parsed.highContrast === "boolean" ? parsed.highContrast : DEFAULT_CONFIG.highContrast;
+        runtimeConfig.numberFormat = parsed.numberFormat === "full" ? "full" : "short";
     } catch {
         // Bei kaputter Config mit Defaults weiterlaufen
     }
@@ -76,6 +82,9 @@ export function resetRuntimeConfig() {
     runtimeConfig.soundEnabled = DEFAULT_CONFIG.soundEnabled;
     runtimeConfig.language = DEFAULT_CONFIG.language;
     runtimeConfig.backgroundColor = DEFAULT_CONFIG.backgroundColor;
+    runtimeConfig.reducedMotion = DEFAULT_CONFIG.reducedMotion;
+    runtimeConfig.highContrast = DEFAULT_CONFIG.highContrast;
+    runtimeConfig.numberFormat = DEFAULT_CONFIG.numberFormat;
     saveConfig();
 
     return { ...runtimeConfig };
@@ -109,4 +118,35 @@ export function getBackgroundColor() {
 
 export function getLanguage() {
     return runtimeConfig.language;
+}
+
+
+export function updateReducedMotion(value) {
+    runtimeConfig.reducedMotion = Boolean(value);
+    saveConfig();
+    return runtimeConfig.reducedMotion;
+}
+
+export function getReducedMotion() {
+    return runtimeConfig.reducedMotion;
+}
+
+export function updateHighContrast(value) {
+    runtimeConfig.highContrast = Boolean(value);
+    saveConfig();
+    return runtimeConfig.highContrast;
+}
+
+export function getHighContrast() {
+    return runtimeConfig.highContrast;
+}
+
+export function updateNumberFormat(value) {
+    runtimeConfig.numberFormat = value === "full" ? "full" : "short";
+    saveConfig();
+    return runtimeConfig.numberFormat;
+}
+
+export function getNumberFormat() {
+    return runtimeConfig.numberFormat;
 }

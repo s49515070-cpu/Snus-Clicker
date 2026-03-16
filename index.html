@@ -70,8 +70,11 @@
     
     <div class="action-bar glass">
         <button id="boostButton" type="button">⚡ Fokus-Boost (x3)</button>
+        <button id="clickBurstButton" type="button">🎯 Klickrausch (x4)</button>
+        <button id="discountBurstButton" type="button">🛍️ Rabatt-Phase (-25%)</button>
         <div id="boostStatus" class="boost-status"></div>
-        <button id="autoBuyerButton" type="button">🤖 Auto-Buyer (50K)</button>
+        <div id="autoBuyerStatus" class="boost-status"></div>
+        <button id="autoBuyerButton" type="button">🤖 Auto-Buyer (30K)</button>
     </div>
 
     <!-- Kauf Optionen -->
@@ -89,7 +92,7 @@
         <div class="milestones-header">
             <h3 id="milestonesTitle">🎯 Milestones</h3>
             <button id="milestonesCloseButton" type="button">✕</button>
-        </div>. 
+        </div>
         <div id="milestonesList" class="milestones-list"></div>
     </div>
 
@@ -102,6 +105,7 @@
     </div>
 
     <div id="goalHints" class="goal-hints glass" aria-live="polite"></div>
+    <div id="activeBonusesPanel" class="goal-hints glass" aria-live="polite"></div>
 
     <button id="settingsToggleButton" class="settings-toggle-button glass" type="button">⚙️ Einstellungen</button>
 
@@ -136,6 +140,40 @@
                 <option value="cheap">Günstig zuerst</option>
                 <option value="balanced">Ausgewogen</option>
                 <option value="reserve">Sparmodus (20% halten)</option>
+                <option value="custom">Custom (Gewichtung)</option>
+            </select>
+        </label>
+        <div id="autoBuyerCustomWeights" hidden>
+            <label>
+                <span id="settingAutoBuyerValueWeightLabel">Custom: Effizienz-Gewicht</span>
+                <input id="autoBuyerValueWeightInput" type="range" min="0" max="100" step="5" value="75">
+                <small id="autoBuyerValueWeightText">75%</small>
+            </label>
+            <label>
+                <span id="settingAutoBuyerCheapWeightLabel">Custom: Günstig-Gewicht</span>
+                <input id="autoBuyerCheapWeightInput" type="range" min="0" max="100" step="5" value="25">
+                <small id="autoBuyerCheapWeightText">25%</small>
+            </label>
+        </div>
+        <label>
+            <span id="settingNumberFormatLabel">Zahlenformat</span>
+            <select id="numberFormatInput">
+                <option value="short">Kurz (1.2M)</option>
+                <option value="full">Voll (1,200,000)</option>
+            </select>
+        </label>
+        <label>
+            <span id="settingReducedMotionLabel">Animationen reduzieren</span>
+            <select id="reducedMotionInput">
+                <option value="off">Aus</option>
+                <option value="on">An</option>
+            </select>
+        </label>
+        <label>
+            <span id="settingHighContrastLabel">Hoher Kontrast</span>
+            <select id="highContrastInput">
+                <option value="off">Aus</option>
+                <option value="on">An</option>
             </select>
         </label>
                 <div class="settings-save-actions">

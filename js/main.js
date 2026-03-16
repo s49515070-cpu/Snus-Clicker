@@ -3,10 +3,10 @@
 // =====================================
 
 
-import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, setAutoBuyerStrategy, getAutoBuyerStrategy } from "./engine.js";
+import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, setAutoBuyerStrategy, getAutoBuyerStrategy, setAutoBuyerWeights, getAutoBuyerWeights } from "./engine.js";
 import { renderUI, renderBuildings, renderPrestigeUpgrades, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
-import { loadConfig, getAutosaveInterval, getUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor } from "./config.js";
+import { loadConfig, getAutosaveInterval, getUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";
 import { t } from "./i18n.js";
 
 // ===============================
@@ -49,6 +49,14 @@ function initSettingsControls() {
     const languageInput = document.getElementById("languageInput");
     const backgroundColorInput = document.getElementById("backgroundColorInput");
     const autoBuyerStrategyInput = document.getElementById("autoBuyerStrategyInput");
+    const autoBuyerCustomWeights = document.getElementById("autoBuyerCustomWeights");
+    const autoBuyerValueWeightInput = document.getElementById("autoBuyerValueWeightInput");
+    const autoBuyerCheapWeightInput = document.getElementById("autoBuyerCheapWeightInput");
+    const autoBuyerValueWeightText = document.getElementById("autoBuyerValueWeightText");
+    const autoBuyerCheapWeightText = document.getElementById("autoBuyerCheapWeightText");
+    const numberFormatInput = document.getElementById("numberFormatInput");
+    const reducedMotionInput = document.getElementById("reducedMotionInput");
+    const highContrastInput = document.getElementById("highContrastInput");
     const resetSettingsButton = document.getElementById("resetSettingsButton");
     
     const collapseDurationMs = 220;
@@ -61,10 +69,26 @@ function initSettingsControls() {
         const optionCheap = autoBuyerStrategyInput.querySelector('option[value="cheap"]');
         const optionBalanced = autoBuyerStrategyInput.querySelector('option[value="balanced"]');
         const optionReserve = autoBuyerStrategyInput.querySelector('option[value="reserve"]');
+        const optionCustom = autoBuyerStrategyInput.querySelector('option[value="custom"]');
         if (optionValue) optionValue.textContent = t("autoBuyerStrategyValue");
         if (optionCheap) optionCheap.textContent = t("autoBuyerStrategyCheap");
         if (optionBalanced) optionBalanced.textContent = t("autoBuyerStrategyBalanced");
         if (optionReserve) optionReserve.textContent = t("autoBuyerStrategyReserve");
+        if (optionCustom) optionCustom.textContent = t("autoBuyerStrategyCustom");
+    };
+
+    const updateCustomWeightsVisibility = (strategy) => {
+        if (!autoBuyerCustomWeights) return;
+        autoBuyerCustomWeights.hidden = strategy !== "custom";
+    };
+
+    const syncCustomWeightTexts = () => {
+        if (autoBuyerValueWeightText && autoBuyerValueWeightInput) {
+            autoBuyerValueWeightText.textContent = `${autoBuyerValueWeightInput.value}%`;
+        }
+        if (autoBuyerCheapWeightText && autoBuyerCheapWeightInput) {
+            autoBuyerCheapWeightText.textContent = `${autoBuyerCheapWeightInput.value}%`;
+        }
     };
 
     const setPanelVisibility = (visible) => {

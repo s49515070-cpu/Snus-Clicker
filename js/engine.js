@@ -721,7 +721,7 @@ function getAutoBuyerChoice() {
         : gameState.cookies;
 
     const baseCps = calculateCps();
-    let best = null;
+    const candidates = [];
 
     buildings.forEach((building) => {
         const data = gameState.buildingData[building.id];
@@ -740,16 +740,49 @@ function getAutoBuyerChoice() {
         const valueScore = cpsGain / cost;
         const affordabilityScore = 1 / cost;
 
-        const score = strategy === "cheap"
-            ? affordabilityScore
-            : strategy === "balanced"
-                ? (valueScore * 0.8 + affordabilityScore * 0.2)
-                : strategy === "custom"
-                    ? (valueScore * Number(gameState.autoBuyerWeights?.value || 0.75) + affordabilityScore * Number(gameState.autoBuyerWeights?.cheap || 0.25))
-                : valueScore;
+        candidates.push({
+            buildingId: building.id,
+            cost,
+            owned,
+            valueScore,
+            affordabilityScore
+        });
+    });
 
-        if (!best || score > best.score || (score === best.score && cost < best.cost)) {
-            best = { buildingId: building.id, score, cost, owned };
+    if (!candidates.length) return null;
+
+    const valueScores = candidates.map((candidate) => candidate.valueScore);
+    const affordabilityScores = candidates.map((candidate) => candidate.affordabilityScore);
+    const minValue = Math.min(...valueScores);
+    const maxValue = Math.max(...valueScores);
+    const minAffordable = Math.min(...affordabilityScores);
+    const maxAffordable = Math.max(...affordabilityScores);
+
+    let best = null;
+
+    candidates.forEach((candidate) => {
+        const normalizedValue = maxValue === minValue
+            ? 1
+            : (candidate.valueScore - minValue) / (maxValue - minValue);
+        const normalizedAffordable = maxAffordable === minAffordable
+            ? 1
+            : (candidate.affordabilityScore - minAffordable) / (maxAffordable - minAffordable);
+
+        const score = strategy === "cheap"
+            ? normalizedAffordable
+            : strategy === "balanced"
+                ? (normalizedValue * 0.8 + normalizedAffordable * 0.2)
+                : strategy === "custom"
+                    ? (normalizedValue * Number(gameState.autoBuyerWeights?.value || 0.75) + normalizedAffordable * Number(gameState.autoBuyerWeights?.cheap || 0.25))
+                : candidate.valueScore;
+
+        if (!best || score > best.score || (score === best.score && candidate.cost < best.cost)) {
+            best = {
+                buildingId: candidate.buildingId,
+                score,
+                cost: candidate.cost,
+                owned: candidate.owned
+            };
         }
     });
 

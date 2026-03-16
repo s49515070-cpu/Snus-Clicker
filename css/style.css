@@ -126,6 +126,20 @@ body {
     color: #4a5568;
 }
 
+.building-forecast {
+    font-size: 0.78rem;
+    color: #0f766e;
+}
+
+body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+}
+
+body.high-contrast {
+    filter: contrast(1.2) saturate(1.05);
+}
+
 /* ===============================
    COOKIE CENTER
 =================================*/

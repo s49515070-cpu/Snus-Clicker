@@ -89,6 +89,9 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
         const title = document.createElement("div");
         title.className = "building-title";
 
+        const owned = document.createElement("div");
+        owned.className = "building-owned";
+
         const nextPrice = document.createElement("div");
         nextPrice.className = "building-next-price";
 
@@ -104,10 +107,10 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
         infoButton.setAttribute("aria-expanded", "false");
         infoButton.textContent = `ℹ️ ${translate("moreInfo")}`;
 
-        details.append(title, nextPrice, buyCost, forecast, infoButton);
+        details.append(title, owned, buyCost, infoButton, nextPrice, forecast);
         card.append(icon, details);
 
-        return { card, title, nextPrice, buyCost, infoButton, forecast };
+        return { card, title, owned, nextPrice, buyCost, infoButton, forecast };
     }
 
     function updateBuildingCard(building, bestBuyBuildingId) {
@@ -123,10 +126,11 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
 
         const isBestBuy = building.id === bestBuyBuildingId;
 
-        entry.title.innerHTML = `<strong>${building.name}</strong> · ${translate("owned")}: ${owned}${isBestBuy ? ` · ⭐ ${translate("bestBuy")}` : ""}`;
+        entry.title.innerHTML = `<strong>${building.name}</strong>${isBestBuy ? ` · ⭐ ${translate("bestBuy")}` : ""}`;
+        entry.owned.textContent = `${translate("owned")}: ${owned}`;
         entry.nextPrice.textContent = `${translate("nextPrice")}: ${formatNumber(cost)}`;
         const discountSuffix = purchase.discountPercent > 0 ? ` (-${purchase.discountPercent}%)` : "";
-        entry.buyCost.textContent = `${translate("purchase")} (${gameState.buyMode === "max" ? "MAX" : `x${purchase.quantity}`}): ${formatNumber(purchase.cost)}${discountSuffix}`;
+        entry.buyCost.textContent = `${translate("purchase")}: ${formatNumber(purchase.cost)}${discountSuffix}`;
         const quantity = Number.isFinite(Number(purchase.quantity)) ? Number(purchase.quantity) : 0;
         const synergyBonusPercent = getSynergyBonus(building.id);
         const synergyMultiplier = 1 + Math.max(0, Number(synergyBonusPercent || 0)) / 100;

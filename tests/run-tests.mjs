@@ -23,6 +23,12 @@ import {
   getAutoBuyerWeights,
   getAutoBuyerStatus,
   getActiveBonuses,
+  claimGoldenSnus,
+  getGoldenSnusState,
+  calculateCps,
+  getBuildingSynergyBonusPercent,
+  getEffectivePurchasePreview,
+  activateDiscountBurst,
 } from '../js/engine.js';
 
 import { buildings, getMaxAffordable, getMaxAffordableSummary } from '../js/buildings.js';
@@ -74,6 +80,9 @@ function resetEngineState() {
   gameState.prestigeMultiplier = 1;
   gameState.clickPower = 1;
   gameState.activeDailyQuestIds = quests.filter((quest) => quest.isDaily).slice(0, 2).map((quest) => quest.id);
+  gameState.goldenSnusAvailableUntil = 0;
+  gameState.goldenSnusCooldownUntil = 0;
+  gameState.goldenSnusReward = 0;
 
   Object.keys(gameState.buildingData).forEach((id) => {
     gameState.buildingData[id].owned = 0;
@@ -1098,6 +1107,58 @@ async function testResetSaveAppliesWithoutReload() {
   assert.equal(localStorage.getItem('snus_clicker_save_backup_2'), null, 'reset should remove all backup slots');
 }
 
+
+
+
+function testDiscountBurstAppliesToPricePreviewAndMaxBuy() {
+  resetEngineState();
+
+  const cursor = buildings.find((entry) => entry.id === 'cursor');
+  assert.ok(cursor, 'cursor building should exist');
+
+  gameState.cookies = 120;
+  gameState.buyMode = 'max';
+  gameState.discountBurstCooldownUntil = 0;
+  gameState.discountBurstUntil = 0;
+
+  const basePreview = getEffectivePurchasePreview(cursor, 0, 'max', gameState.cookies);
+  const activated = activateDiscountBurst();
+  assert.equal(activated, true, 'discount burst should activate when off cooldown');
+
+  const discountedPreview = getEffectivePurchasePreview(cursor, 0, 'max', gameState.cookies);
+  assert.ok(discountedPreview.discountPercent >= 25, 'discount preview should expose discount percentage');
+  assert.ok(discountedPreview.quantity >= basePreview.quantity, 'discounted max buy should afford at least as many buildings');
+}
+
+function testBuildingSynergyBoostsCps() {
+  resetEngineState();
+
+  gameState.buildingData.cursor.owned = 10;
+  gameState.buildingData.farm.owned = 20;
+
+  const synergyBonus = getBuildingSynergyBonusPercent('cursor');
+  const cps = calculateCps();
+
+  assert.ok(synergyBonus > 0, 'cursor should receive synergy bonus from farms');
+  assert.ok(cps > 1, 'synergy should increase total cps beyond raw cursor cps');
+}
+
+function testGoldenSnusClaimRewardsCookies() {
+  resetEngineState();
+  const now = Date.now();
+  gameState.goldenSnusAvailableUntil = now + 5000;
+  gameState.goldenSnusReward = 1234;
+  gameState.goldenSnusCooldownUntil = now;
+
+  const before = gameState.cookies;
+  const reward = claimGoldenSnus();
+  const state = getGoldenSnusState();
+
+  assert.equal(reward, 1234, 'golden snus should return configured reward');
+  assert.equal(gameState.cookies, before + 1234, 'golden snus claim should add cookies');
+  assert.equal(state.available, false, 'golden snus should no longer be available after claim');
+}
+
 async function run() {
   testPrestigeCostsIncrease();
   testPrestigePurchaseRules();
@@ -1124,6 +1185,9 @@ testBuyModeSanitizesFractionalValues();;
   testAutoBuyerStrategyCustomUsesWeightsAndPersistsDecision();
   testBuyBuildingAppliesWorldDiscountModifier();
   testActiveBonusesExposeWorldAndAutomationState();
+  testBuildingSynergyBoostsCps();
+  testDiscountBurstAppliesToPricePreviewAndMaxBuy();
+  testGoldenSnusClaimRewardsCookies();
   testConfigClampingAndPersistence();
   testConfigReset();
   testLocalizedContentKeysForMilestonesAndQuests();

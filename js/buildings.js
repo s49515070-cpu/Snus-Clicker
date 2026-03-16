@@ -39,7 +39,35 @@ export const buildings = [
         growth: 1.14,
         icon: "assets/buildings/temple.png",
         side: "right"
+            },
+    {
+        id: "lab",
+        name: "Snus Lab",
+        baseCost: 65000,
+        baseCps: 220,
+        growth: 1.145,
+        icon: "assets/buildings/factory.png",
+        side: "left"
+    },
+    {
+        id: "exchange",
+        name: "Snus Exchange",
+        baseCost: 380000,
+        baseCps: 1200,
+        growth: 1.148,
+        icon: "assets/buildings/temple.png",
+        side: "right"
+    },
+    {
+        id: "orbital",
+        name: "Orbital Refinery",
+        baseCost: 2500000,
+        baseCps: 6800,
+        growth: 1.152,
+        icon: "assets/buildings/temple.png",
+        side: "left"
     }
+    
 ];
 
 
@@ -78,7 +106,7 @@ export function getBuildingCps(building, owned) {
 
 // MAX Kauf berechnen
 export function getMaxAffordable(building, owned, cookies) {
-       return getMaxAffordableSummary(building, owned, cookies).count;
+    return getMaxAffordableSummary(building, owned, cookies).count;
 }
 
 export function getMaxAffordableSummary(building, owned, cookies) {
@@ -100,5 +128,5 @@ export function getMaxAffordableSummary(building, owned, cookies) {
     }
 
 
-       return { count, totalCost };
+    return { count, totalCost };
 }

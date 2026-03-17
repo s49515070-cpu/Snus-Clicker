@@ -3,8 +3,8 @@
 // =====================================
 
 
-import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, setAutoBuyerStrategy, getAutoBuyerStrategy, setAutoBuyerWeights, getAutoBuyerWeights } from "./engine.js";
-import { renderUI, renderBuildings, renderPrestigeUpgrades, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
+import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, setAutoBuyerStrategy, getAutoBuyerStrategy, setAutoBuyerWeights, getAutoBuyerWeights, prestigeReset, getPotentialPrestigeGain } from "./engine.js";
+import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
 import { loadConfig, getAutosaveInterval, getUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";
 import { t } from "./i18n.js";
@@ -246,45 +246,60 @@ function initSettingsControls() {
 }
 
 
-function initPrestigeControls() {
-    const prestigeToggleButton = document.getElementById("prestigeToggleButton");
-    const prestigePanel = document.getElementById("prestigePanel");
-    const prestigeCloseButton = document.getElementById("prestigeCloseButton");
+function initTrophyPathControls() {
+    const trophyPathButton = document.getElementById("trophyPathButton");
+    const trophyPathModal = document.getElementById("trophyPathModal");
+    const trophyPathCloseButton = document.getElementById("trophyPathCloseButton");
+    const trophyPrestigeButton = document.getElementById("trophyPrestigeButton");
 
-    const collapseDurationMs = 220;
-
-    const setPanelVisibility = (visible) => {
-        if (!prestigePanel) return;
-
-        if (visible) {
-            prestigePanel.hidden = false;
-            requestAnimationFrame(() => {
-                prestigePanel.classList.remove("is-collapsed");
-            });
-        } else {
-            prestigePanel.classList.add("is-collapsed");
-            window.setTimeout(() => {
-                if (prestigePanel.classList.contains("is-collapsed")) {
-                    prestigePanel.hidden = true;
-                }
-            }, collapseDurationMs);
-        }
-
-        if (prestigeToggleButton) {
-            prestigeToggleButton.setAttribute("aria-expanded", visible ? "true" : "false");
+    const setOpen = (open) => {
+        if (!trophyPathModal) return;
+        trophyPathModal.hidden = !open;
+        if (trophyPathButton) trophyPathButton.setAttribute("aria-expanded", open ? "true" : "false");
+        if (open) {
+            renderTrophyPath();
+            renderDiamondShop();
         }
     };
 
-    if (prestigeToggleButton) {
-        prestigeToggleButton.setAttribute("aria-controls", "prestigePanel");
-        prestigeToggleButton.setAttribute("aria-expanded", "true");
-        prestigeToggleButton.addEventListener("click", () => {
-            setPanelVisibility(Boolean(prestigePanel?.hidden));
+    if (trophyPathButton) {
+        trophyPathButton.setAttribute("aria-controls", "trophyPathModal");
+        trophyPathButton.setAttribute("aria-expanded", "false");
+        trophyPathButton.addEventListener("click", () => setOpen(Boolean(trophyPathModal?.hidden)));
+    }
+
+    if (trophyPathCloseButton) {
+        trophyPathCloseButton.addEventListener("click", () => setOpen(false));
+    }
+
+    if (trophyPrestigeButton) {
+        trophyPrestigeButton.addEventListener("click", () => {
+            const potential = getPotentialPrestigeGain();
+            if (potential <= 0) {
+                showToast(t("notEnoughLifetime"), 1700, "warning");
+                return;
+            }
+
+            const confirmed = typeof globalThis.confirm === "function"
+                ? globalThis.confirm(t("trophyResetConfirm"))
+                : true;
+            if (!confirmed) return;
+
+            const earned = prestigeReset();
+            if (earned > 0) {
+                showToast(t("earnedPrestige", { amount: earned }), 1800, "success");
+                renderBuildings();
+                renderDiamondShop();
+                renderTrophyPath();
+                renderUI();
+            }
         });
     }
 
-    if (prestigeCloseButton) {
-        prestigeCloseButton.addEventListener("click", () => setPanelVisibility(false));
+    if (trophyPathModal) {
+        trophyPathModal.addEventListener("click", (event) => {
+            if (event.target === trophyPathModal) setOpen(false);
+        });
     }
 }
 
@@ -366,11 +381,11 @@ function init() {
     }
     applyWorldTheme();
     renderBuildings();
-    renderPrestigeUpgrades();
+    renderDiamondShop();
     initSaveControls();
     initSettingsControls();
     initMilestonesControls();
-    initPrestigeControls();
+    initTrophyPathControls();
     initSaveSyncListener();
     applyStaticTranslations();
 
@@ -394,11 +409,11 @@ function uiLoop(timestamp = 0) {
             [...claimedMilestones, ...claimedQuests].forEach((entry) => {
                 const rewards = [];
                 if (entry.rewardCookies > 0) rewards.push(`+${entry.rewardCookies} ${t("snus")}`);
-                if (entry.rewardPrestigeCookies > 0) rewards.push(`+${entry.rewardPrestigeCookies} ${t("prestigeSnus")}`);
+                if (entry.rewardDiamonds > 0) rewards.push(`+${entry.rewardDiamonds} ${t("diamonds")}`);
                 showToast(`🏁 ${entry.label} (${rewards.join(" | ")})`, 1800, "success");
             });
             renderBuildings();
-            renderPrestigeUpgrades();
+            renderDiamondShop();
         }
 
         runAutoBuyerTick();

@@ -916,7 +916,7 @@ function claimPrestigeTrackRewards(previousLevel, newLevel) {
     const claimedNow = [];
 
     prestigeTrackRewards.forEach((reward) => {
-        const isInRange = reward.level > previousLevel && reward.level <= newLevel;
+        const isInRange = reward.level <= newLevel;
         const alreadyClaimed = Boolean(gameState.prestigeTrackClaimed[reward.level]);
         if (!isInRange || alreadyClaimed) return;
 
@@ -940,6 +940,9 @@ export function getPrestigeTrackStatus() {
 }
 
 export function prestigeReset() {
+    const currentPrestige = Math.max(0, Math.floor(Number(gameState.prestigeCookies) || 0));
+    claimPrestigeTrackRewards(currentPrestige, currentPrestige);
+
     const progress = getPrestigeProgressState();
     const gained = progress.potentialGain;
     if (gained <= 0) return 0;

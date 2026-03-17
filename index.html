@@ -21,7 +21,8 @@
         <div class="stats">
             <div><span id="labelSnus">Snus</span>: <span id="cookieCount" aria-live="polite">0</span></div>
             <div><span id="labelCps">Pro Sekunde</span>: <span id="cps" aria-live="polite">0</span></div>
-            <div><span id="labelPrestige">Prestige-Snus</span>: <span id="prestigeCount" aria-live="polite">0</span></div>
+            <div><span id="labelPrestige">Prestige</span>: <span id="prestigeCount" aria-live="polite">0</span></div>
+            <div><span id="labelDiamonds">Diamanten</span>: <span id="diamondCount" aria-live="polite">0</span></div>
             <div id="nextWorldProgress" class="next-world-progress" aria-live="polite"></div>
         </div>
     </div>
@@ -60,19 +61,7 @@
     
     <button id="goldenSnusButton" class="golden-snus-button" type="button" hidden>🍀 Golden Snus</button>
 
-    <button id="prestigeToggleButton" class="prestige-toggle-button glass" type="button">💎 Prestige</button>
-
-    <!-- Prestige Panel -->
-    <div id="prestigePanel" class="prestige-panel glass highlight-panel">
-        <div class="prestige-header">
-            <h3>💎 Prestige Upgrades</h3>
-            <button id="prestigeCloseButton" type="button" aria-label="Prestige schließen">✕</button>
-        </div>
-        <div id="prestigeSummary" class="prestige-summary"></div>
-        <div id="prestigeUpgrades"></div>
-        <button id="prestigeButton">Prestige Reset</button>
-        <div id="prestigeResetProgress" class="prestige-reset-progress" aria-live="polite"></div>
-    </div>
+        <button id="trophyPathButton" class="trophy-path-button glass" type="button">🏆 Trophäenpfad</button>
 
     
     <div class="action-bar glass">
@@ -101,6 +90,33 @@
         </div>
         <div id="questList" class="quest-list"></div>
         <div id="dailySummary" class="daily-summary"></div>
+    </div>
+
+    
+    <div id="trophyPathModal" class="trophy-path-modal" hidden>
+        <div id="trophyPathPanel" class="trophy-path-panel glass highlight-panel" role="dialog" aria-modal="true" aria-labelledby="trophyPathTitle">
+            <div class="trophy-path-header">
+                <h3 id="trophyPathTitle">🏆 Trophäenpfad</h3>
+                <button id="trophyPathCloseButton" type="button" aria-label="Trophäenpfad schließen">✕</button>
+            </div>
+            <div id="trophyPathIntro" class="trophy-path-intro">Erreiche Prestige-Stufen, um einmalige Belohnungen zu erhalten.</div>
+            <div id="trophyPathList" class="trophy-path-list"></div>
+            <input id="trophyPathScrollBar" class="trophy-path-scrollbar" type="range" min="0" max="100" value="0" step="1" aria-label="Trophäenpfad horizontal scrollen">
+
+            <div class="trophy-reset-box">
+                <div id="trophyResetWarning" class="trophy-reset-warning">⚠️ Prestige-Reset setzt Snus, Gebäude und Weltfortschritt zurück.</div>
+                <button id="trophyPrestigeButton" class="trophy-prestige-button" type="button">🌟 Prestige Reset</button>
+                <div id="trophyPrestigeProgress" class="trophy-prestige-progress" aria-live="polite"></div>
+            </div>
+
+            <div class="diamond-shop">
+                <div class="diamond-shop-header">
+                    <h4 id="diamondShopTitle">💠 Diamanten-Shop</h4>
+                    <div id="diamondShopBalance" class="diamond-shop-balance">0 Diamanten</div>
+                </div>
+                <div id="diamondShopList" class="diamond-shop-list"></div>
+            </div>
+        </div>
     </div>
 
     <div id="activeBonusesPanel" class="active-bonuses-panel" aria-live="polite"></div>
@@ -156,8 +172,8 @@
         <label>
             <span id="settingNumberFormatLabel">Zahlenformat</span>
             <select id="numberFormatInput">
-                <option value="short">Kurz (1.2M)</option>
-                <option value="full">Voll (1,200,000)</option>
+                <option value="short">Kurz (1.2K, 3.4M)</option>
+                <option value="full">Vollständig (1.234)</option>
             </select>
         </label>
         <label>
@@ -174,21 +190,15 @@
                 <option value="on">An</option>
             </select>
         </label>
-                <div class="settings-save-actions">
-            <button id="exportSaveButton" type="button">📤 Save exportieren</button>
-            <button id="importSaveButton" type="button">📥 Save importieren</button>
-        </div>
+        <button id="resetSettingsButton" type="button">↺ Einstellungen zurücksetzen</button>
+        <button id="exportSaveButton" type="button">📤 Save exportieren</button>
+        <button id="importSaveButton" type="button">📥 Save importieren</button>
         <button id="resetSaveButton" type="button">🗑️ Save zurücksetzen</button>
         <small id="resetSaveHint">Achtung: löscht den Spielstand.</small>
-        <button id="resetSettingsButton" type="button">↺ Einstellungen zurücksetzen</button>
     </div>
 
-
-    <!-- Autosave Anzeige -->
-    <div id="autosaveIndicator">💾 Gespeichert</div>
-
-    <!-- Module Scripts -->
+    <div id="autosaveIndicator" class="autosave-indicator" aria-live="polite"></div>
+    
     <script type="module" src="js/main.js"></script>
-
 </body>
 </html>

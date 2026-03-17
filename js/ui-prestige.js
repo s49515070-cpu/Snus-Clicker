@@ -7,6 +7,7 @@ export function createPrestigeUIController({
     getPrestigeUpgradeCost,
     getPrestigeEffects,
     getPotentialPrestigeGain,
+    getPrestigeTrackStatus,
     buyPrestigeUpgrade,
     prestigeReset,
     showToast,

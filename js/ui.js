@@ -15,8 +15,8 @@ import {
     prestigeUpgrades,
     buyPrestigeUpgrade,
     getPrestigeUpgradeCost,
-    getPrestigeEffects,
     getPotentialPrestigeGain,
+    getPrestigeTrackStatus,
     prestigeReset,
     milestones,
     getMilestoneProgress,
@@ -36,14 +36,15 @@ import {
     getEffectivePurchasePreview,
     getGoldenSnusState,
     claimGoldenSnus,
-    PRESTIGE_THRESHOLD,
+    getPrestigeProgressState,
     AUTO_BUYER_UNLOCK_COST
 } from "./engine.js";
 import { buildings, getBuildingCost, getPurchaseCost, getMaxAffordableSummary } from "./buildings.js";
 import { worlds, getWorldById, isWorldUnlocked, getWorldUnlockDetails } from "./worlds.js";
 import { createBuildingsUIController } from "./ui-buildings.js";
 import { initToastSystem, showAutosave, showToast } from "./ui-toast.js";
-import { createPrestigeUIController } from "./ui-prestige.js";
+import { createTrophyPathController } from "./ui-trophy.js";
+import { createDiamondShopController } from "./ui-shop.js";
 import { t } from "./i18n.js";
 import { getBackgroundColor, getNumberFormat, getHighContrast, getReducedMotion } from "./config.js";
 import { playClickSound } from "./audio.js";
@@ -51,13 +52,13 @@ import { playClickSound } from "./audio.js";
 const cookieCountEl = document.getElementById("cookieCount");
 const cpsEl = document.getElementById("cps");
 const prestigeCountEl = document.getElementById("prestigeCount");
+const diamondCountEl = document.getElementById("diamondCount");
 const worldNameEl = document.getElementById("worldName");
 const worldButton = document.getElementById("worldButton");
 const nextWorldProgressEl = document.getElementById("nextWorldProgress");
-const prestigeButton = document.getElementById("prestigeButton");
-const prestigeUpgradesEl = document.getElementById("prestigeUpgrades");
-const prestigeSummaryEl = document.getElementById("prestigeSummary");
-const prestigeResetProgressEl = document.getElementById("prestigeResetProgress");
+const trophyPrestigeProgressEl = document.getElementById("trophyPrestigeProgress");
+const diamondShopListEl = document.getElementById("diamondShopList");
+const diamondShopBalanceEl = document.getElementById("diamondShopBalance");
 const milestonesListEl = document.getElementById("milestonesList");
 const leftColumn = document.getElementById("leftBuildings");
 const rightColumn = document.getElementById("rightBuildings");
@@ -79,6 +80,8 @@ const autoBuyerButton = document.getElementById("autoBuyerButton");
 const autoBuyerStatusEl = document.getElementById("autoBuyerStatus");
 const activeBonusesPanelEl = document.getElementById("activeBonusesPanel");
 const goldenSnusButton = document.getElementById("goldenSnusButton");
+const trophyPathListEl = document.getElementById("trophyPathList");
+const trophyPathScrollBarEl = document.getElementById("trophyPathScrollBar");
 
 initToastSystem(autosaveIndicator);
 
@@ -99,21 +102,22 @@ const { renderBuildings, refreshBuildingsIfNeeded } = createBuildingsUIControlle
     getBuildingSynergyBonusPercent
 });
 
-const { renderPrestigeUpgrades, refreshPrestigeUpgradesIfNeeded, updatePrestigeResetButtonState } = createPrestigeUIController({
+const { renderTrophyPath } = createTrophyPathController({
+    trophyPathListEl,
+    trophyPathScrollBarEl,
+    getPrestigeTrackStatus,
+    t
+});
+
+const { renderDiamondShop } = createDiamondShopController({
     gameState,
     prestigeUpgrades,
-    prestigeUpgradesEl,
-    prestigeSummaryEl,
-    prestigeButton,
+    diamondShopListEl,
+    diamondShopBalanceEl,
     getPrestigeUpgradeCost,
-    getPrestigeEffects,
-    getPotentialPrestigeGain,
     buyPrestigeUpgrade,
-    prestigeReset,
-    showToast,
     t,
-    onUpgradePurchased: () => renderBuildings(),
-    onPrestigeReset: () => renderBuildings()
+    onPurchased: () => renderBuildings()
 });
 
 function formatNumber(num) {
@@ -158,7 +162,7 @@ function renderMilestones() {
         reward.className = "milestone-reward";
         const rewardParts = [];
         if (milestone.rewardCookies) rewardParts.push(`+${milestone.rewardCookies} ${t("snus")}`);
-        if (milestone.rewardPrestigeCookies) rewardParts.push(`+${milestone.rewardPrestigeCookies} ${t("prestigeSnus")}`);
+        if (milestone.rewardDiamonds) rewardParts.push(`+${milestone.rewardDiamonds} ${t("diamonds")}`);
         reward.textContent = rewardParts.length > 0 ? `${t("reward")}: ${rewardParts.join(" | ")}` : `${t("reward")}: —`;
 
         item.append(title, description, progress, reward);
@@ -178,10 +182,14 @@ function renderQuests() {
         item.classList.toggle("is-claimed", status.claimed);
         const label = quest.labelKey ? t(quest.labelKey) : quest.label;
         const description = quest.descriptionKey ? t(quest.descriptionKey) : quest.description;
+        const rewards = [];
+        if (quest.rewardCookies) rewards.push(`+${Math.floor(quest.rewardCookies)} ${t("snus")}`);
+        if (quest.rewardDiamonds) rewards.push(`💎 +${Math.floor(quest.rewardDiamonds)} ${t("diamonds")}`);
         item.innerHTML = `
             <div class="quest-title">${label}</div>
             <div class="quest-description">${description}</div>
             <div class="quest-progress">${Math.floor(Math.min(status.current, status.target))}/${status.target}</div>
+            <div class="quest-reward">${t("reward")}: ${rewards.join(" | ") || "—"}</div>
         `;
         questListEl.appendChild(item);
     });
@@ -315,6 +323,7 @@ export function renderUI() {
     cookieCountEl.textContent = formatNumber(gameState.cookies);
     cpsEl.textContent = formatNumber(cpsValue);
     prestigeCountEl.textContent = gameState.prestigeCookies;
+    if (diamondCountEl) diamondCountEl.textContent = formatNumber(gameState.diamonds || 0);
 
     const world = getWorldById(gameState.currentWorld);
     if (world) worldNameEl.textContent = world.name;
@@ -342,15 +351,14 @@ export function renderUI() {
         }
     }
 
-    if (prestigeResetProgressEl) {
-        const lifetimeTarget = PRESTIGE_THRESHOLD;
-        const progress = Math.min(gameState.lifetimeCookies, lifetimeTarget);
-        const remaining = Math.max(0, lifetimeTarget - gameState.lifetimeCookies);
+    if (trophyPrestigeProgressEl) {
+        const prestigeProgress = getPrestigeProgressState();
+        const progress = prestigeProgress.current;
+        const lifetimeTarget = prestigeProgress.target;
+        const remaining = prestigeProgress.remaining;
         const preview = getPrestigePreview();
         if (remaining <= 0) {
-            const lifetimeSinceLastPrestige = Math.max(0, gameState.lifetimeCookies - gameState.lifetimeCookiesAtLastPrestige);
-            const progressInsideTier = lifetimeSinceLastPrestige % PRESTIGE_THRESHOLD;
-            const remainingToNextPrestige = PRESTIGE_THRESHOLD - progressInsideTier;
+            const remainingToNextPrestige = prestigeProgress.target;
             const etaToNextPrestige = cpsValue > 0 ? remainingToNextPrestige / cpsValue : Infinity;
 
             const recommendation = preview.gain.prestigeCookies >= 5
@@ -361,7 +369,7 @@ export function renderUI() {
                         ? t("prestigeSuggestNextBetter", { eta: formatEta(etaToNextPrestige) })
                         : t("prestigeSuggestWait");
 
-            prestigeResetProgressEl.textContent = `${t("prestigeReady")} ${t("prestigePreview", {
+            trophyPrestigeProgressEl.textContent = `${t("prestigeReady")} ${t("prestigePreview", {
                 lose: formatNumber(preview.lose.cookies),
                 gain: preview.gain.prestigeCookies
             })} ${recommendation}`;
@@ -380,7 +388,7 @@ export function renderUI() {
                 }
             }
 
-            prestigeResetProgressEl.textContent = prestigeProgressText;
+            trophyPrestigeProgressEl.textContent = prestigeProgressText;
         }
     }
 
@@ -390,21 +398,22 @@ export function renderUI() {
     renderDailySummary();
     renderActiveBonusesPanel();
     renderAutoBuyerState();
-    refreshPrestigeUpgradesIfNeeded();
-    updatePrestigeResetButtonState();
+    renderDiamondShop();
     renderMilestones();
+    renderTrophyPath();
 }
 
 export { renderBuildings, refreshBuildingsIfNeeded };
-export { renderPrestigeUpgrades };
+export { renderTrophyPath, renderDiamondShop };
 
 export function refreshAllUI() {
     applyStaticTranslations();
     applyWorldTheme();
     renderBuildings();
-    renderPrestigeUpgrades();
+    renderDiamondShop();
     renderMilestones();
     renderQuests();
+    renderTrophyPath();
     renderUI();
 }
 
@@ -413,6 +422,7 @@ export function applyStaticTranslations() {
         ["labelSnus", t("statsSnus")],
         ["labelCps", t("statsPerSecond")],
         ["labelPrestige", t("statsPrestigeSnus")],
+        ["labelDiamonds", t("diamonds")],
         ["worldButton", t("worldSwitch")],
         ["worldPickerTitle", t("worldPickerTitle")],
         ["settingsToggleButton", t("settingsOpen")],
@@ -420,6 +430,12 @@ export function applyStaticTranslations() {
         ["settingsTitle", t("settingsTitle")],
         ["milestonesTitle", t("milestonesTitle")],
         ["questTitle", t("questTitle")],
+        ["trophyPathButton", t("trophyPathButton")],
+        ["trophyPathTitle", t("trophyPathTitle")],
+        ["trophyPathIntro", t("trophyPathIntro")],
+        ["trophyResetWarning", t("trophyResetWarning")],
+        ["trophyPrestigeButton", t("trophyPrestigeButton")],
+        ["diamondShopTitle", t("diamondShopTitle")],
         ["settingSoundLabel", t("settingSound")],
         ["settingLanguageLabel", t("settingLanguage")],
         ["settingBackgroundLabel", t("settingBackground")],

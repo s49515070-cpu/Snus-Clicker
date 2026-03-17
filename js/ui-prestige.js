@@ -19,7 +19,9 @@ export function createPrestigeUIController({
         levelShort: "Lvl",
         maxReached: "MAX erreicht",
         cost: "Kosten",
-        prestigeSnus: "Prestige-Snus",
+        diamonds: "Diamanten",
+        prestigeSnus: "Prestige",
+        trophyPath: "Trophäenpfad",
         prestigeReset: "Prestige-Reset",
         earnedPrestige: "✨ Du hast {amount} Prestige-Snus erhalten!",
         notEnoughLifetime: "ℹ️ Noch nicht genug Lifetime-Snus für Prestige."
@@ -41,7 +43,7 @@ export function createPrestigeUIController({
             .map((upgrade) => gameState.prestigeUpgradeLevels[upgrade.id] ?? 0)
             .join("|");
 
-        return `${levels}::${gameState.prestigeCookies}`;
+        return `${levels}::${gameState.prestigeCookies}::${gameState.diamonds}`;
     }
 
     function buildPrestigeUpgradeCards() {
@@ -79,7 +81,12 @@ export function createPrestigeUIController({
         if (!prestigeSummaryEl) return;
 
         const effects = getPrestigeEffects();
-        prestigeSummaryEl.textContent = `${translate("activeBonuses")}: Klick +${effects.clickBonusPercent}% | CPS +${effects.cpsBonusPercent}%`;
+        const track = getPrestigeTrackStatus?.() || [];
+        const trackText = track
+            .slice(0, 5)
+            .map((entry) => `${entry.claimed ? "🏆" : entry.unlocked ? "✅" : "🔒"}${entry.level}`)
+            .join(" ");
+        prestigeSummaryEl.textContent = `${translate("activeBonuses")}: Klick +${effects.clickBonusPercent}% | CPS +${effects.cpsBonusPercent}% • ${translate("trophyPath")}: ${trackText}`;
     }
 
     function updatePrestigeUpgradeCards() {
@@ -96,10 +103,10 @@ export function createPrestigeUIController({
             const level = Number(gameState.prestigeUpgradeLevels[upgrade.id] || 0);
             const maxed = level >= upgrade.maxLevel;
             const cost = getPrestigeUpgradeCost(upgrade.id);
-            const canAfford = !maxed && gameState.prestigeCookies >= cost;
+            const canAfford = !maxed && gameState.diamonds >= cost;
 
             entry.title.textContent = `${upgrade.name} (${translate("levelShort")} ${level}/${upgrade.maxLevel})`;
-            entry.meta.textContent = maxed ? translate("maxReached") : `${translate("cost")}: ${cost} ${translate("prestigeSnus")}`;
+            entry.meta.textContent = maxed ? translate("maxReached") : `${translate("cost")}: ${cost} ${translate("diamonds")}`;
             
             entry.card.classList.toggle("is-affordable", canAfford);
             entry.card.classList.toggle("is-unaffordable", !canAfford);

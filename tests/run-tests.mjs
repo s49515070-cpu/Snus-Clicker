@@ -9,6 +9,7 @@ import {
   buyBuilding,
   getPotentialPrestigeGain,
   prestigeReset,
+  getPrestigeTrackStatus,
   buyWorld,
   changeWorld,
   isWorldPurchased,
@@ -413,6 +414,26 @@ function testPotentialPrestigeGainCannotBeClaimedTwice() {
   assert.equal(getPotentialPrestigeGain(), 0, 'prestige should not be re-claimable without new lifetime progress');
 }
 
+
+
+function testPrestigeTrackAwardsBacklogDiamonds() {
+  resetEngineState();
+
+  gameState.prestigeCookies = 3;
+  gameState.diamonds = 0;
+  gameState.prestigeTrackClaimed = {};
+
+  const earned = prestigeReset();
+  const claimedRewards = getPrestigeTrackStatus().filter((entry) => entry.claimed);
+
+  assert.equal(earned, 0, 'prestige reset should not run when no new prestige is available');
+  assert.equal(gameState.diamonds, 25, 'already reached trophy levels should still grant missing diamond rewards');
+  assert.deepEqual(
+    claimedRewards.map((entry) => entry.level),
+    [1, 2, 3],
+    'rewards up to current prestige level should be marked as claimed'
+  );
+}
 
 function testWorldMustBePurchasedBeforeSwitch() {
   resetEngineState();
@@ -1166,6 +1187,7 @@ async function run() {
   testPrestigePurchaseRules();
   testPotentialPrestigeGain();
   testPotentialPrestigeGainCannotBeClaimedTwice();
+  testPrestigeTrackAwardsBacklogDiamonds();
   testWorldMustBePurchasedBeforeSwitch();
   testWorldThreeNeedsBuildingRequirement();
   testWorldUnlockDetailsReportsMissingProgress();

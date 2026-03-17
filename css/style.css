@@ -1273,12 +1273,6 @@ body.high-contrast {
     white-space: normal;
 }
 
-.trophy-path-scrollbar {
-    width: 100%;
-    margin: 6px 0 2px;
-    accent-color: #6366f1;
-}
-
 .trophy-path-item {
     flex: 0 0 250px;
     line-height: 1.3;

@@ -81,7 +81,6 @@ const autoBuyerStatusEl = document.getElementById("autoBuyerStatus");
 const activeBonusesPanelEl = document.getElementById("activeBonusesPanel");
 const goldenSnusButton = document.getElementById("goldenSnusButton");
 const trophyPathListEl = document.getElementById("trophyPathList");
-const trophyPathScrollBarEl = document.getElementById("trophyPathScrollBar");
 
 initToastSystem(autosaveIndicator);
 
@@ -104,7 +103,6 @@ const { renderBuildings, refreshBuildingsIfNeeded } = createBuildingsUIControlle
 
 const { renderTrophyPath } = createTrophyPathController({
     trophyPathListEl,
-    trophyPathScrollBarEl,
     getPrestigeTrackStatus,
     t
 });

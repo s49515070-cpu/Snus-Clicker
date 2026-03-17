@@ -74,6 +74,7 @@ function resetEngineState() {
   gameState.lifetimeCookies = 0;
   gameState.lifetimeCookiesAtLastPrestige = 0;
   gameState.prestigeCookies = 0;
+  gameState.diamonds = 0;
   gameState.buyMode = 1;
   gameState.currentWorld = 1;
   gameState.unlockedWorldIds = [1];
@@ -348,7 +349,7 @@ function testPrestigeControllerCallbacks() {
     }
   });
 
-  gameState.prestigeCookies = 100;
+  gameState.diamonds = 100;
   controller.renderPrestigeUpgrades();
 
   const upgradeClickHandler = prestigeUpgradesEl.listeners.click;
@@ -384,12 +385,12 @@ function testPrestigePurchaseRules() {
   const upgrade = prestigeUpgrades[0];
   const cost = getPrestigeUpgradeCost(upgrade.id);
 
-  assert.equal(buyPrestigeUpgrade(upgrade.id), false, 'cannot buy without enough prestige cookies');
+  assert.equal(buyPrestigeUpgrade(upgrade.id), false, 'cannot buy without enough diamonds');
 
-  gameState.prestigeCookies = cost;
-  assert.equal(buyPrestigeUpgrade(upgrade.id), true, 'can buy with enough prestige cookies');
+  gameState.diamonds = cost;
+  assert.equal(buyPrestigeUpgrade(upgrade.id), true, 'can buy with enough diamonds');
   assert.equal(gameState.prestigeUpgradeLevels[upgrade.id], 1, 'purchase should increase level');
-  assert.equal(gameState.prestigeCookies, 0, 'purchase should deduct cost');
+  assert.equal(gameState.diamonds, 0, 'purchase should deduct cost');
 }
 
 function testPotentialPrestigeGain() {

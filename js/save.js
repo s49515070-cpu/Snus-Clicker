@@ -281,6 +281,7 @@ function normalizeSavePayload(parsed) {
     const lifetimeCookiesAtLastPrestigeRaw = normalizeNumber(migrated.lifetimeCookiesAtLastPrestige, 0, 0);
     const lifetimeCookiesAtLastPrestige = Math.min(lifetimeCookies, lifetimeCookiesAtLastPrestigeRaw);
     const prestigeCookies = normalizeNumber(migrated.prestigeCookies, 0, 0);
+    const diamonds = normalizeNumber(migrated.diamonds, 0, 0);
     const currentWorld = Number(migrated.currentWorld);
     const unlockedWorldIds = normalizeUnlockedWorldIds(migrated.unlockedWorldIds);
     const normalizedCurrentWorld = worlds.some((world) => world.id === currentWorld) ? currentWorld : 1;
@@ -295,6 +296,7 @@ function normalizeSavePayload(parsed) {
         lifetimeCookies,
         lifetimeCookiesAtLastPrestige,
         prestigeCookies,
+        diamonds,
         unlockedWorldIds,
         currentWorld: unlockedWorldIds.includes(normalizedCurrentWorld) ? normalizedCurrentWorld : 1,
         buyMode: buyMode === "max" || (Number.isFinite(buyMode) && buyMode > 0) ? buyMode : 1,
@@ -304,6 +306,7 @@ function normalizeSavePayload(parsed) {
         prestigeUpgradeLevels: normalizePrestigeUpgradeLevels(migrated.prestigeUpgradeLevels),
         milestonesClaimed: normalizeMilestonesClaimed(migrated.milestonesClaimed),
         questsClaimed: { ...(gameState.questsClaimed || {}), ...(migrated.questsClaimed || {}) },
+        prestigeTrackClaimed: { ...(gameState.prestigeTrackClaimed || {}), ...(migrated.prestigeTrackClaimed || {}) },
         activeBoostUntil: normalizeNumber(migrated.activeBoostUntil, 0, 0),
         activeBoostCooldownUntil: normalizeNumber(migrated.activeBoostCooldownUntil, 0, 0),
         totalClicks: normalizeNumber(migrated.totalClicks, 0, 0),
@@ -385,8 +388,10 @@ function buildImportPreview(currentState, importedState) {
         "cookies",
         "lifetimeCookies",
         "prestigeCookies",
+        "diamonds",
         "currentWorld",
-        "buyMode"
+        "buyMode",
+        "prestigeTrackClaimed"
     ];
 
     const lines = watchedFields

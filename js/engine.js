@@ -7,6 +7,7 @@ import { buildings, getPurchaseCost, getBuildingCps } from "./buildings.js";
 import { getWorldById, worlds, isWorldUnlocked } from "./worlds.js";
 
 export const PRESTIGE_THRESHOLD = 1_000_000;
+export const PRESTIGE_STEP_COST = 250_000;
 const ACTIVE_BOOST_DURATION_MS = 30_000;
 const ACTIVE_BOOST_COOLDOWN_MS = 30_000;
 const ACTIVE_BOOST_MULTIPLIER = 3;
@@ -70,6 +71,19 @@ export const prestigeUpgrades = [
     }
 ];
 
+export const prestigeTrackRewards = [
+    { level: 1, rewardDiamonds: 5, title: "Bronze Trophy" },
+    { level: 2, rewardDiamonds: 8, title: "Silver Trophy" },
+    { level: 3, rewardDiamonds: 12, title: "Gold Trophy" },
+    { level: 5, rewardDiamonds: 20, title: "Master Trophy" },
+    { level: 8, rewardDiamonds: 26, title: "Elite Trophy" },
+    { level: 12, rewardDiamonds: 35, title: "Champion Trophy" },
+    { level: 17, rewardDiamonds: 48, title: "Legend Trophy" },
+    { level: 23, rewardDiamonds: 62, title: "Mythic Trophy" },
+    { level: 31, rewardDiamonds: 80, title: "Ascendant Trophy" },
+    { level: 42, rewardDiamonds: 105, title: "Eternal Trophy" }
+];
+
 export const milestones = [
     {
         id: "lifetime_10k",
@@ -110,7 +124,7 @@ export const milestones = [
         description: "Besitze insgesamt 75 Gebäude",
         target: 75,
         rewardCookies: 35_000,
-        rewardPrestigeCookies: 1,
+        rewardDiamonds: 5,
         rewardPerk: "autobuyer_speed",
         progress: (state) => buildings.reduce((sum, building) => sum + Number(state.buildingData[building.id]?.owned || 0), 0)
     },
@@ -170,7 +184,7 @@ export const quests = [
         description: "Verdiene heute 200.000 Snus",
         target: 200_000,
         rewardCookies: 16_000,
-        rewardPrestigeCookies: 1,
+        rewardDiamonds: 1,
         progress: (state) => state.todayStats.earned,
         isDaily: true
     },
@@ -182,7 +196,7 @@ export const quests = [
         description: "Verdiene diese Woche 5.000.000 Snus",
         target: 5_000_000,
         rewardCookies: 120_000,
-        rewardPrestigeCookies: 3,
+        rewardDiamonds: 4,
         progress: (state) => Number(state.weeklyStats?.earned || 0),
         isDaily: false
     },
@@ -194,7 +208,7 @@ export const quests = [
         description: "Klicke insgesamt 5.000x",
         target: 5_000,
         rewardCookies: 10_000,
-        rewardPrestigeCookies: 1,
+        rewardDiamonds: 2,
         progress: (state) => state.totalClicks,
         isDaily: false
     },
@@ -206,7 +220,7 @@ export const quests = [
         description: "Besitze insgesamt 100 Gebäude",
         target: 100,
         rewardCookies: 25_000,
-        rewardPrestigeCookies: 1,
+        rewardDiamonds: 2,
         progress: (state) => buildings.reduce((sum, building) => sum + Number(state.buildingData[building.id]?.owned || 0), 0),
         isDaily: false
     }
@@ -227,6 +241,7 @@ export const gameState = {
     lifetimeCookies: 0,
     lifetimeCookiesAtLastPrestige: 0,
     prestigeCookies: 0,
+    diamonds: 0,
     currentWorld: 1,
     unlockedWorldIds: [1],
     buyMode: 1,
@@ -262,7 +277,8 @@ export const gameState = {
     milestonePerks: {},
     goldenSnusAvailableUntil: 0,
     goldenSnusCooldownUntil: 0,
-    goldenSnusReward: 0
+    goldenSnusReward: 0,
+    prestigeTrackClaimed: {}
 };
 
 function getTodayKey() {
@@ -396,6 +412,13 @@ function resetPrestigeUpgrades() {
     });
 }
 
+function resetPrestigeTrack() {
+    gameState.prestigeTrackClaimed = {};
+    prestigeTrackRewards.forEach((reward) => {
+        gameState.prestigeTrackClaimed[reward.level] = false;
+    });
+}
+
 function resetMilestones() {
     milestones.forEach((milestone) => {
         gameState.milestonesClaimed[milestone.id] = false;
@@ -413,6 +436,7 @@ export function resetGameState() {
     gameState.lifetimeCookies = 0;
     gameState.lifetimeCookiesAtLastPrestige = 0;
     gameState.prestigeCookies = 0;
+    gameState.diamonds = 0;
     gameState.currentWorld = 1;
     gameState.unlockedWorldIds = [1];
     gameState.buyMode = 1;
@@ -449,6 +473,7 @@ export function resetGameState() {
     rotateDailyQuestsForToday();
     resetBuildingData();
     resetPrestigeUpgrades();
+    resetPrestigeTrack();
     resetMilestones();
     resetQuests();
 }
@@ -838,8 +863,42 @@ export function getPrestigeUpgradeCost(upgradeId) {
 }
 
 export function getPotentialPrestigeGain() {
-    const lifetimeSinceLastPrestige = Math.max(0, gameState.lifetimeCookies - gameState.lifetimeCookiesAtLastPrestige);
-    return Math.floor(lifetimeSinceLastPrestige / PRESTIGE_THRESHOLD);
+    const progress = getPrestigeProgressState();
+    return progress.potentialGain;
+}
+
+export function getPrestigeCostForLevel(currentPrestigeLevel) {
+    const level = Math.max(0, Math.floor(Number(currentPrestigeLevel) || 0));
+    return PRESTIGE_THRESHOLD + (level * PRESTIGE_STEP_COST);
+}
+
+export function getPrestigeProgressState() {
+    let availableLifetime = Math.max(0, gameState.lifetimeCookies - gameState.lifetimeCookiesAtLastPrestige);
+    let simulatedPrestige = Math.max(0, Math.floor(Number(gameState.prestigeCookies) || 0));
+    let spentLifetime = 0;
+    let potentialGain = 0;
+
+    while (true) {
+        const nextCost = getPrestigeCostForLevel(simulatedPrestige);
+        if (availableLifetime < nextCost) break;
+        availableLifetime -= nextCost;
+        spentLifetime += nextCost;
+        simulatedPrestige += 1;
+        potentialGain += 1;
+    }
+
+    const nextCost = getPrestigeCostForLevel(simulatedPrestige);
+    const current = Math.min(nextCost, nextCost - Math.max(0, nextCost - availableLifetime));
+    const remaining = Math.max(0, nextCost - availableLifetime);
+
+    return {
+        current,
+        target: nextCost,
+        remaining,
+        potentialGain,
+        spentLifetime,
+        carryLifetime: availableLifetime
+    };
 }
 
 export function getPrestigePreview() {
@@ -853,13 +912,43 @@ export function getPrestigePreview() {
     };
 }
 
+function claimPrestigeTrackRewards(previousLevel, newLevel) {
+    const claimedNow = [];
+
+    prestigeTrackRewards.forEach((reward) => {
+        const isInRange = reward.level > previousLevel && reward.level <= newLevel;
+        const alreadyClaimed = Boolean(gameState.prestigeTrackClaimed[reward.level]);
+        if (!isInRange || alreadyClaimed) return;
+
+        gameState.prestigeTrackClaimed[reward.level] = true;
+        if (reward.rewardDiamonds) gameState.diamonds += Number(reward.rewardDiamonds);
+        claimedNow.push(reward);
+    });
+
+    return claimedNow;
+}
+
+export function getPrestigeTrackStatus() {
+    return [...prestigeTrackRewards]
+        .sort((a, b) => Number(a.level) - Number(b.level))
+        .map((reward) => ({
+            ...reward,
+            rewardDiamonds: Number(reward.rewardDiamonds || 0),
+            unlocked: gameState.prestigeCookies >= reward.level,
+            claimed: Boolean(gameState.prestigeTrackClaimed[reward.level])
+        }));
+}
+
 export function prestigeReset() {
-    const gained = getPotentialPrestigeGain();
+    const progress = getPrestigeProgressState();
+    const gained = progress.potentialGain;
     if (gained <= 0) return 0;
 
+    const previousPrestige = gameState.prestigeCookies;
     gameState.prestigeCookies += gained;
-    gameState.lifetimeCookiesAtLastPrestige = gameState.lifetimeCookies;
+    gameState.lifetimeCookiesAtLastPrestige += progress.spentLifetime
     gameState.prestigeMultiplier = 1 + gameState.prestigeCookies * 0.01;
+    claimPrestigeTrackRewards(previousPrestige, gameState.prestigeCookies);
 
     gameState.cookies = 0;
     gameState.currentWorld = 1;
@@ -891,9 +980,9 @@ export function buyPrestigeUpgrade(upgradeId) {
     if (level >= upgrade.maxLevel) return false;
 
     const cost = getPrestigeUpgradeCost(upgrade.id);
-    if (gameState.prestigeCookies < cost) return false;
+    if (gameState.diamonds < cost) return false;
 
-    gameState.prestigeCookies -= cost;
+    gameState.diamonds -= cost;
     gameState.prestigeUpgradeLevels[upgrade.id] = level + 1;
     return true;
 }
@@ -966,21 +1055,21 @@ export function claimAvailableMilestones() {
 
         gameState.milestonesClaimed[milestone.id] = true;
         const rewardCookies = Number(milestone.rewardCookies || 0);
-        const rewardPrestigeCookies = Number(milestone.rewardPrestigeCookies || 0);
+        const rewardDiamonds = Number(milestone.rewardDiamonds || 0);
 
         if (rewardCookies > 0) {
             addCookies(rewardCookies);
         }
 
-        if (rewardPrestigeCookies > 0) {
-            gameState.prestigeCookies += rewardPrestigeCookies;
+        if (rewardDiamonds > 0) {
+            gameState.diamonds += rewardDiamonds;
         }
 
         if (milestone.rewardPerk) {
             gameState.milestonePerks[milestone.rewardPerk] = true;
         }
 
-        claimedNow.push({ id: milestone.id, label: milestone.label, rewardCookies, rewardPrestigeCookies });
+        claimedNow.push({ id: milestone.id, label: milestone.label, rewardCookies, rewardDiamonds });
     });
 
     return claimedNow;
@@ -996,13 +1085,13 @@ export function claimAvailableQuests() {
 
         gameState.questsClaimed[quest.id] = true;
         const rewardCookies = Number(quest.rewardCookies || 0);
-        const rewardPrestigeCookies = Number(quest.rewardPrestigeCookies || 0);
+        const rewardDiamonds = Number(quest.rewardDiamonds || 0);
 
         const streakBonus = Math.min(0.25, Number(gameState.dailyStreak || 0) * 0.01);
         if (rewardCookies > 0) addCookies(rewardCookies * (1 + streakBonus));
-        if (rewardPrestigeCookies > 0) gameState.prestigeCookies += rewardPrestigeCookies;
+        if (rewardDiamonds > 0) gameState.diamonds += rewardDiamonds;
 
-        claimedNow.push({ id: quest.id, label: quest.label, rewardCookies, rewardPrestigeCookies });
+        claimedNow.push({ id: quest.id, label: quest.label, rewardCookies, rewardDiamonds });
     });
 
     return claimedNow;

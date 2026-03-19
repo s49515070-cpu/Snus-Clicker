@@ -454,6 +454,21 @@ function testPrestigeTrackExtendsToLevelHundred() {
   );
 }
 
+function testPrestigeTrackDiamondCadence() {
+  const rewardLevels = prestigeTrackRewards
+    .filter((entry) => entry.rewardDiamonds > 0)
+    .map((entry) => entry.level);
+
+  assert.deepEqual(
+    rewardLevels.slice(0, 16),
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 25],
+    'trophy path should reward every level to 10, every 2 levels to 20, then every 5 levels'
+  );
+  assert.equal(rewardLevels.at(-1), 100, 'trophy path should keep diamond rewards through level 100');
+  assert.equal(prestigeTrackRewards.find((entry) => entry.level === 11)?.rewardDiamonds, 0, 'level 11 should not grant diamonds');
+  assert.equal(prestigeTrackRewards.find((entry) => entry.level === 21)?.rewardDiamonds, 0, 'level 21 should not grant diamonds');
+}
+
 function testWorldMustBePurchasedBeforeSwitch() {
   resetEngineState();
 
@@ -1243,6 +1258,7 @@ async function run() {
   testPotentialPrestigeGainCannotBeClaimedTwice();
   testPrestigeTrackAwardsBacklogDiamonds();
   testPrestigeTrackExtendsToLevelHundred();
+  testPrestigeTrackDiamondCadence();
   testWorldMustBePurchasedBeforeSwitch();
   testWorldThreeNeedsBuildingRequirement();
   testWorldUnlockDetailsReportsMissingProgress();

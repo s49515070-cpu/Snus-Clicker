@@ -37,6 +37,14 @@ import { buildings, getMaxAffordable, getMaxAffordableSummary } from '../js/buil
 import { getWorldById, getWorldUnlockDetails } from '../js/worlds.js';
 import { createBuildingsUIController } from '../js/ui-buildings.js';
 import { createPrestigeUIController } from '../js/ui-prestige.js';
+import {
+  WORD_LENGTH,
+  applyKeyInput,
+  buildBoard,
+  createInitialGameState,
+  evaluateGuess,
+  submitGuess,
+} from '../js/wordle-logic.js';
 
 const localStorageMock = (() => {
   const store = new Map();
@@ -1177,6 +1185,41 @@ function testBuildingSynergyBoostsCps() {
   assert.ok(cps > 1, 'synergy should increase total cps beyond raw cursor cps');
 }
 
+
+function testWordleEvaluationHandlesDuplicateLetters() {
+  const result = evaluateGuess('LEVEL', 'HELLO');
+  assert.deepEqual(
+    result.map((tile) => tile.state),
+    ['present', 'correct', 'absent', 'absent', 'present'],
+    'wordle evaluation should consume duplicate letters correctly'
+  );
+}
+
+function testWordleSubmitGuessTracksWinAndStatistics() {
+  let state = createInitialGameState('APFEL');
+  state = { ...state, currentGuess: 'APFEL' };
+  const result = submitGuess(state, new Set(['APFEL']));
+
+  assert.equal(result.accepted, true, 'valid wordle guess should be accepted');
+  assert.equal(result.state.status, 'won', 'matching solution should end the game as won');
+  assert.equal(result.state.statistics.played, 1, 'winning should increment played count');
+  assert.equal(result.state.statistics.wins, 1, 'winning should increment wins count');
+  assert.equal(result.state.statistics.distribution[0], 1, 'distribution should record first-try win');
+}
+
+function testWordleBoardReflectsDraftInput() {
+  let state = createInitialGameState('APFEL');
+  state = applyKeyInput(state, 'A');
+  state = applyKeyInput(state, 'P');
+
+  const board = buildBoard(state);
+  assert.equal(board.length, 6, 'wordle board should always expose six rows');
+  assert.equal(board[0][0].letter, 'A', 'draft board should show typed letters');
+  assert.equal(board[0][1].letter, 'P', 'draft board should show consecutive typed letters');
+  assert.equal(board[0][2].state, 'empty', 'remaining tiles should stay empty before submission');
+  assert.equal(WORD_LENGTH, 5, 'wordle should stay configured to five letters');
+}
+
 function testGoldenSnusClaimRewardsCookies() {
   resetEngineState();
   const now = Date.now();
@@ -1223,6 +1266,9 @@ testBuyModeSanitizesFractionalValues();;
   testActiveBonusesExposeWorldAndAutomationState();
   testBuildingSynergyBoostsCps();
   testDiscountBurstAppliesToPricePreviewAndMaxBuy();
+  testWordleEvaluationHandlesDuplicateLetters();
+  testWordleSubmitGuessTracksWinAndStatistics();
+  testWordleBoardReflectsDraftInput();
   testGoldenSnusClaimRewardsCookies();
   testConfigClampingAndPersistence();
   testConfigReset();

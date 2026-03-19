@@ -8,6 +8,7 @@ import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyWo
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
 import { loadConfig, getAutosaveInterval, getUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";
 import { t } from "./i18n.js";
+import { initWordle } from "./wordle.js";
 
 // ===============================
 // INITIALISIERUNG
@@ -387,6 +388,7 @@ function init() {
     initMilestonesControls();
     initTrophyPathControls();
     initSaveSyncListener();
+    initWordle();
     applyStaticTranslations();
 
     gameLoop();

@@ -41,6 +41,7 @@ import {
   WORD_LENGTH,
   applyKeyInput,
   buildBoard,
+  createDailySeed,
   createInitialGameState,
   evaluateGuess,
   submitGuess,
@@ -1222,6 +1223,22 @@ function testWordleSubmitGuessTracksWinAndStatistics() {
   assert.equal(result.state.statistics.distribution[0], 1, 'distribution should record first-try win');
 }
 
+function testWordleDailySeedUsesLocalCalendarDay() {
+  const lateEvening = new Date(2024, 0, 1, 23, 30);
+  const shortlyAfterMidnight = new Date(2024, 0, 2, 0, 30);
+
+  assert.equal(
+    createDailySeed(lateEvening),
+    0,
+    'daily seed should still point to the current puzzle before the local midnight rollover'
+  );
+  assert.equal(
+    createDailySeed(shortlyAfterMidnight),
+    1,
+    'daily seed should advance as soon as the local calendar day changes'
+  );
+}
+
 function testWordleBoardReflectsDraftInput() {
   let state = createInitialGameState('APFEL');
   state = applyKeyInput(state, 'A');
@@ -1269,6 +1286,7 @@ testBuildingsControllerRoiUsesMaxQuantity();
 testBuyModeSanitizesFractionalValues();;
   testPrestigeControllerCallbacks();
   testBuyBuildingNormalizesOwnedType();
+  testWordleDailySeedUsesLocalCalendarDay();
   testBuildingPurchaseNeedsValidId();
   testMaxAffordableSummaryMatchesCount();
   testMilestoneClaimingRewards();

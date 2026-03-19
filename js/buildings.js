@@ -25,8 +25,8 @@ export const buildings = [
     {
         id: "factory",
         name: "Snus Factory",
-        baseCost: 950,
-        baseCps: 8,
+        baseCps: 10,
+        growth: 1.135,
         growth: 1.14,
         icon: "assets/buildings/factory.png",
         side: "left"
@@ -34,36 +34,36 @@ export const buildings = [
     {
         id: "temple",
         name: "Snus Temple",
-        baseCost: 9000,
-        baseCps: 47,
-        growth: 1.14,
+        baseCost: 8800,
+        baseCps: 95,
+        growth: 1.135,
         icon: "assets/buildings/temple.png",
         side: "right"
             },
     {
         id: "lab",
         name: "Snus Lab",
-        baseCost: 65000,
-        baseCps: 220,
-        growth: 1.145,
+        baseCost: 62000,
+        baseCps: 700,
+        growth: 1.138,
         icon: "assets/buildings/factory.png",
         side: "left"
     },
     {
         id: "exchange",
         name: "Snus Exchange",
-        baseCost: 380000,
-        baseCps: 1200,
-        growth: 1.148,
+        baseCost: 360000,
+        baseCps: 4500,
+        growth: 1.14,
         icon: "assets/buildings/temple.png",
         side: "right"
     },
     {
         id: "orbital",
         name: "Orbital Refinery",
-        baseCost: 2500000,
-        baseCps: 6800,
-        growth: 1.152,
+        baseCost: 2200000,
+        baseCps: 32000,
+        growth: 1.142,
         icon: "assets/buildings/temple.png",
         side: "left"
     }

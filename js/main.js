@@ -6,7 +6,7 @@
 import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, setAutoBuyerStrategy, getAutoBuyerStrategy, setAutoBuyerWeights, getAutoBuyerWeights, prestigeReset, getPotentialPrestigeGain } from "./engine.js";
 import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
-import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";";
+import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";
 import { t } from "./i18n.js";
 import { initWordle } from "./wordle.js";
 

@@ -6,7 +6,7 @@
 import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, setAutoBuyerStrategy, getAutoBuyerStrategy, setAutoBuyerWeights, getAutoBuyerWeights, prestigeReset, getPotentialPrestigeGain } from "./engine.js";
 import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
-import { loadConfig, getAutosaveInterval, getUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";
+import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";";
 import { t } from "./i18n.js";
 import { initWordle } from "./wordle.js";
 
@@ -49,6 +49,10 @@ function initSettingsControls() {
     const soundInput = document.getElementById("soundEnabledInput");
     const languageInput = document.getElementById("languageInput");
     const backgroundColorInput = document.getElementById("backgroundColorInput");
+    const autosaveIntervalInput = document.getElementById("autosaveIntervalInput");
+    const autosaveIntervalText = document.getElementById("autosaveIntervalText");
+    const uiRefreshIntervalInput = document.getElementById("uiRefreshIntervalInput");
+    const uiRefreshIntervalText = document.getElementById("uiRefreshIntervalText");
     const autoBuyerStrategyInput = document.getElementById("autoBuyerStrategyInput");
     const autoBuyerCustomWeights = document.getElementById("autoBuyerCustomWeights");
     const autoBuyerValueWeightInput = document.getElementById("autoBuyerValueWeightInput");
@@ -89,6 +93,16 @@ function initSettingsControls() {
         }
         if (autoBuyerCheapWeightText && autoBuyerCheapWeightInput) {
             autoBuyerCheapWeightText.textContent = `${autoBuyerCheapWeightInput.value}%`;
+        }
+    };
+
+    const syncRangeTexts = () => {
+        if (autosaveIntervalText && autosaveIntervalInput) {
+            autosaveIntervalText.textContent = `${Number(autosaveIntervalInput.value).toLocaleString("de-DE")} ms`;
+        }
+
+        if (uiRefreshIntervalText && uiRefreshIntervalInput) {
+            uiRefreshIntervalText.textContent = `${Number(uiRefreshIntervalInput.value).toLocaleString("de-DE")} ms`;
         }
     };
 
@@ -151,6 +165,27 @@ function initSettingsControls() {
             updateBackgroundColor(selectedColor);
             applyWorldTheme();
             showToast(t("backgroundUpdated"), 1400, "info");
+        });
+    }
+
+    if (autosaveIntervalInput) {
+        autosaveIntervalInput.value = String(getAutosaveInterval());
+        syncRangeTexts();
+        autosaveIntervalInput.addEventListener("input", syncRangeTexts);
+        autosaveIntervalInput.addEventListener("change", () => {
+            updateAutosaveInterval(autosaveIntervalInput.value);
+            syncRangeTexts();
+            restartAutosaveTimer();
+            showToast(t("autosaveUpdated"), 1400, "info");
+        });
+    }
+
+    if (uiRefreshIntervalInput) {
+        uiRefreshIntervalInput.value = String(getUiRefreshInterval());
+        syncRangeTexts();
+        uiRefreshIntervalInput.addEventListener("input", () => {
+            updateUiRefreshInterval(uiRefreshIntervalInput.value);
+            syncRangeTexts();
         });
     }
 
@@ -222,6 +257,8 @@ function initSettingsControls() {
             if (soundInput) soundInput.value = defaults.soundEnabled ? "on" : "off";
             if (languageInput) languageInput.value = defaults.language;
             if (backgroundColorInput) backgroundColorInput.value = defaults.backgroundColor || "#dff6ff";
+            if (autosaveIntervalInput) autosaveIntervalInput.value = String(defaults.autosaveIntervalMs);
+            if (uiRefreshIntervalInput) uiRefreshIntervalInput.value = String(defaults.uiRefreshIntervalMs);
             if (autoBuyerStrategyInput) {
                 setAutoBuyerStrategy("value");
                 updateAutoBuyerStrategyOptionLabels();
@@ -237,6 +274,7 @@ function initSettingsControls() {
             if (reducedMotionInput) reducedMotionInput.value = defaults.reducedMotion ? "on" : "off";
             if (highContrastInput) highContrastInput.value = defaults.highContrast ? "on" : "off";
 
+            syncRangeTexts();
             restartAutosaveTimer();
             applyStaticTranslations();
             updateAutoBuyerStrategyOptionLabels();

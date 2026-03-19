@@ -120,6 +120,35 @@
 
     <div id="activeBonusesPanel" class="active-bonuses-panel" aria-live="polite"></div>
 
+    <button id="wordleLauncherButton" class="wordle-launcher-button glass" type="button">🟩 Wordle</button>
+
+    <div id="wordleModal" class="wordle-modal" hidden>
+        <div class="wordle-panel glass highlight-panel" role="dialog" aria-modal="true" aria-labelledby="wordleTitle">
+            <div class="wordle-header">
+                <div>
+                    <div id="wordleModeBadge" class="wordle-mode-badge">Tagesrätsel</div>
+                    <h3 id="wordleTitle">🟩 Wordle</h3>
+                    <p id="wordleSubtitle" class="wordle-subtitle">Heute wartet ein neues 5-Buchstaben-Wort.</p>
+                </div>
+                <button id="wordleCloseButton" type="button" aria-label="Wordle schließen">✕</button>
+            </div>
+
+            <div class="wordle-toolbar">
+                <button id="wordlePracticeButton" type="button">🎲 Neue Trainingsrunde</button>
+                <button id="wordleResetButton" type="button">↻ Aktuelle Runde neu starten</button>
+                <label class="wordle-hard-mode-toggle">
+                    <input id="wordleHardModeInput" type="checkbox">
+                    <span>Hard Mode</span>
+                </label>
+            </div>
+
+            <div id="wordleStatus" class="wordle-status" aria-live="polite"></div>
+            <div id="wordleBoard" class="wordle-board" aria-label="Wordle Spielfeld"></div>
+            <div id="wordleKeyboard" class="wordle-keyboard" aria-label="Wordle Tastatur"></div>
+            <div id="wordleStats" class="wordle-stats"></div>
+        </div>
+    </div>
+
     <button id="settingsToggleButton" class="settings-toggle-button glass" type="button">⚙️ Einstellungen</button>
 
     <!-- Settings Controls -->

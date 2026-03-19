@@ -77,23 +77,34 @@ const prestigeTrackMilestoneRewards = new Map([
     [3, { rewardDiamonds: 12, title: "Gold Trophy" }],
     [5, { rewardDiamonds: 20, title: "Master Trophy" }],
     [8, { rewardDiamonds: 26, title: "Elite Trophy" }],
+    [10, { rewardDiamonds: 32, title: "Hero Trophy" }],
     [12, { rewardDiamonds: 35, title: "Champion Trophy" }],
-    [17, { rewardDiamonds: 48, title: "Legend Trophy" }],
-    [23, { rewardDiamonds: 62, title: "Mythic Trophy" }],
-    [31, { rewardDiamonds: 80, title: "Ascendant Trophy" }],
-    [42, { rewardDiamonds: 105, title: "Eternal Trophy" }],
+    [20, { rewardDiamonds: 56, title: "Legend Trophy" }],
+    [25, { rewardDiamonds: 68, title: "Mythic Trophy" }],
+    [30, { rewardDiamonds: 68, title: "Mythic Trophy" }],
+    [35, { rewardDiamonds: 68, title: "Mythic Trophy" }],
+    [40, { rewardDiamonds: 68, title: "Mythic Trophy" }],
+    [45, { rewardDiamonds: 68, title: "Mythic Trophy" }],
     [50, { rewardDiamonds: 126, title: "Immortal Trophy" }],
     [60, { rewardDiamonds: 152, title: "Cosmic Trophy" }],
     [70, { rewardDiamonds: 182, title: "Transcendent Trophy" }],
     [80, { rewardDiamonds: 216, title: "Infinity Trophy" }],
     [90, { rewardDiamonds: 254, title: "Omega Trophy" }],
-    [100, { rewardDiamonds: 300, title: "Centurion Trophy" }]
+    [100, { rewardDiamonds: 30000, title: "Centurion Trophy" }]
 ]);
+
+function isPrestigeTrackDiamondLevel(level) {
+    if (level <= 10) return true;
+    if (level <= 20) return level % 2 === 0;
+    return level % 5 === 0;
+}
 
 function getGeneratedPrestigeTrackReward(level) {
     const previousLevel = Math.max(0, level - 1);
     return {
-        rewardDiamonds: Math.round(5 + (level * 2.1) + (previousLevel * 0.85)),
+        rewardDiamonds: isPrestigeTrackDiamondLevel(level)
+            ? Math.round(5 + (level * 2.1) + (previousLevel * 0.85))
+            : 0,
         title: `Prestige ${level} Trophy`
     };
 }

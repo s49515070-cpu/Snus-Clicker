@@ -665,6 +665,24 @@ body.high-contrast {
     padding: 6px 8px;
 }
 
+.settings-range-control {
+    gap: 6px;
+}
+
+.settings-range-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.settings-panel input[type="range"] {
+    width: 100%;
+    padding: 0;
+    accent-color: #6366f1;
+    cursor: ew-resize;
+}
+
 #backgroundColorInput {
     width: 100%;
     min-height: 36px;

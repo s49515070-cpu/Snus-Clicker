@@ -71,18 +71,42 @@ export const prestigeUpgrades = [
     }
 ];
 
-export const prestigeTrackRewards = [
-    { level: 1, rewardDiamonds: 5, title: "Bronze Trophy" },
-    { level: 2, rewardDiamonds: 8, title: "Silver Trophy" },
-    { level: 3, rewardDiamonds: 12, title: "Gold Trophy" },
-    { level: 5, rewardDiamonds: 20, title: "Master Trophy" },
-    { level: 8, rewardDiamonds: 26, title: "Elite Trophy" },
-    { level: 12, rewardDiamonds: 35, title: "Champion Trophy" },
-    { level: 17, rewardDiamonds: 48, title: "Legend Trophy" },
-    { level: 23, rewardDiamonds: 62, title: "Mythic Trophy" },
-    { level: 31, rewardDiamonds: 80, title: "Ascendant Trophy" },
-    { level: 42, rewardDiamonds: 105, title: "Eternal Trophy" }
-];
+const prestigeTrackMilestoneRewards = new Map([
+    [1, { rewardDiamonds: 5, title: "Bronze Trophy" }],
+    [2, { rewardDiamonds: 8, title: "Silver Trophy" }],
+    [3, { rewardDiamonds: 12, title: "Gold Trophy" }],
+    [5, { rewardDiamonds: 20, title: "Master Trophy" }],
+    [8, { rewardDiamonds: 26, title: "Elite Trophy" }],
+    [12, { rewardDiamonds: 35, title: "Champion Trophy" }],
+    [17, { rewardDiamonds: 48, title: "Legend Trophy" }],
+    [23, { rewardDiamonds: 62, title: "Mythic Trophy" }],
+    [31, { rewardDiamonds: 80, title: "Ascendant Trophy" }],
+    [42, { rewardDiamonds: 105, title: "Eternal Trophy" }],
+    [50, { rewardDiamonds: 126, title: "Immortal Trophy" }],
+    [60, { rewardDiamonds: 152, title: "Cosmic Trophy" }],
+    [70, { rewardDiamonds: 182, title: "Transcendent Trophy" }],
+    [80, { rewardDiamonds: 216, title: "Infinity Trophy" }],
+    [90, { rewardDiamonds: 254, title: "Omega Trophy" }],
+    [100, { rewardDiamonds: 300, title: "Centurion Trophy" }]
+]);
+
+function getGeneratedPrestigeTrackReward(level) {
+    const previousLevel = Math.max(0, level - 1);
+    return {
+        rewardDiamonds: Math.round(5 + (level * 2.1) + (previousLevel * 0.85)),
+        title: `Prestige ${level} Trophy`
+    };
+}
+
+export const prestigeTrackRewards = Array.from({ length: 100 }, (_, index) => {
+    const level = index + 1;
+    const milestoneReward = prestigeTrackMilestoneRewards.get(level);
+
+    return {
+        level,
+        ...(milestoneReward || getGeneratedPrestigeTrackReward(level))
+    };
+});
 
 export const milestones = [
     {

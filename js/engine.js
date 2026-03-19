@@ -774,6 +774,33 @@ export function getAutoBuyerStatus() {
     };
 }
 
+function isCandidateBetterForStrategy(candidate, currentBest, strategy) {
+    if (!currentBest) return true;
+
+    const compareDescending = (left, right) => Number(left) - Number(right);
+    const compareAscending = (left, right) => Number(right) - Number(left);
+
+    const comparisons = strategy === "cheap"
+        ? [
+            compareAscending(candidate.cost, currentBest.cost),
+            compareDescending(candidate.cpsGain, currentBest.cpsGain),
+            compareDescending(candidate.valueScore, currentBest.valueScore)
+        ]
+        : [
+            compareDescending(candidate.valueScore, currentBest.valueScore),
+            compareDescending(candidate.cpsGain, currentBest.cpsGain),
+            compareAscending(candidate.paybackSeconds, currentBest.paybackSeconds),
+            compareAscending(candidate.cost, currentBest.cost)
+        ];
+
+    for (const result of comparisons) {
+        if (result > 0) return true;
+        if (result < 0) return false;
+    }
+
+    return false;
+}
+
 function getAutoBuyerChoice() {
     const strategy = getAutoBuyerStrategy();
     const availableBudget = strategy === "reserve"
@@ -799,13 +826,15 @@ function getAutoBuyerChoice() {
 
         const valueScore = cpsGain / cost;
         const affordabilityScore = 1 / cost;
-
+        const paybackSeconds = cpsGain > 0 ? cost / cpsGain : Number.POSITIVE_INFINITY;
+        
         candidates.push({
             buildingId: building.id,
             cost,
             owned,
-            valueScore,
-            affordabilityScore
+            cpsGain,
+            affordabilityScore,
+            paybackSeconds
         });
     });
 
@@ -834,14 +863,17 @@ function getAutoBuyerChoice() {
                 ? (normalizedValue * 0.8 + normalizedAffordable * 0.2)
                 : strategy === "custom"
                     ? (normalizedValue * Number(gameState.autoBuyerWeights?.value || 0.75) + normalizedAffordable * Number(gameState.autoBuyerWeights?.cheap || 0.25))
-                : candidate.valueScore;
+                : normalizedValue;
 
-        if (!best || score > best.score || (score === best.score && candidate.cost < best.cost)) {
+        if (!best || score > best.score || (score === best.score && isCandidateBetterForStrategy(candidate, best, strategy))) {
             best = {
                 buildingId: candidate.buildingId,
                 score,
                 cost: candidate.cost,
-                owned: candidate.owned
+                owned: candidate.owned,
+                cpsGain: candidate.cpsGain,
+                valueScore: candidate.valueScore,
+                paybackSeconds: candidate.paybackSeconds
             };
         }
     });
@@ -1045,6 +1077,16 @@ export function calculateCps() {
     return total;
 }
 
+function getLateGameClickShare() {
+    const totalBuildings = getTotalBuildingsOwned();
+    const prestigeLevel = Math.max(0, Math.floor(Number(gameState.prestigeCookies) || 0));
+    const milestoneBonus = gameState.milestonePerks?.skill_power ? 0.015 : 0;
+    const buildingShare = Math.min(0.09, totalBuildings * 0.00035);
+    const prestigeShare = Math.min(0.08, prestigeLevel * 0.002);
+
+    return Math.min(0.22, 0.04 + buildingShare + prestigeShare + milestoneBonus);
+}
+
 export function getMilestoneProgress(milestoneId) {
     const milestone = milestones.find((entry) => entry.id === milestoneId);
     if (!milestone) return { current: 0, target: 0, completed: false, claimed: false };
@@ -1164,9 +1206,10 @@ export function clickCookie() {
     const worldModifiers = getWorldModifiers();
     const worldMultiplier = worldModifiers.worldMultiplier * (1 + worldModifiers.clickBonus);
     const crit = Math.random() < 0.12;
+    const cpsSupport = calculateCps() * getLateGameClickShare();
 
     const base = gameState.clickPower * getClickUpgradeMultiplier() * worldMultiplier * gameState.prestigeMultiplier * getClickBurstMultiplier();
-    const amount = base * (crit ? 2 : 1);
+    const amount = (base + cpsSupport) * (crit ? 2 : 1);
 
     addCookies(amount);
     gameState.totalClicks += 1;

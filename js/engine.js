@@ -1,4 +1,4 @@
-// =====================================
+n// =====================================
 // GAME ENGINE – SNUS CLICKER
 // Core Logik & Game Loop
 // =====================================
@@ -833,6 +833,7 @@ function getAutoBuyerChoice() {
             cost,
             owned,
             cpsGain,
+            valueScore
             affordabilityScore,
             paybackSeconds
         });

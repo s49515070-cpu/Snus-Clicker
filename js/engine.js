@@ -833,7 +833,7 @@ function getAutoBuyerChoice() {
             cost,
             owned,
             cpsGain,
-            valueScore
+            valueScore,
             affordabilityScore,
             paybackSeconds
         });

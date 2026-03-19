@@ -10,6 +10,7 @@ import {
   getPotentialPrestigeGain,
   prestigeReset,
   getPrestigeTrackStatus,
+  prestigeTrackRewards,
   buyWorld,
   changeWorld,
   isWorldPurchased,
@@ -432,6 +433,16 @@ function testPrestigeTrackAwardsBacklogDiamonds() {
     claimedRewards.map((entry) => entry.level),
     [1, 2, 3],
     'rewards up to current prestige level should be marked as claimed'
+  );
+}
+
+function testPrestigeTrackExtendsToLevelHundred() {
+  assert.equal(prestigeTrackRewards.length, 100, 'trophy path should define rewards through level 100');
+  assert.equal(prestigeTrackRewards[0].level, 1, 'trophy path should start at level 1');
+  assert.equal(prestigeTrackRewards.at(-1)?.level, 100, 'trophy path should end at level 100');
+  assert.ok(
+    prestigeTrackRewards.every((entry, index) => entry.level === index + 1),
+    'trophy path should include every level without gaps'
   );
 }
 
@@ -1188,6 +1199,7 @@ async function run() {
   testPotentialPrestigeGain();
   testPotentialPrestigeGainCannotBeClaimedTwice();
   testPrestigeTrackAwardsBacklogDiamonds();
+  testPrestigeTrackExtendsToLevelHundred();
   testWorldMustBePurchasedBeforeSwitch();
   testWorldThreeNeedsBuildingRequirement();
   testWorldUnlockDetailsReportsMissingProgress();

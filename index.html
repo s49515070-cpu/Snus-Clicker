@@ -175,6 +175,20 @@
             <span id="settingBackgroundLabel">Hintergrundfarbe</span>
             <input id="backgroundColorInput" type="color" value="#dff6ff">
         </label>
+        <label class="settings-range-control">
+            <span id="settingAutosaveIntervalLabel">Autosave-Intervall</span>
+            <div class="settings-range-row">
+                <input id="autosaveIntervalInput" type="range" min="1000" max="60000" step="1000" value="5000">
+                <small id="autosaveIntervalText">5.000 ms</small>
+            </div>
+        </label>
+        <label class="settings-range-control">
+            <span id="settingUiRefreshIntervalLabel">UI-Refresh Intervall</span>
+            <div class="settings-range-row">
+                <input id="uiRefreshIntervalInput" type="range" min="16" max="250" step="2" value="100">
+                <small id="uiRefreshIntervalText">100 ms</small>
+            </div>
+        </label>
         <label>
             <span id="settingAutoBuyerStrategyLabel">Auto-Buyer Strategie</span>
             <select id="autoBuyerStrategyInput">

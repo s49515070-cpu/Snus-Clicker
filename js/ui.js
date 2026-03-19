@@ -437,6 +437,8 @@ export function applyStaticTranslations() {
         ["settingSoundLabel", t("settingSound")],
         ["settingLanguageLabel", t("settingLanguage")],
         ["settingBackgroundLabel", t("settingBackground")],
+        ["settingAutosaveIntervalLabel", t("settingAutosaveInterval")],
+        ["settingUiRefreshIntervalLabel", t("settingUiRefreshInterval")],
         ["settingAutoBuyerStrategyLabel", t("settingAutoBuyerStrategy")],
         ["settingAutoBuyerValueWeightLabel", t("settingAutoBuyerValueWeight")],
         ["settingAutoBuyerCheapWeightLabel", t("settingAutoBuyerCheapWeight")],

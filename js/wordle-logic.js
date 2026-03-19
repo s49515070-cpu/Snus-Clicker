@@ -23,9 +23,9 @@ export function normalizeWordList(words) {
 }
 
 export function createDailySeed(date = new Date()) {
-    const utcDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const epoch = new Date(WORDLE_EPOCH);
-    return Math.max(0, Math.floor((utcDate.getTime() - epoch.getTime()) / 86_400_000));
+    return Math.max(0, Math.floor((localDate.getTime() - epoch.getTime()) / 86_400_000));
 }
 
 export function getWordForSeed(seed, solutionWords) {

@@ -39,6 +39,7 @@ import { buildings, getMaxAffordable, getMaxAffordableSummary } from '../js/buil
 import { getWorldById, getWorldUnlockDetails } from '../js/worlds.js';
 import { createBuildingsUIController } from '../js/ui-buildings.js';
 import { createPrestigeUIController } from '../js/ui-prestige.js';
+import { initWordle } from '../js/wordle.js';
 import {
   WORD_LENGTH,
   applyKeyInput,
@@ -149,9 +150,13 @@ function createMockElement(tag = 'div') {
     className: '',
     textContent: '',
     innerHTML: '',
-    style: {},
+    style: {
+      setProperty() {}
+    },
     dataset: {},
     disabled: false,
+    hidden: false,
+    checked: false,
     children: [],
     listeners: {},
     append(...items) {
@@ -170,6 +175,44 @@ function createMockElement(tag = 'div') {
       remove() {}
     }
   };
+}
+
+function installWordleDocumentMock() {
+  const elements = new Map();
+  const ids = [
+    'wordleLauncherButton',
+    'wordleModal',
+    'wordleCloseButton',
+    'wordleBoard',
+    'wordleKeyboard',
+    'wordleStatus',
+    'wordleSubtitle',
+    'wordleModeBadge',
+    'wordleStats',
+    'wordlePracticeButton',
+    'wordleResetButton',
+    'wordleHardModeInput',
+  ];
+
+  ids.forEach((id) => {
+    const element = createMockElement('div');
+    element.id = id;
+    if (id === 'wordleModal') element.hidden = true;
+    elements.set(id, element);
+  });
+
+  globalThis.document = {
+    activeElement: null,
+    getElementById(id) {
+      return elements.get(id) || null;
+    },
+    createElement(tag) {
+      return createMockElement(tag);
+    },
+    addEventListener() {},
+  };
+
+  return Object.fromEntries(elements.entries());
 }
 
 function installControllerDocumentMock() {
@@ -1262,6 +1305,111 @@ function testWordleBoardReflectsDraftInput() {
   assert.equal(WORD_LENGTH, 5, 'wordle should stay configured to five letters');
 }
 
+function testWordleDailyRolloverPreservesStatisticsAndSettings() {
+  localStorage.clear();
+  const ui = installWordleDocumentMock();
+
+  const realDate = globalThis.Date;
+  const fixedNow = new realDate('2024-01-02T09:00:00Z');
+
+  class MockDate extends realDate {
+    constructor(...args) {
+      super(...(args.length === 0 ? [fixedNow] : args));
+    }
+
+    static now() {
+      return fixedNow.getTime();
+    }
+  }
+
+  globalThis.Date = MockDate;
+
+  localStorage.setItem('snus_clicker_wordle_state_v1', JSON.stringify({
+    seed: 0,
+    mode: 'daily',
+    solution: 'APFEL',
+    guesses: ['APFEL'],
+    currentGuess: '',
+    status: 'won',
+    hardMode: true,
+    statistics: {
+      played: 7,
+      wins: 6,
+      currentStreak: 4,
+      maxStreak: 5,
+      distribution: [1, 2, 3, 0, 0, 0],
+    }
+  }));
+
+  try {
+    initWordle();
+  } finally {
+    globalThis.Date = realDate;
+  }
+
+  assert.equal(ui.wordleHardModeInput.checked, true, 'daily rollover should preserve hard mode preference');
+  assert.match(ui.wordleStats.innerHTML, />7</, 'daily rollover should keep played statistics');
+  assert.match(ui.wordleStats.innerHTML, />4</, 'daily rollover should keep current streak statistics');
+}
+
+function testWordleWinAwardsDiamondsAndStartsNextRound() {
+  resetEngineState();
+  localStorage.clear();
+  const ui = installWordleDocumentMock();
+
+  localStorage.setItem('snus_clicker_wordle_state_v1', JSON.stringify({
+    seed: 0,
+    mode: 'practice',
+    solution: 'APFEL',
+    guesses: [],
+    currentGuess: 'APFEL',
+    status: 'playing',
+    hardMode: false,
+    statistics: {
+      played: 0,
+      wins: 0,
+      currentStreak: 0,
+      maxStreak: 0,
+      distribution: [0, 0, 0, 0, 0, 0],
+    }
+  }));
+
+  const realSetTimeout = globalThis.setTimeout;
+  const realClearTimeout = globalThis.clearTimeout;
+  const scheduledTimers = [];
+  globalThis.setTimeout = (callback, delay) => {
+    scheduledTimers.push({ callback, delay });
+    return scheduledTimers.length;
+  };
+  globalThis.clearTimeout = () => {};
+
+  try {
+    initWordle();
+    ui.wordleLauncherButton.listeners.click();
+    ui.wordleKeyboard.listeners.click({
+      target: {
+        closest() {
+          return { dataset: { key: 'Enter' } };
+        }
+      }
+    });
+
+    assert.equal(gameState.diamonds, 10, 'winning a word should award ten diamonds');
+    assert.match(ui.wordleStatus.textContent, /10 Diamanten/, 'win message should mention the diamond reward');
+    assert.equal(scheduledTimers.length, 1, 'winning should schedule the next round automatically');
+
+    scheduledTimers[0].callback();
+
+    const persisted = JSON.parse(localStorage.getItem('snus_clicker_wordle_state_v1'));
+    assert.equal(persisted.mode, 'practice', 'after a win the next round should continue in practice mode');
+    assert.equal(persisted.seed, 1, 'after a win the next round should advance to the next word');
+    assert.notEqual(persisted.solution, 'APFEL', 'after a win the next round should use a fresh solution');
+  } finally {
+    globalThis.setTimeout = realSetTimeout;
+    globalThis.clearTimeout = realClearTimeout;
+  }
+}
+
 function testLeSnusClusterDetection() {
   const board = createBoardFromIds([
     ["ten", "ten", "jack", "queen", "king", "ace"],
@@ -1358,6 +1506,8 @@ testBuyModeSanitizesFractionalValues();;
   testWordleEvaluationHandlesDuplicateLetters();
   testWordleSubmitGuessTracksWinAndStatistics();
   testWordleBoardReflectsDraftInput();
+  testWordleDailyRolloverPreservesStatisticsAndSettings();
+  testWordleWinAwardsDiamondsAndStartsNextRound();
   testLeSnusClusterDetection();
   testLeSnusRoundProducesStructuredResult();
   testSpendAndAwardCookiesHelpers();

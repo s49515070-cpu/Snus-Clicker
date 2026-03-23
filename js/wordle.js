@@ -14,12 +14,15 @@ import {
     scoreKeyboard,
     submitGuess
 } from "./wordle-logic.js";
+import { awardDiamonds } from "./engine.js";
 
 const KEYBOARD_ROWS = [
     ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
     ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
     ["ENTER", "Z", "X", "C", "V", "B", "N", "M", "⌫"]
 ];
+const WORDLE_WIN_DIAMONDS = 10;
+const WORDLE_WIN_ADVANCE_DELAY_MS = 1500;
 
 const solutionWords = normalizeWordList(WORDLE_SOLUTIONS);
 const allowedWords = new Set(normalizeWordList([...WORDLE_ALLOWED_GUESSES, ...solutionWords]));
@@ -61,12 +64,30 @@ function createPracticeState(index = 0) {
     };
 }
 
+function createStateCarryover(rawPersisted) {
+    const safeStatistics = rawPersisted?.statistics && typeof rawPersisted.statistics === "object"
+        ? {
+            played: Math.max(0, Number(rawPersisted.statistics.played) || 0),
+            wins: Math.max(0, Number(rawPersisted.statistics.wins) || 0),
+            currentStreak: Math.max(0, Number(rawPersisted.statistics.currentStreak) || 0),
+            maxStreak: Math.max(0, Number(rawPersisted.statistics.maxStreak) || 0),
+            distribution: Array.from({ length: MAX_ATTEMPTS }, (_, index) => Math.max(0, Number(rawPersisted.statistics.distribution?.[index]) || 0))
+        }
+        : createInitialGameState(solutionWords[0]).statistics;
+
+    return {
+        statistics: safeStatistics,
+        hardMode: Boolean(rawPersisted?.hardMode)
+    };
+}
+
 function loadWordleState() {
     const dailyState = createNewDailyState();
     const rawPersisted = safeStorageRead();
     const persisted = hydratePersistedState(rawPersisted, dailyState.solution);
     const persistedSeed = Number(rawPersisted?.seed);
     const persistedMode = rawPersisted?.mode === "practice" ? "practice" : "daily";
+    const carryover = createStateCarryover(rawPersisted);
 
     if (persistedMode === "daily" && persistedSeed === dailyState.seed) {
         return {
@@ -87,7 +108,10 @@ function loadWordleState() {
         };
     }
 
-    return dailyState;
+    return {
+        ...dailyState,
+        ...carryover
+    };
 }
 
 function computeStatsSummary(state) {
@@ -117,8 +141,42 @@ export function initWordle() {
 
     let state = loadWordleState();
     let practiceSeed = state.mode === "practice" ? state.seed : 0;
+    let autoAdvanceTimerId = null;
 
     const persist = () => safeStorageWrite(state);
+    const diamondCountEl = document.getElementById("diamondCount");
+
+    const clearAutoAdvanceTimer = () => {
+        if (autoAdvanceTimerId) {
+            clearTimeout(autoAdvanceTimerId);
+            autoAdvanceTimerId = null;
+        }
+    };
+
+    const refreshDiamondCount = (value) => {
+        if (diamondCountEl) {
+            diamondCountEl.textContent = String(Math.max(0, Math.floor(Number(value) || 0)));
+        }
+    };
+
+    const createNextSolvedRoundState = () => {
+        practiceSeed = state.seed + 1;
+        return {
+            ...createPracticeState(practiceSeed),
+            statistics: state.statistics,
+            hardMode: state.hardMode,
+            message: "Neue Runde gestartet."
+        };
+    };
+
+    const queueNextSolvedRound = () => {
+        clearAutoAdvanceTimer();
+        autoAdvanceTimerId = setTimeout(() => {
+            state = createNextSolvedRoundState();
+            render();
+            autoAdvanceTimerId = null;
+        }, WORDLE_WIN_ADVANCE_DELAY_MS);
+    };
 
     const render = () => {
         const board = buildBoard(state);
@@ -203,6 +261,17 @@ export function initWordle() {
             setMessage(result.reason);
             return;
         }
+        if (state.status === "won") {
+            const nextDiamondTotal = awardDiamonds(WORDLE_WIN_DIAMONDS);
+            refreshDiamondCount(nextDiamondTotal);
+            state = {
+                ...state,
+                message: `Du hast gewonnen! Jetzt bekommst du ${WORDLE_WIN_DIAMONDS} Diamanten.`
+            };
+            render();
+            queueNextSolvedRound();
+            return;
+        }
         render();
     };
 
@@ -247,6 +316,7 @@ export function initWordle() {
     });
 
     practiceButton?.addEventListener("click", () => {
+        clearAutoAdvanceTimer();
         practiceSeed += 1;
         state = {
             ...createPracticeState(practiceSeed),
@@ -257,6 +327,7 @@ export function initWordle() {
     });
 
     resetButton?.addEventListener("click", () => {
+        clearAutoAdvanceTimer();
         state = state.mode === "practice"
             ? { ...createPracticeState(state.seed), statistics: state.statistics, hardMode: state.hardMode }
             : { ...createNewDailyState(), statistics: state.statistics, hardMode: state.hardMode };

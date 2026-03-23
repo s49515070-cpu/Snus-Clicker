@@ -1025,64 +1025,49 @@ function getAutoBuyerChoice() {
     const strategy = getAutoBuyerStrategy();
     const availableBudget = gameState.cookies;
 
-    const baseCps = calculateCps();
-    const candidates = [];
+    const candidates = buildings
+        .map((building) => {
+            const data = gameState.buildingData[building.id];
+            if (!data) return null;
 
-    buildings.forEach((building) => {
-        const data = gameState.buildingData[building.id];
-        if (!data) return;
+            const rawOwned = Number(data.owned);
+            const owned = Number.isFinite(rawOwned) && rawOwned >= 0 ? Math.floor(rawOwned) : 0;
+            const preview = getEffectivePurchasePreview(building, owned, 1, availableBudget);
+            const cost = Number(preview.totalCost || 0);
+            if (cost <= 0 || preview.quantity < 1 || cost > availableBudget) return null;
 
-        const rawOwned = Number(data.owned);
-        const owned = Number.isFinite(rawOwned) && rawOwned >= 0 ? Math.floor(rawOwned) : 0;
-        const preview = getEffectivePurchasePreview(building, owned, 1, availableBudget);
-        const cost = Number(preview.totalCost || 0);
-        if (cost <= 0 || preview.quantity < 1 || cost > availableBudget) return;
+            const synergyBonusPercent = Math.max(0, Number(getBuildingSynergyBonusPercent(building.id) || 0));
+            const cpsGain = building.baseCps * (1 + synergyBonusPercent / 100);
+            const valueScore = cost > 0 && Number.isFinite(cpsGain) ? cpsGain / cost : 0;
+            const affordabilityScore = cost > 0 ? 1 / cost : 0;
+            const paybackSeconds = cpsGain > 0 ? cost / cpsGain : Number.POSITIVE_INFINITY;
 
-        data.owned = owned + 1;
-        const cpsGain = Math.max(0, calculateCps() - baseCps);
-        data.owned = owned;
-
-        const valueScore = cost > 0 && Number.isFinite(cpsGain) ? cpsGain / cost : 0;
-        const affordabilityScore = cost > 0 ? 1 / cost : 0;
-        const paybackSeconds = cpsGain > 0 ? cost / cpsGain : Number.POSITIVE_INFINITY;
-
-        candidates.push({
-            buildingId: building.id,
-            cost,
-            owned,
-            cpsGain,
-            valueScore: Number.isFinite(valueScore) ? valueScore : 0,
-            affordabilityScore: Number.isFinite(affordabilityScore) ? affordabilityScore : 0,
-            paybackSeconds
-        });
-    });
+            return {
+                buildingId: building.id,
+                cost,
+                owned,
+                cpsGain,
+                valueScore: Number.isFinite(valueScore) ? valueScore : 0,
+                affordabilityScore: Number.isFinite(affordabilityScore) ? affordabilityScore : 0,
+                paybackSeconds
+            };
+        })
+        .filter(Boolean);
 
     if (!candidates.length) return null;
 
-    let best = null;
+    if (strategy === "cheap") {
+        return candidates.reduce((best, candidate) => (
+            isCandidateBetterForStrategy(candidate, best, strategy) ? candidate : best
+        ), null);
+    }
 
-    candidates.forEach((candidate) => {
-        const normalizedValue = getNormalizedCandidateScore(candidate, candidates, "valueScore");
-        const normalizedAffordable = getNormalizedCandidateScore(candidate, candidates, "affordabilityScore");
-
-        const score = strategy === "cheap"
-            ? normalizedAffordable
-            : candidate.valueScore;
-
-        if (!best || score > best.score || (score === best.score && isCandidateBetterForStrategy(candidate, best, strategy))) {
-            best = {
-                buildingId: candidate.buildingId,
-                score,
-                cost: candidate.cost,
-                owned: candidate.owned,
-                cpsGain: candidate.cpsGain,
-                valueScore: candidate.valueScore,
-                paybackSeconds: candidate.paybackSeconds
-            };
-        }
-    });
-
-    return best;
+    return candidates.reduce((best, candidate) => {
+        if (!best) return candidate;
+        if (candidate.valueScore > best.valueScore) return candidate;
+        if (candidate.valueScore < best.valueScore) return best;
+        return isCandidateBetterForStrategy(candidate, best, strategy) ? candidate : best;
+    }, null);
 }
 
 export function runAutoBuyerTick() {

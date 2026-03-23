@@ -3,7 +3,7 @@
 // =====================================
 
 
-import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, setAutoBuyerStrategy, getAutoBuyerStrategy, setAutoBuyerWeights, getAutoBuyerWeights, prestigeReset, getPotentialPrestigeGain } from "./engine.js";
+import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, setAutoBuyerStrategy, getAutoBuyerStrategy, setAutoBuyerWeights, getAutoBuyerWeights, prestigeReset, getPotentialPrestigeGain, getClaimablePrestigeTrackRewards } from "./engine.js";
 import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
 import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";
@@ -362,20 +362,28 @@ function initTrophyPathControls() {
     if (trophyPrestigeButton) {
         trophyPrestigeButton.addEventListener("click", () => {
             const potential = getPotentialPrestigeGain();
-            if (potential <= 0) {
+            const claimableRewards = getClaimablePrestigeTrackRewards().length;
+            if (potential <= 0 && claimableRewards <= 0) {
                 showToast(t("notEnoughLifetime"), 1700, "warning");
                 return;
             }
 
-            const confirmed = typeof globalThis.confirm === "function"
-                ? globalThis.confirm(t("trophyResetConfirm"))
-                : true;
-            if (!confirmed) return;
+            if (potential > 0) {
+                const confirmed = typeof globalThis.confirm === "function"
+                    ? globalThis.confirm(t("trophyResetConfirm"))
+                    : true;
+                if (!confirmed) return;
+            }
 
             const earned = prestigeReset();
             if (earned > 0) {
                 showToast(t("earnedPrestige", { amount: earned }), 1800, "success");
                 renderBuildings();
+                renderDiamondShop();
+                renderTrophyPath();
+                renderUI();
+            } else if (claimableRewards > 0) {
+                showToast(t("claimedTrophyRewards", { count: claimableRewards }), 1800, "success");
                 renderDiamondShop();
                 renderTrophyPath();
                 renderUI();

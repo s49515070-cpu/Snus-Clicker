@@ -430,6 +430,38 @@ function getTodayKey() {
     return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
 }
 
+function parseDayKey(dayKey) {
+    if (typeof dayKey !== "string") return null;
+
+    const match = dayKey.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (!match) return null;
+
+    const [, yearRaw, monthRaw, dayRaw] = match;
+    const year = Number(yearRaw);
+    const month = Number(monthRaw);
+    const day = Number(dayRaw);
+    const date = new Date(year, month - 1, day);
+
+    if (
+        Number.isNaN(date.getTime())
+        || date.getFullYear() !== year
+        || date.getMonth() !== month - 1
+        || date.getDate() !== day
+    ) {
+        return null;
+    }
+
+    return date;
+}
+
+function getDayDifference(previousDayKey, currentDayKey) {
+    const previousDate = parseDayKey(previousDayKey);
+    const currentDate = parseDayKey(currentDayKey);
+    if (!previousDate || !currentDate) return null;
+
+    return Math.round((currentDate.getTime() - previousDate.getTime()) / (24 * 60 * 60 * 1000));
+}
+
 function getWeekKey() {
     const now = new Date();
     const firstJan = new Date(now.getFullYear(), 0, 1);
@@ -482,7 +514,10 @@ function ensureDailyStats() {
     const key = getTodayKey();
     if (gameState.todayStats.resetDayKey !== key) {
         if (gameState.todayStats.resetDayKey) {
-            gameState.dailyStreak = Number(gameState.dailyStreak || 0) + 1;
+            const dayDiff = getDayDifference(gameState.todayStats.resetDayKey, key);
+            gameState.dailyStreak = dayDiff === 1
+                ? Number(gameState.dailyStreak || 0) + 1
+                : 0;
         }
         gameState.todayStats.resetDayKey = key;
         gameState.todayStats.clicks = 0;
@@ -666,6 +701,11 @@ resetGameState();
 function getUpgradeLevel(upgradeId) {
     const value = Number(gameState.prestigeUpgradeLevels[upgradeId] || 0);
     return Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+}
+
+export function getPrestigeMultiplierForLevel(prestigeLevel) {
+    const safeLevel = Math.max(0, Math.floor(Number(prestigeLevel) || 0));
+    return 1 + safeLevel * 0.01;
 }
 
 function getCpsUpgradeMultiplier() {
@@ -1155,6 +1195,10 @@ export function getPrestigeTrackStatus() {
         }));
 }
 
+export function getClaimablePrestigeTrackRewards() {
+    return getPrestigeTrackStatus().filter((reward) => reward.unlocked && !reward.claimed);
+}
+
 export function prestigeReset() {
     const currentPrestige = Math.max(0, Math.floor(Number(gameState.prestigeCookies) || 0));
     claimPrestigeTrackRewards(currentPrestige, currentPrestige);
@@ -1166,7 +1210,7 @@ export function prestigeReset() {
     const previousPrestige = gameState.prestigeCookies;
     gameState.prestigeCookies += gained;
     gameState.lifetimeCookiesAtLastPrestige += progress.spentLifetime
-    gameState.prestigeMultiplier = 1 + gameState.prestigeCookies * 0.01;
+    gameState.prestigeMultiplier = getPrestigeMultiplierForLevel(gameState.prestigeCookies);
     claimPrestigeTrackRewards(previousPrestige, gameState.prestigeCookies);
 
     gameState.cookies = 0;
@@ -1229,11 +1273,11 @@ export function calculateCps() {
 function getLateGameClickShare() {
     const totalBuildings = getTotalBuildingsOwned();
     const prestigeLevel = Math.max(0, Math.floor(Number(gameState.prestigeCookies) || 0));
-    const milestoneBonus = gameState.milestonePerks?.skill_power ? 0.015 : 0;
-    const buildingShare = Math.min(0.09, totalBuildings * 0.00035);
-    const prestigeShare = Math.min(0.08, prestigeLevel * 0.002);
+    const milestoneBonus = gameState.milestonePerks?.skill_power ? 0.005 : 0;
+    const buildingShare = Math.min(0.03, totalBuildings * 0.00012);
+    const prestigeShare = Math.min(0.02, prestigeLevel * 0.0007);
 
-    return Math.min(0.22, 0.04 + buildingShare + prestigeShare + milestoneBonus);
+    return Math.min(0.06, 0.01 + buildingShare + prestigeShare + milestoneBonus);
 }
 
 export function getMilestoneProgress(milestoneId) {

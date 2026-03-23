@@ -46,7 +46,7 @@ function parsePosKey(key) {
 }
 
 function getSymbol(symbolId) {
-    return SYMBOLS[symbolId] || SYMBOLS.snus;
+    return SYMBOLS[symbolId] || SYMBOLS.ten;
 }
 
 function randomInt(min, max, rng = Math.random) {
@@ -178,14 +178,14 @@ export function findWinningClusters(board) {
 }
 
 export function cascadeBoard(board, winningPositions, rng = Math.random, options = {}) {
-    const winningSymbolIds = new Set(winningPositions.map((position) => board[position.row]?.[position.col]?.id).filter(Boolean));
+    const winningPositionKeys = new Set(winningPositions.map((position) => posKey(position.row, position.col)));
     const nextBoard = Array.from({ length: LE_SNUS_ROWS }, () => Array.from({ length: LE_SNUS_COLUMNS }, () => null));
 
     for (let col = 0; col < LE_SNUS_COLUMNS; col += 1) {
         const survivors = [];
         for (let row = LE_SNUS_ROWS - 1; row >= 0; row -= 1) {
             const cell = board[row][col];
-            const shouldRemove = !cell.special && winningSymbolIds.has(cell.id);
+            const shouldRemove = !cell.special && winningPositionKeys.has(posKey(row, col));
             if (!shouldRemove) {
                 survivors.push(cloneCell(cell));
             }
@@ -433,7 +433,8 @@ function simulateFeature(board, rng = Math.random, bonusConfig = BONUS_CONFIG.ba
     return {
         board: sequence.board,
         totalMultiplier,
-        goldenPositions: stickyGoldenPositions,
+        goldenPositions: nextPersistentGoldenPositions,
+        activatedGoldenPositions: stickyGoldenPositions,
         persistentGoldenPositions: nextPersistentGoldenPositions,
         timeline: sequence.timeline,
         activation,
@@ -449,13 +450,14 @@ function runBonusGame(stake, rng = Math.random, startingConfig = BONUS_CONFIG.lu
     let currentConfig = startingConfig;
 
     while (spinsRemaining > 0 && spins.length < 60) {
-        const board = createBoard(rng, { guaranteedRainbow: currentConfig.guaranteedRainbow });
-        const result = simulateFeature(board, rng, currentConfig, persistentGolden);
+        const spinConfig = currentConfig;
+        const board = createBoard(rng, { guaranteedRainbow: spinConfig.guaranteedRainbow });
+        const result = simulateFeature(board, rng, spinConfig, persistentGolden);
         persistentGolden = result.persistentGoldenPositions;
         totalMultiplier += result.totalMultiplier;
 
         let retriggerText = "";
-        if (currentConfig.id === "luck" && result.fsCount >= 4) {
+        if (spinConfig.id === "luck" && result.fsCount >= 4) {
             currentConfig = BONUS_CONFIG.glitter;
             spinsRemaining += 4;
             retriggerText = " · Upgrade to All That Glitters is Gold (+4 spins)";
@@ -469,7 +471,7 @@ function runBonusGame(stake, rng = Math.random, startingConfig = BONUS_CONFIG.lu
 
         spins.push({
             index: spins.length + 1,
-            label: `${currentConfig.label} · Spin ${spins.length + 1}`,
+            label: `${spinConfig.label} · Spin ${spins.length + 1}`,
             totalMultiplier: result.totalMultiplier,
             goldenPositions: result.goldenPositions,
             board: result.board,
@@ -500,7 +502,7 @@ export function runLeSnusRound(stakeInput, rng = Math.random, options = {}) {
             goldenPositions: [],
             timeline: [],
             triggeredBonus: null,
-            summaryLines: ["Kein Snus für Le-Snus vorhanden."],
+            summaryLines: ["Keine Diamanten für Le-Snus vorhanden."],
             fsCount: 0
         };
     }
@@ -525,7 +527,7 @@ export function runLeSnusRound(stakeInput, rng = Math.random, options = {}) {
             timeline: bonusResult.spins.flatMap((spin) => spin.timeline),
             triggeredBonus: forcedConfig,
             bonusResult,
-            summaryLines: [`Bought Feature: ${forcedConfig.label}`, `Total: ${totalMultiplier.toFixed(2)}x = ${totalPayout.toLocaleString("de-DE")} Snus`],
+            summaryLines: [`Bought Feature: ${forcedConfig.label}`, `Total: ${totalMultiplier.toFixed(2)}x = ${totalPayout.toLocaleString("de-DE")} Diamanten`],
             fsCount: 0
         };
     }
@@ -535,7 +537,7 @@ export function runLeSnusRound(stakeInput, rng = Math.random, options = {}) {
     const triggeredBonus = getTriggeredBonus(fsCount);
     const summaryLines = [
         `Base Game: ${baseResult.totalMultiplier.toFixed(2)}x`,
-        `Golden Squares: ${baseResult.goldenPositions.length}`,
+        `Golden Squares: ${baseResult.activatedGoldenPositions.length}`,
         triggeredBonus ? `Feature Trigger: ${triggeredBonus.label}` : "Feature Trigger: none"
     ];
 
@@ -569,7 +571,7 @@ export function runLeSnusRound(stakeInput, rng = Math.random, options = {}) {
 
     totalMultiplier = Math.min(MAX_TOTAL_MULTIPLIER, Number(totalMultiplier.toFixed(2)));
     const totalPayout = Math.floor(stake * totalMultiplier);
-    summaryLines.push(`Total: ${totalMultiplier.toFixed(2)}x = ${totalPayout.toLocaleString("de-DE")} Snus`);
+    summaryLines.push(`Total: ${totalMultiplier.toFixed(2)}x = ${totalPayout.toLocaleString("de-DE")} Diamanten`);
 
     return {
         stake,
@@ -588,7 +590,7 @@ export function runLeSnusRound(stakeInput, rng = Math.random, options = {}) {
 
 export function getLeSnusFeatureRules() {
     return [
-        "6x5 grid with cluster pays from 8 matching symbols.",
+        "6x5 grid with cluster pays from 5 matching symbols.",
         "Wins create Golden Squares; a Rainbow activates every highlighted square.",
         "Bronze coins pay 0.2x-4x, Silver 5x-20x, Gold 25x-500x and Clovers multiply adjacent values x2-x10.",
         "Pots collect values top-to-bottom, left-to-right and can re-activate Golden Squares for another round.",

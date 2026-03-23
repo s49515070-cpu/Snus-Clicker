@@ -3,7 +3,7 @@
 // LocalStorage Offline Save
 // =====================================
 
-import { gameState, prestigeUpgrades, milestones, resetGameState, AUTO_BUYER_STRATEGIES, quests } from "./engine.js";
+import { gameState, prestigeUpgrades, milestones, resetGameState, AUTO_BUYER_STRATEGIES, quests, getPrestigeMultiplierForLevel } from "./engine.js";
 import { buildings } from "./buildings.js";
 import { worlds } from "./worlds.js";
 
@@ -286,7 +286,7 @@ function normalizeSavePayload(parsed) {
     const currentWorld = Number(migrated.currentWorld);
     const unlockedWorldIds = normalizeUnlockedWorldIds(migrated.unlockedWorldIds);
     const normalizedCurrentWorld = worlds.some((world) => world.id === currentWorld) ? currentWorld : 1;
-    const prestigeMultiplier = normalizeNumber(migrated.prestigeMultiplier, 1, 1);
+    const prestigeMultiplier = getPrestigeMultiplierForLevel(prestigeCookies);
     const clickPower = normalizeNumber(migrated.clickPower, 1, 1);
     const buyMode = migrated.buyMode === "max" ? "max" : Number(migrated.buyMode);
 

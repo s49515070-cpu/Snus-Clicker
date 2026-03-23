@@ -3,7 +3,7 @@
 // =====================================
 
 
-import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, setAutoBuyerStrategy, getAutoBuyerStrategy, setAutoBuyerWeights, getAutoBuyerWeights, prestigeReset, getPotentialPrestigeGain, getClaimablePrestigeTrackRewards } from "./engine.js";
+import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, prestigeReset, getPotentialPrestigeGain, getClaimablePrestigeTrackRewards } from "./engine.js";
 import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
 import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";
@@ -101,48 +101,12 @@ function initSettingsControls() {
     const autosaveIntervalText = document.getElementById("autosaveIntervalText");
     const uiRefreshIntervalInput = document.getElementById("uiRefreshIntervalInput");
     const uiRefreshIntervalText = document.getElementById("uiRefreshIntervalText");
-    const autoBuyerStrategyInput = document.getElementById("autoBuyerStrategyInput");
-    const autoBuyerCustomWeights = document.getElementById("autoBuyerCustomWeights");
-    const autoBuyerValueWeightInput = document.getElementById("autoBuyerValueWeightInput");
-    const autoBuyerCheapWeightInput = document.getElementById("autoBuyerCheapWeightInput");
-    const autoBuyerValueWeightText = document.getElementById("autoBuyerValueWeightText");
-    const autoBuyerCheapWeightText = document.getElementById("autoBuyerCheapWeightText");
     const numberFormatInput = document.getElementById("numberFormatInput");
     const reducedMotionInput = document.getElementById("reducedMotionInput");
     const highContrastInput = document.getElementById("highContrastInput");
     const resetSettingsButton = document.getElementById("resetSettingsButton");
     
     const collapseDurationMs = 220;
-
-    
-    const updateAutoBuyerStrategyOptionLabels = () => {
-        if (!autoBuyerStrategyInput) return;
-
-        const optionValue = autoBuyerStrategyInput.querySelector('option[value="value"]');
-        const optionCheap = autoBuyerStrategyInput.querySelector('option[value="cheap"]');
-        const optionBalanced = autoBuyerStrategyInput.querySelector('option[value="balanced"]');
-        const optionReserve = autoBuyerStrategyInput.querySelector('option[value="reserve"]');
-        const optionCustom = autoBuyerStrategyInput.querySelector('option[value="custom"]');
-        if (optionValue) optionValue.textContent = t("autoBuyerStrategyValue");
-        if (optionCheap) optionCheap.textContent = t("autoBuyerStrategyCheap");
-        if (optionBalanced) optionBalanced.textContent = t("autoBuyerStrategyBalanced");
-        if (optionReserve) optionReserve.textContent = t("autoBuyerStrategyReserve");
-        if (optionCustom) optionCustom.textContent = t("autoBuyerStrategyCustom");
-    };
-
-    const updateCustomWeightsVisibility = (strategy) => {
-        if (!autoBuyerCustomWeights) return;
-        autoBuyerCustomWeights.hidden = strategy !== "custom";
-    };
-
-    const syncCustomWeightTexts = () => {
-        if (autoBuyerValueWeightText && autoBuyerValueWeightInput) {
-            autoBuyerValueWeightText.textContent = `${autoBuyerValueWeightInput.value}%`;
-        }
-        if (autoBuyerCheapWeightText && autoBuyerCheapWeightInput) {
-            autoBuyerCheapWeightText.textContent = `${autoBuyerCheapWeightInput.value}%`;
-        }
-    };
 
     const syncRangeTexts = () => {
         if (autosaveIntervalText && autosaveIntervalInput) {
@@ -201,7 +165,6 @@ function initSettingsControls() {
         languageInput.addEventListener("change", () => {
             updateLanguage(languageInput.value);
             applyStaticTranslations();
-            updateAutoBuyerStrategyOptionLabels();
             refreshAllUI();
         });
     }
@@ -237,43 +200,6 @@ function initSettingsControls() {
         });
     }
 
-    if (autoBuyerStrategyInput) {
-        updateAutoBuyerStrategyOptionLabels();
-        autoBuyerStrategyInput.value = getAutoBuyerStrategy();
-        updateCustomWeightsVisibility(autoBuyerStrategyInput.value);
-        autoBuyerStrategyInput.addEventListener("change", () => {
-            const strategy = setAutoBuyerStrategy(autoBuyerStrategyInput.value);
-            updateCustomWeightsVisibility(strategy);
-            const strategyLabelKey = strategy === "cheap"
-                ? "autoBuyerStrategyCheap"
-                : strategy === "balanced"
-                    ? "autoBuyerStrategyBalanced"
-                    : strategy === "reserve"
-                        ? "autoBuyerStrategyReserve"
-                        : strategy === "custom"
-                            ? "autoBuyerStrategyCustom"
-                        : "autoBuyerStrategyValue";
-            showToast(t("autoBuyerStrategyUpdated", { strategy: t(strategyLabelKey) }), 1300, "info");
-        });
-    }
-
-        const weights = getAutoBuyerWeights();
-    if (autoBuyerValueWeightInput && autoBuyerCheapWeightInput) {
-        autoBuyerValueWeightInput.value = String(Math.round(weights.value * 100));
-        autoBuyerCheapWeightInput.value = String(Math.round(weights.cheap * 100));
-        syncCustomWeightTexts();
-
-        const onWeightsInput = () => {
-            const valueWeight = Number(autoBuyerValueWeightInput.value) / 100;
-            const cheapWeight = Number(autoBuyerCheapWeightInput.value) / 100;
-            setAutoBuyerWeights(valueWeight, cheapWeight);
-            syncCustomWeightTexts();
-        };
-
-        autoBuyerValueWeightInput.addEventListener("input", onWeightsInput);
-        autoBuyerCheapWeightInput.addEventListener("input", onWeightsInput);
-    }
-
     if (numberFormatInput) {
         numberFormatInput.value = getNumberFormat();
         numberFormatInput.addEventListener("change", () => {
@@ -307,17 +233,6 @@ function initSettingsControls() {
             if (backgroundColorInput) backgroundColorInput.value = defaults.backgroundColor || "#dff6ff";
             if (autosaveIntervalInput) autosaveIntervalInput.value = String(defaults.autosaveIntervalMs);
             if (uiRefreshIntervalInput) uiRefreshIntervalInput.value = String(defaults.uiRefreshIntervalMs);
-            if (autoBuyerStrategyInput) {
-                setAutoBuyerStrategy("value");
-                updateAutoBuyerStrategyOptionLabels();
-                updateCustomWeightsVisibility("value");
-                setAutoBuyerWeights(0.75, 0.25);
-            }
-            if (autoBuyerValueWeightInput && autoBuyerCheapWeightInput) {
-                autoBuyerValueWeightInput.value = "75";
-                autoBuyerCheapWeightInput.value = "25";
-                syncCustomWeightTexts();
-            }
             if (numberFormatInput) numberFormatInput.value = defaults.numberFormat;
             if (reducedMotionInput) reducedMotionInput.value = defaults.reducedMotion ? "on" : "off";
             if (highContrastInput) highContrastInput.value = defaults.highContrast ? "on" : "off";
@@ -325,7 +240,6 @@ function initSettingsControls() {
             syncRangeTexts();
             restartAutosaveTimer();
             applyStaticTranslations();
-            updateAutoBuyerStrategyOptionLabels();
             refreshAllUI();
             showToast(t("settingsResetDone"), 1600, "info");
         });

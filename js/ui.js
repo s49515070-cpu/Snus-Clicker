@@ -399,6 +399,10 @@ export function renderUI() {
     renderDiamondShop();
     renderMilestones();
     renderTrophyPath();
+
+    if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("snus:ui-rendered"));
+    }
 }
 
 export { renderBuildings, refreshBuildingsIfNeeded };

@@ -31,6 +31,8 @@ import {
   getBuildingSynergyBonusPercent,
   getEffectivePurchasePreview,
   activateDiscountBurst,
+  awardCookies,
+  spendCookies,
 } from '../js/engine.js';
 
 import { buildings, getMaxAffordable, getMaxAffordableSummary } from '../js/buildings.js';
@@ -46,6 +48,14 @@ import {
   evaluateGuess,
   submitGuess,
 } from '../js/wordle-logic.js';
+
+import {
+  createBoardFromIds,
+  createSeededRng,
+  findWinningClusters,
+  runLeSnusRound,
+  getLeSnusFeatureRules,
+} from '../js/le-snus-logic.js';
 
 const localStorageMock = (() => {
   const store = new Map();
@@ -1252,6 +1262,51 @@ function testWordleBoardReflectsDraftInput() {
   assert.equal(WORD_LENGTH, 5, 'wordle should stay configured to five letters');
 }
 
+function testLeSnusClusterDetection() {
+  const board = createBoardFromIds([
+    ["ten", "ten", "jack", "queen", "king", "ace"],
+    ["ten", "ten", "jack", "queen", "king", "ace"],
+    ["ten", "beer", "cheese", "baguette", "hat", "clamp"],
+    ["beer", "beer", "cheese", "baguette", "hat", "clamp"],
+    ["rainbow", "fs", "cheese", "baguette", "hat", "clamp"],
+  ]);
+
+  const wins = findWinningClusters(board);
+  assert.equal(wins.length, 1, 'one qualifying cluster should be detected');
+  assert.equal(wins[0].symbolId, 'ten', 'cluster should identify the correct symbol');
+  assert.equal(wins[0].count, 5, 'cluster should count all orthogonally connected symbols');
+  assert.equal(wins[0].multiplier > 0, true, 'cluster should award a multiplier');
+}
+
+function testLeSnusRoundProducesStructuredResult() {
+  const round = runLeSnusRound(100, createSeededRng(42));
+
+  assert.equal(round.stake, 100, 'round should preserve the stake');
+  assert.equal(Array.isArray(round.board), true, 'round should expose a board');
+  assert.equal(Array.isArray(round.summaryLines), true, 'round should expose summary lines');
+  assert.equal(round.board.length, 5, 'Le-Snus board should have five rows');
+  assert.equal(round.board[0].length, 6, 'Le-Snus board should have six columns');
+  assert.equal(round.totalMultiplier >= 0, true, 'round multiplier should never be negative');
+}
+
+function testLeSnusFeatureRulesReflectPublicCoinRanges() {
+  const rules = getLeSnusFeatureRules();
+
+  assert.equal(rules.some((rule) => rule.includes('0.2x-4x')), true, 'rules should document bronze coin range');
+  assert.equal(rules.some((rule) => rule.includes('All That Glitters is Gold')), true, 'rules should expose the public bonus name');
+}
+
+function testSpendAndAwardCookiesHelpers() {
+  resetEngineState();
+  gameState.cookies = 500;
+
+  const spent = spendCookies(320);
+  awardCookies(120);
+
+  assert.equal(spent, 320, 'spendCookies should return deducted amount');
+  assert.equal(gameState.cookies, 300, 'helpers should update the live cookie bank correctly');
+}
+
 function testGoldenSnusClaimRewardsCookies() {
   resetEngineState();
   const now = Date.now();
@@ -1303,6 +1358,10 @@ testBuyModeSanitizesFractionalValues();;
   testWordleEvaluationHandlesDuplicateLetters();
   testWordleSubmitGuessTracksWinAndStatistics();
   testWordleBoardReflectsDraftInput();
+  testLeSnusClusterDetection();
+  testLeSnusRoundProducesStructuredResult();
+  testSpendAndAwardCookiesHelpers();
+  testLeSnusFeatureRulesReflectPublicCoinRanges();
   testGoldenSnusClaimRewardsCookies();
   testConfigClampingAndPersistence();
   testConfigReset();

@@ -1329,10 +1329,10 @@ body.high-contrast {
     text-align: right;
 }
 
+.slot-launcher-button,
 .wordle-launcher-button {
     position: fixed;
     right: 20px;
-    bottom: 20px;
     border: none;
     border-radius: 999px;
     cursor: pointer;
@@ -1342,6 +1342,17 @@ body.high-contrast {
     box-shadow: 0 12px 26px rgba(15, 23, 42, 0.25);
 }
 
+.slot-launcher-button {
+    bottom: 76px;
+    background: linear-gradient(135deg, rgba(250, 204, 21, 0.96), rgba(249, 115, 22, 0.92));
+    color: #3f2305;
+}
+
+.wordle-launcher-button {
+    bottom: 20px;
+}
+
+.slot-modal,
 .wordle-modal {
     position: fixed;
     inset: 0;
@@ -1353,6 +1364,14 @@ body.high-contrast {
     z-index: 1300;
 }
 
+.slot-panel {
+    width: min(1100px, 100%);
+    max-height: 92vh;
+    overflow: auto;
+    display: grid;
+    gap: 18px;
+}
+
 .wordle-panel {
     width: min(760px, 100%);
     max-height: 90vh;
@@ -1361,6 +1380,7 @@ body.high-contrast {
     gap: 16px;
 }
 
+.slot-header,
 .wordle-header {
     display: flex;
     justify-content: space-between;
@@ -1368,6 +1388,7 @@ body.high-contrast {
     gap: 16px;
 }
 
+.slot-header button,
 .wordle-header button {
     border: none;
     border-radius: 10px;
@@ -1375,6 +1396,231 @@ body.high-contrast {
     height: 40px;
     cursor: pointer;
     font-size: 1.1rem;
+}
+
+.slot-mode-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(250, 204, 21, 0.18);
+    color: #92400e;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.slot-subtitle {
+    margin-top: 6px;
+    color: #475569;
+    font-size: 0.95rem;
+    max-width: 74ch;
+}
+
+.slot-balance-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+}
+
+.slot-balance-card,
+.slot-paytable,
+.slot-log,
+.slot-board,
+.slot-feature-list {
+    background: rgba(255, 255, 255, 0.58);
+    border-radius: 18px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.slot-balance-card {
+    display: grid;
+    gap: 6px;
+    padding: 14px 16px;
+}
+
+.slot-balance-card span {
+    color: #64748b;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+}
+
+.slot-balance-card strong {
+    font-size: 1.3rem;
+    color: #0f172a;
+}
+
+.slot-status {
+    min-height: 24px;
+    font-weight: 700;
+    color: #7c2d12;
+}
+
+.slot-machine-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.slot-board {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(70px, 1fr));
+    gap: 10px;
+    padding: 16px;
+    background: linear-gradient(180deg, rgba(255, 247, 237, 0.92), rgba(255, 255, 255, 0.76));
+}
+
+.slot-cell {
+    position: relative;
+    min-height: 92px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.86));
+    border: 2px solid rgba(148, 163, 184, 0.18);
+    display: grid;
+    place-items: center;
+    gap: 4px;
+    text-align: center;
+    padding: 10px 6px;
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.slot-cell-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.slot-cell small {
+    color: #475569;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.slot-cell.is-special {
+    background: linear-gradient(180deg, rgba(219, 234, 254, 0.95), rgba(224, 231, 255, 0.88));
+    border-color: rgba(99, 102, 241, 0.24);
+}
+
+.slot-cell.is-golden {
+    background: linear-gradient(180deg, rgba(254, 240, 138, 0.95), rgba(251, 191, 36, 0.88));
+    border-color: rgba(217, 119, 6, 0.42);
+    box-shadow: 0 12px 26px rgba(234, 179, 8, 0.18);
+}
+
+.slot-cell.is-winning {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 16px 28px rgba(249, 115, 22, 0.2);
+    border-color: rgba(249, 115, 22, 0.58);
+}
+
+.slot-side-panel {
+    display: grid;
+    gap: 12px;
+}
+
+.slot-paytable {
+    display: grid;
+    gap: 10px;
+    padding: 14px 16px;
+}
+
+.slot-paytable h4 {
+    margin: 0;
+    color: #0f172a;
+}
+
+.slot-feature-list {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+}
+
+.slot-feature-list div {
+    color: #1e293b;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.slot-payouts {
+    display: grid;
+    gap: 8px;
+}
+
+.slot-payouts div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: #1e293b;
+    font-weight: 700;
+}
+
+.slot-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.slot-actions button {
+    border: none;
+    border-radius: 14px;
+    padding: 12px 16px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+#slotSpinButton {
+    background: linear-gradient(135deg, #f97316, #ef4444);
+    color: #fff;
+    box-shadow: 0 12px 24px rgba(249, 115, 22, 0.24);
+}
+
+#slotSpinButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+#slotTopUpButton {
+    background: rgba(255, 255, 255, 0.82);
+    color: #0f172a;
+}
+
+.slot-log {
+    display: grid;
+    gap: 10px;
+    padding: 14px 16px;
+}
+
+.slot-log-entry {
+    display: grid;
+    grid-template-columns: minmax(140px, 1.1fr) minmax(0, 2fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.slot-log-entry:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.slot-log-entry strong {
+    color: #0f172a;
+}
+
+.slot-log-entry span {
+    color: #475569;
+}
+
+.slot-log-entry em {
+    font-style: normal;
+    font-weight: 800;
+    color: #c2410c;
 }
 
 .wordle-mode-badge {
@@ -1575,13 +1821,51 @@ body.high-contrast {
 }
 
 @media (max-width: 768px) {
+    .slot-launcher-button,
     .wordle-launcher-button {
         right: 10px;
+        padding: 10px 14px;
+    }
+
+    .slot-launcher-button {
+        bottom: 64px;
+    }
+
+    .wordle-launcher-button {
         bottom: 10px;
     }
 
+    .slot-modal,
     .wordle-modal {
         padding: 10px;
+    }
+
+    .slot-machine-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .slot-board {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        padding: 12px;
+    }
+
+    .slot-cell {
+        min-height: 84px;
+    }
+
+    .slot-cell-icon {
+        font-size: 1.7rem;
+    }
+
+    .slot-log-entry {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .slot-payouts div,
+    .slot-feature-list div {
+        font-size: 0.88rem;
     }
 
     .wordle-row {

@@ -397,6 +397,32 @@ function addCookies(amount) {
     gameState.weeklyStats.earned += amount;
 }
 
+export function awardCookies(amount) {
+    const safeAmount = Math.max(0, Number(amount) || 0);
+    addCookies(safeAmount);
+    return Math.max(0, gameState.cookies);
+}
+
+export function spendCookies(amount) {
+    const safeAmount = Math.max(0, Math.floor(Number(amount) || 0));
+    if (safeAmount <= 0 || gameState.cookies < safeAmount) return 0;
+    gameState.cookies -= safeAmount;
+    return safeAmount;
+}
+
+export function awardDiamonds(amount) {
+    const safeAmount = Math.max(0, Number(amount) || 0);
+    gameState.diamonds = Math.max(0, Number(gameState.diamonds || 0)) + safeAmount;
+    return Math.max(0, gameState.diamonds);
+}
+
+export function spendDiamonds(amount) {
+    const safeAmount = Math.max(0, Number(amount) || 0);
+    if (safeAmount <= 0 || Number(gameState.diamonds || 0) < safeAmount) return 0;
+    gameState.diamonds = Number(gameState.diamonds || 0) - safeAmount;
+    return safeAmount;
+}
+
 function scheduleNextGoldenSnus(now = Date.now()) {
     const randomPart = Math.floor(Math.random() * GOLDEN_SNUS_RANDOM_COOLDOWN_MS);
     gameState.goldenSnusCooldownUntil = now + GOLDEN_SNUS_BASE_COOLDOWN_MS + randomPart;

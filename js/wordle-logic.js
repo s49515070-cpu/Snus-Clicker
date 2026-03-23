@@ -234,14 +234,6 @@ export function submitGuess(state, wordBank) {
         return { state, accepted: false, reason: "Dieses Wort ist nicht in der Liste." };
     }
 
-    const rows = state.guesses.map((entry) => evaluateGuess(entry, state.solution));
-    if (state.hardMode) {
-        const hardModeError = validateHardMode(guess, rows);
-        if (hardModeError) {
-            return { state, accepted: false, reason: hardModeError };
-        }
-    }
-
     const nextGuesses = [...state.guesses, guess];
     const isWin = guess === state.solution;
     const isLoss = !isWin && nextGuesses.length >= MAX_ATTEMPTS;

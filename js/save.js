@@ -310,6 +310,10 @@ function normalizeSavePayload(parsed) {
         prestigeTrackClaimed: { ...(gameState.prestigeTrackClaimed || {}), ...(migrated.prestigeTrackClaimed || {}) },
         activeBoostUntil: normalizeNumber(migrated.activeBoostUntil, 0, 0),
         activeBoostCooldownUntil: normalizeNumber(migrated.activeBoostCooldownUntil, 0, 0),
+        clickBurstUntil: normalizeNumber(migrated.clickBurstUntil, 0, 0),
+        clickBurstCooldownUntil: normalizeNumber(migrated.clickBurstCooldownUntil, 0, 0),
+        discountBurstUntil: normalizeNumber(migrated.discountBurstUntil, 0, 0),
+        discountBurstCooldownUntil: normalizeNumber(migrated.discountBurstCooldownUntil, 0, 0),
         totalClicks: normalizeNumber(migrated.totalClicks, 0, 0),
         autoBuyerUnlocked: Boolean(migrated.autoBuyerUnlocked),
         autoBuyerEnabled: Boolean(migrated.autoBuyerEnabled),
@@ -669,7 +673,7 @@ Backup-Slot: ${selectedSlot}`, true);
 // ===============================
 
 export function resetSave() {
-    const confirmed = confirm(t("resetSaveHint"));
+    const confirmed = confirmAction(t("resetSaveHint"), true);
     if (!confirmed) return;
 
     try {

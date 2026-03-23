@@ -925,7 +925,18 @@ export function setAutoBuyerEnabled(enabled) {
 }
 
 function normalizeAutoBuyerStrategy(value) {
-    return AUTO_BUYER_STRATEGIES.includes(value) ? value : "value";
+    const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+    const aliases = {
+        efficiency: "value",
+        effizienz: "value",
+        cheapest: "cheap",
+        billig: "cheap",
+        balanced: "balanced",
+        reserve: "reserve",
+        custom: "custom"
+    };
+    const mapped = aliases[normalized] || normalized;
+    return AUTO_BUYER_STRATEGIES.includes(mapped) ? mapped : "value";
 }
 
 export function setAutoBuyerStrategy(strategy) {
@@ -989,6 +1000,23 @@ function isCandidateBetterForStrategy(candidate, currentBest, strategy) {
     return false;
 }
 
+function getNormalizedCandidateScore(candidate, candidates, key) {
+    const rawValues = candidates
+        .map((entry) => Number(entry[key]))
+        .filter((value) => Number.isFinite(value));
+
+    if (!rawValues.length) return 0;
+
+    const min = Math.min(...rawValues);
+    const max = Math.max(...rawValues);
+    const current = Number(candidate[key]);
+
+    if (!Number.isFinite(current)) return 0;
+    if (max === min) return 1;
+
+    return (current - min) / (max - min);
+}
+
 function getAutoBuyerChoice() {
     const strategy = getAutoBuyerStrategy();
     const availableBudget = strategy === "reserve"
@@ -1012,47 +1040,37 @@ function getAutoBuyerChoice() {
         const cpsGain = Math.max(0, calculateCps() - baseCps);
         data.owned = owned;
 
-        const valueScore = cpsGain / cost;
-        const affordabilityScore = 1 / cost;
+        const valueScore = cost > 0 && Number.isFinite(cpsGain) ? cpsGain / cost : 0;
+        const affordabilityScore = cost > 0 ? 1 / cost : 0;
         const paybackSeconds = cpsGain > 0 ? cost / cpsGain : Number.POSITIVE_INFINITY;
-        
+
         candidates.push({
             buildingId: building.id,
             cost,
             owned,
             cpsGain,
-            valueScore,
-            affordabilityScore,
+            valueScore: Number.isFinite(valueScore) ? valueScore : 0,
+            affordabilityScore: Number.isFinite(affordabilityScore) ? affordabilityScore : 0,
             paybackSeconds
         });
     });
 
     if (!candidates.length) return null;
 
-    const valueScores = candidates.map((candidate) => candidate.valueScore);
-    const affordabilityScores = candidates.map((candidate) => candidate.affordabilityScore);
-    const minValue = Math.min(...valueScores);
-    const maxValue = Math.max(...valueScores);
-    const minAffordable = Math.min(...affordabilityScores);
-    const maxAffordable = Math.max(...affordabilityScores);
-
     let best = null;
+    const customWeights = getAutoBuyerWeights();
 
     candidates.forEach((candidate) => {
-        const normalizedValue = maxValue === minValue
-            ? 1
-            : (candidate.valueScore - minValue) / (maxValue - minValue);
-        const normalizedAffordable = maxAffordable === minAffordable
-            ? 1
-            : (candidate.affordabilityScore - minAffordable) / (maxAffordable - minAffordable);
+        const normalizedValue = getNormalizedCandidateScore(candidate, candidates, "valueScore");
+        const normalizedAffordable = getNormalizedCandidateScore(candidate, candidates, "affordabilityScore");
 
         const score = strategy === "cheap"
             ? normalizedAffordable
             : strategy === "balanced"
                 ? (normalizedValue * 0.8 + normalizedAffordable * 0.2)
                 : strategy === "custom"
-                    ? (normalizedValue * Number(gameState.autoBuyerWeights?.value || 0.75) + normalizedAffordable * Number(gameState.autoBuyerWeights?.cheap || 0.25))
-                : normalizedValue;
+                    ? (normalizedValue * customWeights.value + normalizedAffordable * customWeights.cheap)
+                    : candidate.valueScore;
 
         if (!best || score > best.score || (score === best.score && isCandidateBetterForStrategy(candidate, best, strategy))) {
             best = {

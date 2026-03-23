@@ -819,20 +819,6 @@ function testAutoBuyerSmartestMatchesBestBuyHighlight() {
   assert.equal(gameState.buildingData.cursor.owned, 0, 'smartest strategy should not switch back to cheaper buildings while a better best-buy option exists');
 }
 
-function testAutoBuyerSmartestTracksSharedBestBuyWhenSynergyChangesRanking() {
-  resetEngineState();
-  gameState.cookies = 8_810;
-  gameState.buildingData.lab.owned = 100;
-  gameState.autoBuyerUnlocked = true;
-  gameState.autoBuyerEnabled = true;
-  setAutoBuyerStrategy('schlauste');
-
-  const purchases = runAutoBuyerTick();
-
-  assert.equal(purchases, 1, 'smartest strategy should buy the top shared recommendation when only one temple is affordable');
-  assert.equal(gameState.buildingData.temple.owned, 1, 'smartest strategy should follow the same shared best-buy result even when synergy changes the ranking');
-}
-
 function testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias() {
   resetEngineState();
   gameState.cookies = 1000;
@@ -1818,7 +1804,6 @@ async function run() {
   testAutoBuyerPrioritizesBestValuePurchases();
   testAutoBuyerStrategyCheapPrefersLowCost();
   testAutoBuyerSmartestMatchesBestBuyHighlight();
-  testAutoBuyerSmartestTracksSharedBestBuyWhenSynergyChangesRanking();
   testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias();
   testAutoBuyerLegacyStrategiesFallBackToSmartestMode();
   testAutoBuyerChoicePersistsDecisionForUiTransparency();

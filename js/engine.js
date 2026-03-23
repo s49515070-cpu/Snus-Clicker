@@ -980,21 +980,7 @@ export function getAutoBuyerStatus() {
 
 function getAutoBuyerChoice() {
     const strategy = getAutoBuyerStrategy();
-    const candidates = getBuildingPurchaseCandidates({
-        buildings,
-        gameState,
-        budget: gameState.cookies,
-        getEffectivePurchasePreview,
-        getPurchaseCost,
-        getBuildingSynergyBonusPercent,
-        affordableOnly: true
-    });
 
-    if (!candidates.length) return null;
-
-    return strategy === "cheap"
-        ? pickCheapestCandidate(candidates)
-        : pickBestValueCandidate(candidates);
 }
 
 export function runAutoBuyerTick() {

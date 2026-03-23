@@ -100,9 +100,9 @@ function loadWordleState() {
 
     if (persistedMode === "practice") {
         const practiceState = createPracticeState(persistedSeed);
+        const hydratedPracticeState = hydratePersistedState(rawPersisted, practiceState.solution);
         return {
-            ...hydratePersistedState(rawPersisted, practiceState.solution),
-            solution: practiceState.solution,
+            ...hydratedPracticeState,
             seed: practiceState.seed,
             mode: "practice"
         };

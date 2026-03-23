@@ -8,8 +8,10 @@ import {
   setBuyMode,
   buyBuilding,
   getPotentialPrestigeGain,
+  getPrestigeMultiplierForLevel,
   prestigeReset,
   getPrestigeTrackStatus,
+  getClaimablePrestigeTrackRewards,
   prestigeTrackRewards,
   buyWorld,
   changeWorld,
@@ -48,12 +50,16 @@ import {
   createDailySeed,
   createInitialGameState,
   evaluateGuess,
+  getWordForSeed,
+  normalizeWordList,
   submitGuess,
 } from '../js/wordle-logic.js';
+import { WORDLE_SOLUTIONS } from '../data/wordle-words.js';
 
 import {
   createBoardFromIds,
   createSeededRng,
+  cascadeBoard,
   findWinningClusters,
   runLeSnusRound,
   getLeSnusFeatureRules,
@@ -193,6 +199,7 @@ function installWordleDocumentMock() {
     'wordlePracticeButton',
     'wordleResetButton',
     'wordleHardModeInput',
+    'diamondCount',
   ];
 
   ids.forEach((id) => {
@@ -433,6 +440,43 @@ function testPrestigeControllerCallbacks() {
   assert.equal(prestigeResetCalls, 1, 'prestige reset callback should be called once');
 }
 
+function testPrestigeControllerAllowsBacklogTrackClaims() {
+  resetEngineState();
+  installControllerDocumentMock();
+
+  const prestigeUpgradesEl = createMockElement('section');
+  const prestigeButton = createMockElement('button');
+  const prestigeSummaryEl = createMockElement('div');
+  const toastCalls = [];
+
+  const controller = createPrestigeUIController({
+    gameState,
+    prestigeUpgrades,
+    prestigeUpgradesEl,
+    prestigeSummaryEl,
+    prestigeButton,
+    getPrestigeUpgradeCost,
+    getPrestigeEffects: () => ({ clickBonusPercent: 0, cpsBonusPercent: 0 }),
+    getPotentialPrestigeGain: () => 0,
+    getClaimablePrestigeTrackRewards: () => [{ level: 1 }, { level: 2 }],
+    getPrestigeTrackStatus: () => [],
+    buyPrestigeUpgrade,
+    prestigeReset: () => 0,
+    showToast: (message) => {
+      toastCalls.push(message);
+    },
+    onPrestigeReset: () => {}
+  });
+
+  controller.renderPrestigeUpgrades();
+
+  assert.equal(prestigeButton.disabled, false, 'prestige button should stay enabled when trophy rewards are still claimable');
+  assert.match(prestigeButton.textContent, /🏆 2/, 'prestige button should surface pending trophy rewards');
+
+  prestigeButton.listeners.click();
+  assert.match(String(toastCalls[0] || ''), /Trophäen-Belohnungen|trophy rewards/i, 'claim-only clicks should acknowledge trophy reward collection');
+}
+
 function testPrestigeCostsIncrease() {
   resetEngineState();
 
@@ -496,6 +540,11 @@ function testPrestigeTrackAwardsBacklogDiamonds() {
     claimedRewards.map((entry) => entry.level),
     [1, 2, 3],
     'rewards up to current prestige level should be marked as claimed'
+  );
+  assert.deepEqual(
+    getClaimablePrestigeTrackRewards().map((entry) => entry.level),
+    [],
+    'after claiming backlog rewards there should be no remaining unlocked trophy rewards'
   );
 }
 
@@ -860,7 +909,7 @@ async function testLoadGameNormalization() {
   assert.equal(gameState.currentWorld, 1, 'invalid world should fallback to 1');
   assert.deepEqual(gameState.unlockedWorldIds, [1], 'unlocked worlds should normalize and always keep world 1');
   assert.equal(gameState.buyMode, 1, 'invalid buy mode should fallback to 1');
-  assert.equal(gameState.prestigeMultiplier, 1, 'prestige multiplier should clamp to min 1');
+  assert.equal(gameState.prestigeMultiplier, getPrestigeMultiplierForLevel(3), 'prestige multiplier should be derived from prestige cookies on load');
   assert.equal(gameState.clickPower, 1, 'click power should clamp to min 1');
   assert.equal(gameState.buildingData.cursor.owned, 0, 'negative owned building count should clamp to 0');
   assert.equal(gameState.saveVersion, 3, 'save should be migrated to current save version');
@@ -1340,7 +1389,7 @@ function testWordleDailyRolloverPreservesStatisticsAndSettings() {
   globalThis.Date = MockDate;
 
   localStorage.setItem('snus_clicker_wordle_state_v1', JSON.stringify({
-    seed: 0,
+    seed: createDailySeed(new Date()),
     mode: 'daily',
     solution: 'APFEL',
     guesses: ['APFEL'],
@@ -1409,8 +1458,8 @@ function testWordleWinAwardsDiamondsAndStartsNextRound() {
       }
     });
 
-    assert.equal(gameState.diamonds, 10, 'winning a word should award ten diamonds');
-    assert.match(ui.wordleStatus.textContent, /10 Diamanten/, 'win message should mention the diamond reward');
+    assert.equal(gameState.diamonds, 0, 'practice wins should not award diamonds');
+    assert.match(ui.wordleStatus.textContent, /Trainingsrunde gewonnen/, 'practice win message should stay reward-free');
     assert.equal(scheduledTimers.length, 1, 'winning should schedule the next round automatically');
 
     scheduledTimers[0].callback();
@@ -1419,6 +1468,95 @@ function testWordleWinAwardsDiamondsAndStartsNextRound() {
     assert.equal(persisted.mode, 'practice', 'after a win the next round should continue in practice mode');
     assert.equal(persisted.seed, 1, 'after a win the next round should advance to the next word');
     assert.notEqual(persisted.solution, 'APFEL', 'after a win the next round should use a fresh solution');
+  } finally {
+    globalThis.setTimeout = realSetTimeout;
+    globalThis.clearTimeout = realClearTimeout;
+  }
+}
+
+function testWordleDailyResetIsBlocked() {
+  resetEngineState();
+  localStorage.clear();
+  const ui = installWordleDocumentMock();
+
+  localStorage.setItem('snus_clicker_wordle_state_v1', JSON.stringify({
+    seed: createDailySeed(new Date()),
+    mode: 'daily',
+    solution: 'APFEL',
+    guesses: ['ANGEL'],
+    currentGuess: 'A',
+    status: 'playing',
+    hardMode: false,
+    statistics: {
+      played: 0,
+      wins: 0,
+      currentStreak: 0,
+      maxStreak: 0,
+      distribution: [0, 0, 0, 0, 0, 0],
+    }
+  }));
+
+  initWordle();
+  ui.wordleLauncherButton.listeners.click();
+  assert.equal(ui.wordleResetButton.disabled, true, 'daily mode should disable the reset button');
+  ui.wordleResetButton.listeners.click();
+
+  const persisted = JSON.parse(localStorage.getItem('snus_clicker_wordle_state_v1'));
+  assert.equal(persisted.mode, 'daily', 'daily reset should keep the daily round active');
+  assert.match(ui.wordleStatus.textContent, /nicht zurückgesetzt werden/i, 'daily reset should explain why it is blocked');
+}
+
+function testWordleDailyWinAwardsDiamondsWithoutAutoPracticeRound() {
+  resetEngineState();
+  localStorage.clear();
+  const ui = installWordleDocumentMock();
+  const normalizedSolutions = normalizeWordList(WORDLE_SOLUTIONS);
+  const dailySeed = createDailySeed(new Date());
+  const dailySolution = getWordForSeed(dailySeed, normalizedSolutions);
+
+  localStorage.setItem('snus_clicker_wordle_state_v1', JSON.stringify({
+    seed: dailySeed,
+    mode: 'daily',
+    solution: dailySolution,
+    guesses: [],
+    currentGuess: dailySolution,
+    status: 'playing',
+    hardMode: false,
+    statistics: {
+      played: 0,
+      wins: 0,
+      currentStreak: 0,
+      maxStreak: 0,
+      distribution: [0, 0, 0, 0, 0, 0],
+    }
+  }));
+
+  const realSetTimeout = globalThis.setTimeout;
+  const realClearTimeout = globalThis.clearTimeout;
+  const scheduledTimers = [];
+  globalThis.setTimeout = (callback, delay) => {
+    scheduledTimers.push({ callback, delay });
+    return scheduledTimers.length;
+  };
+  globalThis.clearTimeout = () => {};
+
+  try {
+    initWordle();
+    ui.wordleLauncherButton.listeners.click();
+    ui.wordleKeyboard.listeners.click({
+      target: {
+        closest() {
+          return { dataset: { key: 'Enter' } };
+        }
+      }
+    });
+
+    assert.equal(gameState.diamonds, 10, 'daily wins should still award diamonds');
+    assert.equal(scheduledTimers.length, 0, 'daily wins should not auto-start a practice round');
+
+    const persisted = JSON.parse(localStorage.getItem('snus_clicker_wordle_state_v1'));
+    assert.equal(persisted.mode, 'daily', 'daily wins should remain on the daily puzzle');
+    assert.equal(persisted.status, 'won', 'daily win state should persist as won');
   } finally {
     globalThis.setTimeout = realSetTimeout;
     globalThis.clearTimeout = realClearTimeout;
@@ -1441,6 +1579,36 @@ function testLeSnusClusterDetection() {
   assert.equal(wins[0].multiplier > 0, true, 'cluster should award a multiplier');
 }
 
+function testLeSnusCascadeOnlyRemovesWinningPositions() {
+  const board = createBoardFromIds([
+    ['ten', 'ten', 'queen', 'queen', 'queen', 'queen'],
+    ['ten', 'queen', 'queen', 'jack', 'jack', 'jack'],
+    ['ten', 'queen', 'jack', 'jack', 'ace', 'ace'],
+    ['ten', 'queen', 'ace', 'ace', 'ace', 'king'],
+    ['king', 'king', 'king', 'king', 'ace', 'king']
+  ]);
+
+  const winningPositions = [
+    { row: 0, col: 0 },
+    { row: 1, col: 0 },
+    { row: 2, col: 0 },
+    { row: 3, col: 0 },
+    { row: 0, col: 1 },
+    { row: 1, col: 1 },
+    { row: 2, col: 1 },
+    { row: 3, col: 1 },
+    { row: 0, col: 2 }
+  ];
+
+  const nextBoard = cascadeBoard(board, winningPositions, () => 0.1);
+
+  assert.equal(
+    nextBoard.flat().filter((cell) => cell.id === 'queen').length,
+    4,
+    'cascade should only remove the queen tiles that were part of the actual win'
+  );
+}
+
 function testLeSnusRoundProducesStructuredResult() {
   const round = runLeSnusRound(100, createSeededRng(42));
 
@@ -1450,13 +1618,29 @@ function testLeSnusRoundProducesStructuredResult() {
   assert.equal(round.board.length, 5, 'Le-Snus board should have five rows');
   assert.equal(round.board[0].length, 6, 'Le-Snus board should have six columns');
   assert.equal(round.totalMultiplier >= 0, true, 'round multiplier should never be negative');
+  assert.equal(round.summaryLines.some((line) => line.includes('Diamanten')), true, 'Le-Snus summaries should use diamonds as payout currency');
 }
 
 function testLeSnusFeatureRulesReflectPublicCoinRanges() {
   const rules = getLeSnusFeatureRules();
 
   assert.equal(rules.some((rule) => rule.includes('0.2x-4x')), true, 'rules should document bronze coin range');
+  assert.equal(rules.some((rule) => rule.includes('5 matching symbols')), true, 'rules should describe the real 5-symbol cluster threshold');
   assert.equal(rules.some((rule) => rule.includes('All That Glitters is Gold')), true, 'rules should expose the public bonus name');
+}
+
+function testLeSnusLuckUpgradeKeepsOriginalSpinLabel() {
+  const round = runLeSnusRound(1, createSeededRng(122), { forcedFeature: 'luck' });
+  const firstSpin = round.bonusResult?.spins?.[0];
+
+  assert.ok(firstSpin, 'forced luck feature should produce at least one bonus spin');
+  assert.match(firstSpin.retriggerText, /Upgrade to All That Glitters is Gold/, 'seeded spin should trigger the luck-to-glitter upgrade');
+  assert.equal(firstSpin.label.startsWith('Luck of the Bandit'), true, 'the upgrading spin should keep its original luck label');
+}
+
+function testLeSnusZeroStakeMentionsDiamonds() {
+  const round = runLeSnusRound(0, createSeededRng(7));
+  assert.equal(round.summaryLines[0], 'Keine Diamanten für Le-Snus vorhanden.', 'zero-stake message should reference diamonds instead of snus');
 }
 
 function testSpendAndAwardCookiesHelpers() {
@@ -1503,6 +1687,7 @@ testBuildingsControllerMarksBestBuy();
 testBuildingsControllerRoiUsesMaxQuantity();
 testBuyModeSanitizesFractionalValues();;
   testPrestigeControllerCallbacks();
+  testPrestigeControllerAllowsBacklogTrackClaims();
   testBuyBuildingNormalizesOwnedType();
   testWordleDailySeedUsesLocalCalendarDay();
   testBuildingPurchaseNeedsValidId();
@@ -1524,10 +1709,15 @@ testBuyModeSanitizesFractionalValues();;
   testWordleBoardReflectsDraftInput();
   testWordleDailyRolloverPreservesStatisticsAndSettings();
   testWordleWinAwardsDiamondsAndStartsNextRound();
+  testWordleDailyResetIsBlocked();
+  testWordleDailyWinAwardsDiamondsWithoutAutoPracticeRound();
   testLeSnusClusterDetection();
+  testLeSnusCascadeOnlyRemovesWinningPositions();
   testLeSnusRoundProducesStructuredResult();
   testSpendAndAwardCookiesHelpers();
   testLeSnusFeatureRulesReflectPublicCoinRanges();
+  testLeSnusLuckUpgradeKeepsOriginalSpinLabel();
+  testLeSnusZeroStakeMentionsDiamonds();
   testGoldenSnusClaimRewardsCookies();
   testConfigClampingAndPersistence();
   testConfigReset();

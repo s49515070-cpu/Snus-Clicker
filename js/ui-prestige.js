@@ -7,6 +7,7 @@ export function createPrestigeUIController({
     getPrestigeUpgradeCost,
     getPrestigeEffects,
     getPotentialPrestigeGain,
+    getClaimablePrestigeTrackRewards,
     getPrestigeTrackStatus,
     buyPrestigeUpgrade,
     prestigeReset,
@@ -25,7 +26,8 @@ export function createPrestigeUIController({
         trophyPath: "Trophäenpfad",
         prestigeReset: "Prestige-Reset",
         earnedPrestige: "✨ Du hast {amount} Prestige-Snus erhalten!",
-        notEnoughLifetime: "ℹ️ Noch nicht genug Lifetime-Snus für Prestige."
+        notEnoughLifetime: "ℹ️ Noch nicht genug Lifetime-Snus für Prestige.",
+        claimedTrophyRewards: "🏆 {count} Trophäen-Belohnungen eingesammelt!"
     };
     const translate = typeof t === "function"
         ? t
@@ -122,8 +124,13 @@ export function createPrestigeUIController({
         if (!prestigeButton) return;
 
         const potential = getPotentialPrestigeGain();
-        prestigeButton.disabled = potential <= 0;
-        prestigeButton.textContent = potential > 0 ? `${translate("prestigeReset")} (+${potential})` : translate("prestigeReset");
+        const claimableRewards = getClaimablePrestigeTrackRewards?.().length || 0;
+        prestigeButton.disabled = potential <= 0 && claimableRewards <= 0;
+        prestigeButton.textContent = potential > 0
+            ? `${translate("prestigeReset")} (+${potential})`
+            : claimableRewards > 0
+                ? `${translate("prestigeReset")} (🏆 ${claimableRewards})`
+                : translate("prestigeReset");
    }
 
     function refreshPrestigeUpgradesIfNeeded() {
@@ -152,6 +159,8 @@ export function createPrestigeUIController({
 
     if (prestigeButton) {
         prestigeButton.addEventListener("click", () => {
+            const claimableRewards = getClaimablePrestigeTrackRewards?.().length || 0;
+            const potential = getPotentialPrestigeGain();
             const earned = prestigeReset();
             if (earned > 0) {
                 showToast(translate("earnedPrestige", { amount: earned }), 1800, "success");
@@ -160,6 +169,10 @@ export function createPrestigeUIController({
                 if (typeof onPrestigeReset === "function") {
                     onPrestigeReset(earned);
                 }
+            } else if (claimableRewards > 0 && potential <= 0) {
+                showToast(translate("claimedTrophyRewards", { count: claimableRewards }), 1800, "success");
+                updatePrestigeUpgradeCards();
+                updatePrestigeResetButtonState();
             } else {
                 showToast(translate("notEnoughLifetime"), 1800, "warning");
             }

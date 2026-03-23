@@ -246,6 +246,12 @@ export function initWordle() {
         `;
 
         if (hardModeInput) hardModeInput.checked = Boolean(state.hardMode);
+        if (resetButton) {
+            resetButton.disabled = state.mode === "daily";
+            resetButton.title = state.mode === "daily"
+                ? "Tagesrätsel kann nicht zurückgesetzt werden."
+                : "";
+        }
         persist();
     };
 
@@ -262,14 +268,22 @@ export function initWordle() {
             return;
         }
         if (state.status === "won") {
-            const nextDiamondTotal = awardDiamonds(WORDLE_WIN_DIAMONDS);
-            refreshDiamondCount(nextDiamondTotal);
+            if (state.mode === "daily") {
+                const nextDiamondTotal = awardDiamonds(WORDLE_WIN_DIAMONDS);
+                refreshDiamondCount(nextDiamondTotal);
+            }
             state = {
                 ...state,
-                message: `Du hast gewonnen! Jetzt bekommst du ${WORDLE_WIN_DIAMONDS} Diamanten.`
+                message: state.mode === "daily"
+                    ? `Du hast gewonnen! Jetzt bekommst du ${WORDLE_WIN_DIAMONDS} Diamanten.`
+                    : "Du hast die Trainingsrunde gewonnen!"
             };
             render();
-            queueNextSolvedRound();
+            if (state.mode === "practice") {
+                queueNextSolvedRound();
+            } else {
+                clearAutoAdvanceTimer();
+            }
             return;
         }
         render();
@@ -328,6 +342,14 @@ export function initWordle() {
 
     resetButton?.addEventListener("click", () => {
         clearAutoAdvanceTimer();
+        if (state.mode === "daily") {
+            state = {
+                ...state,
+                message: "Das Tagesrätsel kann nicht zurückgesetzt werden."
+            };
+            render();
+            return;
+        }
         state = state.mode === "practice"
             ? { ...createPracticeState(state.seed), statistics: state.statistics, hardMode: state.hardMode }
             : { ...createNewDailyState(), statistics: state.statistics, hardMode: state.hardMode };

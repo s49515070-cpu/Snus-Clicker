@@ -1,3 +1,5 @@
+import { getBestBuyBuildingId as getRecommendedBestBuyBuildingId } from "./building-recommendations.js";
+
 export function createBuildingsUIController({ gameState, buildings, getBuildingCost, getPurchaseCost, getMaxAffordableSummary, getEffectivePurchasePreview, buyBuilding, formatNumber, t, leftColumn, rightColumn, getBuildingSynergyBonusPercent }) {
     const fallbackTranslations = {
         purchase: "Kauf",
@@ -54,21 +56,15 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
 
     
     function getBestBuyBuildingId() {
-        let best = null;
-
-        buildings.forEach((building) => {
-            const rawOwned = Number(gameState.buildingData[building.id]?.owned);
-            const owned = Number.isFinite(rawOwned) && rawOwned >= 0 ? Math.floor(rawOwned) : 0;
-            const cost = getPurchaseCost(building, owned, 1);
-            if (!Number.isFinite(cost) || cost <= 0) return;
-
-            const score = building.baseCps / cost;
-            if (!best || score > best.score || (score === best.score && cost < best.cost)) {
-                best = { id: building.id, score, cost };
-            }
+        return getRecommendedBestBuyBuildingId({
+            buildings,
+            gameState,
+            budget: gameState.cookies,
+            getEffectivePurchasePreview,
+            getPurchaseCost,
+            getBuildingSynergyBonusPercent: getSynergyBonus,
+            affordableOnly: true
         });
-
-        return best ? best.id : null;
     }
 
     function buildCardSkeleton(building) {

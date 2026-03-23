@@ -39,6 +39,7 @@ import {
 import { buildings, getMaxAffordable, getMaxAffordableSummary } from '../js/buildings.js';
 import { getWorldById, getWorldUnlockDetails } from '../js/worlds.js';
 import { createBuildingsUIController } from '../js/ui-buildings.js';
+import { getBestBuyBuildingId as getRecommendedBestBuyBuildingId } from '../js/building-recommendations.js';
 import { createPrestigeUIController } from '../js/ui-prestige.js';
 import { initWordle } from '../js/wordle.js';
 import {
@@ -285,6 +286,7 @@ function testBuildingsControllerRendersAfterPurchase() {
 function testBuildingsControllerMarksBestBuy() {
   resetEngineState();
   installControllerDocumentMock();
+  gameState.cookies = 1_000;
 
   const leftColumn = createMockElement('section');
   const rightColumn = createMockElement('section');
@@ -374,6 +376,86 @@ function testBuildingsControllerRoiUsesMaxQuantity() {
   assert.ok(String(forecastNode?.textContent || '').includes('ROI:'), 'ROI forecast should be rendered for MAX mode');
   assert.ok(String(forecastNode?.textContent || '').includes('SPS: +'), 'SPS gain should be shown in building info');
   assert.equal(String(forecastNode?.textContent || '').includes('—'), false, 'ROI should be numeric in MAX mode when purchases are possible');
+}
+
+function testSharedBestBuyRecommendationUsesAffordableDiscountedValue() {
+  resetEngineState();
+  gameState.cookies = 50;
+
+  const bestBuyBuildingId = getRecommendedBestBuyBuildingId({
+    buildings,
+    gameState,
+    budget: gameState.cookies,
+    getEffectivePurchasePreview,
+    getBuildingSynergyBonusPercent,
+  });
+
+  assert.equal(bestBuyBuildingId, 'cursor', 'best-buy recommendation should only consider currently affordable offers');
+}
+
+function testSharedBestBuyRecommendationUsesSynergyBonuses() {
+  resetEngineState();
+  gameState.cookies = 10_000;
+  gameState.buildingData.lab.owned = 100;
+
+  const bestBuyBuildingId = getRecommendedBestBuyBuildingId({
+    buildings,
+    gameState,
+    budget: gameState.cookies,
+    getEffectivePurchasePreview,
+    getBuildingSynergyBonusPercent,
+  });
+
+  assert.equal(bestBuyBuildingId, 'temple', 'best-buy recommendation should include synergy bonuses when ranking offers');
+}
+
+function testBuildingsControllerMarksSharedBestBuyWhenSynergyChangesRanking() {
+  resetEngineState();
+  installControllerDocumentMock();
+  gameState.cookies = 10_000;
+  gameState.buildingData.lab.owned = 100;
+
+  const leftColumn = createMockElement('section');
+  const rightColumn = createMockElement('section');
+
+  const controller = createBuildingsUIController({
+    gameState,
+    buildings,
+    getBuildingCost: (building, owned) => Math.floor(building.baseCost * Math.pow(building.growth, owned)),
+    getPurchaseCost: (building, owned, quantity) => {
+      let total = 0;
+      for (let i = 0; i < quantity; i += 1) {
+        total += Math.floor(building.baseCost * Math.pow(building.growth, owned + i));
+      }
+      return total;
+    },
+    getMaxAffordableSummary: (building, owned, cookies) => {
+      let count = 0;
+      let totalCost = 0;
+      while (true) {
+        const cost = Math.floor(building.baseCost * Math.pow(building.growth, owned + count));
+        if (totalCost + cost > cookies) break;
+        totalCost += cost;
+        count += 1;
+      }
+      return { count, totalCost };
+    },
+    getEffectivePurchasePreview,
+    buyBuilding,
+    formatNumber: (n) => String(Math.floor(n)),
+    t: (key) => (key === 'bestBuy' ? 'Best Buy' : key),
+    leftColumn,
+    rightColumn,
+    getBuildingSynergyBonusPercent,
+  });
+
+  controller.renderBuildings();
+
+  const templeCard = rightColumn.children.find((card) => card.dataset?.buildingId === 'temple');
+  assert.ok(templeCard, 'temple card should be rendered');
+
+  const titleNode = templeCard.children?.[1]?.children?.[0];
+  assert.ok(String(titleNode?.innerHTML || '').includes('Best Buy'), 'shared best-buy logic should drive the yellow-highlighted UI recommendation');
 }
 
 function testBuyModeSanitizesFractionalValues() {
@@ -721,6 +803,34 @@ function testAutoBuyerStrategyCheapPrefersLowCost() {
 
   assert.equal(purchases, 3, 'cheap strategy should still honor purchase limit when affordable');
   assert.equal(gameState.buildingData.cursor.owned, 3, 'cheap strategy should prioritize lower-cost buildings');
+}
+
+function testAutoBuyerSmartestMatchesBestBuyHighlight() {
+  resetEngineState();
+  gameState.cookies = 1000;
+  gameState.autoBuyerUnlocked = true;
+  gameState.autoBuyerEnabled = true;
+  setAutoBuyerStrategy('schlauste');
+
+  const purchases = runAutoBuyerTick();
+
+  assert.equal(purchases, 3, 'smartest strategy should still honor the purchase cap');
+  assert.equal(gameState.buildingData.farm.owned, 3, 'smartest strategy should buy the same best-buy building that the UI highlights');
+  assert.equal(gameState.buildingData.cursor.owned, 0, 'smartest strategy should not switch back to cheaper buildings while a better best-buy option exists');
+}
+
+function testAutoBuyerSmartestTracksSharedBestBuyWhenSynergyChangesRanking() {
+  resetEngineState();
+  gameState.cookies = 8_810;
+  gameState.buildingData.lab.owned = 100;
+  gameState.autoBuyerUnlocked = true;
+  gameState.autoBuyerEnabled = true;
+  setAutoBuyerStrategy('schlauste');
+
+  const purchases = runAutoBuyerTick();
+
+  assert.equal(purchases, 1, 'smartest strategy should buy the top shared recommendation when only one temple is affordable');
+  assert.equal(gameState.buildingData.temple.owned, 1, 'smartest strategy should follow the same shared best-buy result even when synergy changes the ranking');
 }
 
 function testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias() {
@@ -1687,10 +1797,13 @@ async function run() {
   testWorldMustBePurchasedBeforeSwitch();
   testWorldThreeNeedsBuildingRequirement();
   testWorldUnlockDetailsReportsMissingProgress();
-  testBuyModeSanitizing();
+testBuyModeSanitizing();
 testBuildingsControllerRendersAfterPurchase();
 testBuildingsControllerMarksBestBuy();
 testBuildingsControllerRoiUsesMaxQuantity();
+testSharedBestBuyRecommendationUsesAffordableDiscountedValue();
+testSharedBestBuyRecommendationUsesSynergyBonuses();
+testBuildingsControllerMarksSharedBestBuyWhenSynergyChangesRanking();
 testBuyModeSanitizesFractionalValues();;
   testPrestigeControllerCallbacks();
   testPrestigeControllerAllowsBacklogTrackClaims();
@@ -1704,6 +1817,8 @@ testBuyModeSanitizesFractionalValues();;
   testOfflineProgressUsesReducedRatioWithoutQuestProgress();
   testAutoBuyerPrioritizesBestValuePurchases();
   testAutoBuyerStrategyCheapPrefersLowCost();
+  testAutoBuyerSmartestMatchesBestBuyHighlight();
+  testAutoBuyerSmartestTracksSharedBestBuyWhenSynergyChangesRanking();
   testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias();
   testAutoBuyerLegacyStrategiesFallBackToSmartestMode();
   testAutoBuyerChoicePersistsDecisionForUiTransparency();

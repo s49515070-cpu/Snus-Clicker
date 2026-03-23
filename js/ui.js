@@ -48,7 +48,7 @@ import { initToastSystem, showAutosave, showToast } from "./ui-toast.js";
 import { createTrophyPathController } from "./ui-trophy.js";
 import { createDiamondShopController } from "./ui-shop.js";
 import { t } from "./i18n.js";
-import { getBackgroundColor, getCookieHorizontalOffset, getNumberFormat, getHighContrast, getReducedMotion } from "./config.js";
+import { getBackgroundColor, getNumberFormat, getHighContrast, getReducedMotion } from "./config.js";
 import { playClickSound } from "./audio.js";
 
 const cookieCountEl = document.getElementById("cookieCount");
@@ -692,7 +692,7 @@ if (goldenSnusButton) {
 }
 
 export function applyCookieHorizontalOffset() {
-    document.documentElement.style.setProperty("--cookie-horizontal-offset", `${getCookieHorizontalOffset()}px`);
+    document.documentElement.style.setProperty("--cookie-horizontal-offset", "0px");
 }
 
 export function applyWorldTheme() {

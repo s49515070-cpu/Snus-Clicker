@@ -22,8 +22,7 @@ const AUTO_BUYER_MAX_PURCHASES_PER_TICK = 3;
 const OFFLINE_PROGRESS_RATIO = 0.3;
 const ACTIVE_DAILY_QUEST_COUNT = 3;
 
-export const AUTO_BUYER_STRATEGIES = ["value", "cheap", "balanced", "reserve", "custom"];
-const AUTO_BUYER_RESERVE_RATIO = 0.2;
+export const AUTO_BUYER_STRATEGIES = ["value", "cheap"];
 
 export const prestigeUpgrades = [
     {
@@ -929,11 +928,16 @@ function normalizeAutoBuyerStrategy(value) {
     const aliases = {
         efficiency: "value",
         effizienz: "value",
+        smart: "value",
+        smartest: "value",
+        schlauste: "value",
         cheapest: "cheap",
+        günstigste: "cheap",
+        guenstigste: "cheap",
         billig: "cheap",
-        balanced: "balanced",
-        reserve: "reserve",
-        custom: "custom"
+        balanced: "value",
+        reserve: "value",
+        custom: "value"
     };
     const mapped = aliases[normalized] || normalized;
     return AUTO_BUYER_STRATEGIES.includes(mapped) ? mapped : "value";
@@ -1019,9 +1023,7 @@ function getNormalizedCandidateScore(candidate, candidates, key) {
 
 function getAutoBuyerChoice() {
     const strategy = getAutoBuyerStrategy();
-    const availableBudget = strategy === "reserve"
-        ? Math.max(0, gameState.cookies * (1 - AUTO_BUYER_RESERVE_RATIO))
-        : gameState.cookies;
+    const availableBudget = gameState.cookies;
 
     const baseCps = calculateCps();
     const candidates = [];
@@ -1058,7 +1060,6 @@ function getAutoBuyerChoice() {
     if (!candidates.length) return null;
 
     let best = null;
-    const customWeights = getAutoBuyerWeights();
 
     candidates.forEach((candidate) => {
         const normalizedValue = getNormalizedCandidateScore(candidate, candidates, "valueScore");
@@ -1066,11 +1067,7 @@ function getAutoBuyerChoice() {
 
         const score = strategy === "cheap"
             ? normalizedAffordable
-            : strategy === "balanced"
-                ? (normalizedValue * 0.8 + normalizedAffordable * 0.2)
-                : strategy === "custom"
-                    ? (normalizedValue * customWeights.value + normalizedAffordable * customWeights.cheap)
-                    : candidate.valueScore;
+            : candidate.valueScore;
 
         if (!best || score > best.score || (score === best.score && isCandidateBetterForStrategy(candidate, best, strategy))) {
             best = {

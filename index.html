@@ -71,6 +71,13 @@
         <div id="boostStatus" class="boost-status"></div>
         <div id="autoBuyerStatus" class="boost-status"></div>
         <button id="autoBuyerButton" type="button">🤖 Auto-Buyer (30K)</button>
+        <div id="autoBuyerModeControls" class="auto-buyer-mode-controls" hidden>
+            <div id="autoBuyerModeLabel" class="auto-buyer-mode-label">Auto-Buyer Modus</div>
+            <div class="auto-buyer-mode-buttons">
+                <button id="autoBuyerValueModeButton" type="button">Schlauste</button>
+                <button id="autoBuyerCheapModeButton" type="button">Günstigste</button>
+            </div>
+        </div>
     </div>
 
         <button id="milestonesToggleButton" class="milestones-toggle-button glass" type="button">🎯 Milestones</button>
@@ -269,28 +276,6 @@
                 <small id="uiRefreshIntervalText">100 ms</small>
             </div>
         </label>
-        <label>
-            <span id="settingAutoBuyerStrategyLabel">Auto-Buyer Strategie</span>
-            <select id="autoBuyerStrategyInput">
-                <option value="value">Effizienz</option>
-                <option value="cheap">Günstig zuerst</option>
-                <option value="balanced">Ausgewogen</option>
-                <option value="reserve">Sparmodus (20% halten)</option>
-                <option value="custom">Custom (Gewichtung)</option>
-            </select>
-        </label>
-        <div id="autoBuyerCustomWeights" hidden>
-            <label>
-                <span id="settingAutoBuyerValueWeightLabel">Custom: Effizienz-Gewicht</span>
-                <input id="autoBuyerValueWeightInput" type="range" min="0" max="100" step="5" value="75">
-                <small id="autoBuyerValueWeightText">75%</small>
-            </label>
-            <label>
-                <span id="settingAutoBuyerCheapWeightLabel">Custom: Günstig-Gewicht</span>
-                <input id="autoBuyerCheapWeightInput" type="range" min="0" max="100" step="5" value="25">
-                <small id="autoBuyerCheapWeightText">25%</small>
-            </label>
-        </div>
         <label>
             <span id="settingNumberFormatLabel">Zahlenformat</span>
             <select id="numberFormatInput">

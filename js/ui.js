@@ -30,6 +30,8 @@ import {
     activateDiscountBurst,
     unlockAutoBuyer,
     setAutoBuyerEnabled,
+    setAutoBuyerStrategy,
+    getAutoBuyerStrategy,
     getAutoBuyerStatus,
     getPrestigePreview,
     getBuildingSynergyBonusPercent,
@@ -78,6 +80,10 @@ const questListEl = document.getElementById("questList");
 const dailySummaryEl = document.getElementById("dailySummary");
 const autoBuyerButton = document.getElementById("autoBuyerButton");
 const autoBuyerStatusEl = document.getElementById("autoBuyerStatus");
+const autoBuyerModeControls = document.getElementById("autoBuyerModeControls");
+const autoBuyerModeLabelEl = document.getElementById("autoBuyerModeLabel");
+const autoBuyerValueModeButton = document.getElementById("autoBuyerValueModeButton");
+const autoBuyerCheapModeButton = document.getElementById("autoBuyerCheapModeButton");
 const activeBonusesPanelEl = document.getElementById("activeBonusesPanel");
 const goldenSnusButton = document.getElementById("goldenSnusButton");
 const trophyPathListEl = document.getElementById("trophyPathList");
@@ -241,11 +247,24 @@ function renderAutoBuyerState() {
     if (!gameState.autoBuyerUnlocked) {
         autoBuyerButton.textContent = t("autoBuyerUnlock", { cost: formatNumber(AUTO_BUYER_UNLOCK_COST) });
         autoBuyerButton.classList.remove("is-active");
+        if (autoBuyerModeControls) autoBuyerModeControls.hidden = true;
         return;
     }
 
     autoBuyerButton.textContent = gameState.autoBuyerEnabled ? t("autoBuyerOn") : t("autoBuyerOff");
     autoBuyerButton.classList.toggle("is-active", gameState.autoBuyerEnabled);
+
+    const strategy = getAutoBuyerStrategy();
+    if (autoBuyerModeControls) autoBuyerModeControls.hidden = false;
+    if (autoBuyerModeLabelEl) autoBuyerModeLabelEl.textContent = t("autoBuyerModeLabel");
+    if (autoBuyerValueModeButton) {
+        autoBuyerValueModeButton.textContent = t("autoBuyerStrategyValue");
+        autoBuyerValueModeButton.classList.toggle("is-selected", strategy === "value");
+    }
+    if (autoBuyerCheapModeButton) {
+        autoBuyerCheapModeButton.textContent = t("autoBuyerStrategyCheap");
+        autoBuyerCheapModeButton.classList.toggle("is-selected", strategy === "cheap");
+    }
     
     if (autoBuyerStatusEl) {
         autoBuyerStatusEl.textContent = t("autoBuyerDecision", { decision: getAutoBuyerStatus().decision });
@@ -443,9 +462,7 @@ export function applyStaticTranslations() {
         ["settingBackgroundLabel", t("settingBackground")],
         ["settingAutosaveIntervalLabel", t("settingAutosaveInterval")],
         ["settingUiRefreshIntervalLabel", t("settingUiRefreshInterval")],
-        ["settingAutoBuyerStrategyLabel", t("settingAutoBuyerStrategy")],
-        ["settingAutoBuyerValueWeightLabel", t("settingAutoBuyerValueWeight")],
-        ["settingAutoBuyerCheapWeightLabel", t("settingAutoBuyerCheapWeight")],
+        ["autoBuyerModeLabel", t("autoBuyerModeLabel")],
         ["settingNumberFormatLabel", t("settingNumberFormat")],
         ["settingReducedMotionLabel", t("settingReducedMotion")],
         ["settingHighContrastLabel", t("settingHighContrast")],
@@ -648,6 +665,20 @@ if (autoBuyerButton) {
         setAutoBuyerEnabled(!gameState.autoBuyerEnabled);
     });
 }
+
+[autoBuyerValueModeButton, autoBuyerCheapModeButton].forEach((button) => {
+    if (!button) return;
+
+    button.addEventListener("click", () => {
+        if (!gameState.autoBuyerUnlocked) return;
+
+        const strategy = button === autoBuyerCheapModeButton ? "cheap" : "value";
+        const appliedStrategy = setAutoBuyerStrategy(strategy);
+        const strategyLabelKey = appliedStrategy === "cheap" ? "autoBuyerStrategyCheap" : "autoBuyerStrategyValue";
+        showToast(t("autoBuyerStrategyUpdated", { strategy: t(strategyLabelKey) }), 1300, "info");
+        renderUI();
+    });
+});
 
 if (goldenSnusButton) {
     goldenSnusButton.addEventListener("click", () => {

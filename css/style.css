@@ -818,6 +818,23 @@ body.high-contrast {
     cursor: pointer;
 }
 
+.auto-buyer-modes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.auto-buyer-modes button {
+    background: rgba(255, 255, 255, 0.8);
+    color: #0f172a;
+}
+
+.auto-buyer-modes button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.auto-buyer-modes button.is-active,
 #autoBuyerButton.is-active {
     background: #22c55e;
     color: #fff;

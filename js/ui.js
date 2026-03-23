@@ -37,7 +37,9 @@ import {
     getGoldenSnusState,
     claimGoldenSnus,
     getPrestigeProgressState,
-    AUTO_BUYER_UNLOCK_COST
+    AUTO_BUYER_UNLOCK_COST,
+    setAutoBuyerStrategy,
+    getAutoBuyerStrategy
 } from "./engine.js";
 import { buildings, getBuildingCost, getPurchaseCost, getMaxAffordableSummary } from "./buildings.js";
 import { worlds, getWorldById, isWorldUnlocked, getWorldUnlockDetails } from "./worlds.js";
@@ -78,6 +80,9 @@ const questListEl = document.getElementById("questList");
 const dailySummaryEl = document.getElementById("dailySummary");
 const autoBuyerButton = document.getElementById("autoBuyerButton");
 const autoBuyerStatusEl = document.getElementById("autoBuyerStatus");
+const autoBuyerModeButtonsEl = document.getElementById("autoBuyerModeButtons");
+const autoBuyerModeSmartButton = document.getElementById("autoBuyerModeSmartButton");
+const autoBuyerModeCheapButton = document.getElementById("autoBuyerModeCheapButton");
 const activeBonusesPanelEl = document.getElementById("activeBonusesPanel");
 const goldenSnusButton = document.getElementById("goldenSnusButton");
 const trophyPathListEl = document.getElementById("trophyPathList");
@@ -238,17 +243,36 @@ function renderBoostStatus() {
 function renderAutoBuyerState() {
     if (!autoBuyerButton) return;
 
+    const strategy = getAutoBuyerStrategy();
+
     if (!gameState.autoBuyerUnlocked) {
         autoBuyerButton.textContent = t("autoBuyerUnlock", { cost: formatNumber(AUTO_BUYER_UNLOCK_COST) });
         autoBuyerButton.classList.remove("is-active");
-        return;
+    } else {
+        autoBuyerButton.textContent = gameState.autoBuyerEnabled ? t("autoBuyerOn") : t("autoBuyerOff");
+        autoBuyerButton.classList.toggle("is-active", gameState.autoBuyerEnabled);
     }
 
-    autoBuyerButton.textContent = gameState.autoBuyerEnabled ? t("autoBuyerOn") : t("autoBuyerOff");
-    autoBuyerButton.classList.toggle("is-active", gameState.autoBuyerEnabled);
-    
+    if (autoBuyerModeButtonsEl) {
+        autoBuyerModeButtonsEl.hidden = false;
+    }
+    if (autoBuyerModeSmartButton) {
+        autoBuyerModeSmartButton.disabled = !gameState.autoBuyerUnlocked;
+        autoBuyerModeSmartButton.textContent = `🧠 ${t("autoBuyerStrategyValue")}`;
+        autoBuyerModeSmartButton.classList.toggle("is-active", strategy === "value");
+        autoBuyerModeSmartButton.setAttribute("aria-pressed", strategy === "value" ? "true" : "false");
+    }
+    if (autoBuyerModeCheapButton) {
+        autoBuyerModeCheapButton.disabled = !gameState.autoBuyerUnlocked;
+        autoBuyerModeCheapButton.textContent = `💸 ${t("autoBuyerStrategyCheap")}`;
+        autoBuyerModeCheapButton.classList.toggle("is-active", strategy === "cheap");
+        autoBuyerModeCheapButton.setAttribute("aria-pressed", strategy === "cheap" ? "true" : "false");
+    }
+
     if (autoBuyerStatusEl) {
-        autoBuyerStatusEl.textContent = t("autoBuyerDecision", { decision: getAutoBuyerStatus().decision });
+        autoBuyerStatusEl.textContent = gameState.autoBuyerUnlocked
+            ? t("autoBuyerDecision", { decision: getAutoBuyerStatus().decision })
+            : "";
     }
 }
 
@@ -443,9 +467,6 @@ export function applyStaticTranslations() {
         ["settingBackgroundLabel", t("settingBackground")],
         ["settingAutosaveIntervalLabel", t("settingAutosaveInterval")],
         ["settingUiRefreshIntervalLabel", t("settingUiRefreshInterval")],
-        ["settingAutoBuyerStrategyLabel", t("settingAutoBuyerStrategy")],
-        ["settingAutoBuyerValueWeightLabel", t("settingAutoBuyerValueWeight")],
-        ["settingAutoBuyerCheapWeightLabel", t("settingAutoBuyerCheapWeight")],
         ["settingNumberFormatLabel", t("settingNumberFormat")],
         ["settingReducedMotionLabel", t("settingReducedMotion")],
         ["settingHighContrastLabel", t("settingHighContrast")],
@@ -643,9 +664,29 @@ if (autoBuyerButton) {
         if (!gameState.autoBuyerUnlocked) {
             const unlocked = unlockAutoBuyer();
             showToast(unlocked ? t("autoBuyerUnlocked") : t("autoBuyerNeedSnus", { cost: formatNumber(AUTO_BUYER_UNLOCK_COST) }), 1500, unlocked ? "success" : "warning");
+            renderUI();
             return;
         }
         setAutoBuyerEnabled(!gameState.autoBuyerEnabled);
+        renderUI();
+    });
+}
+
+if (autoBuyerModeSmartButton) {
+    autoBuyerModeSmartButton.addEventListener("click", () => {
+        if (!gameState.autoBuyerUnlocked) return;
+        setAutoBuyerStrategy("value");
+        showToast(t("autoBuyerStrategyUpdated", { strategy: t("autoBuyerStrategyValue") }), 1300, "info");
+        renderUI();
+    });
+}
+
+if (autoBuyerModeCheapButton) {
+    autoBuyerModeCheapButton.addEventListener("click", () => {
+        if (!gameState.autoBuyerUnlocked) return;
+        setAutoBuyerStrategy("cheap");
+        showToast(t("autoBuyerStrategyUpdated", { strategy: t("autoBuyerStrategyCheap") }), 1300, "info");
+        renderUI();
     });
 }
 

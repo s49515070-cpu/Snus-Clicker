@@ -23,8 +23,6 @@ import {
   getActiveQuests,
   runAutoBuyerTick,
   setAutoBuyerStrategy,
-  setAutoBuyerWeights,
-  getAutoBuyerWeights,
   getAutoBuyerStatus,
   getActiveBonuses,
   claimGoldenSnus,
@@ -725,38 +723,20 @@ function testAutoBuyerStrategyCheapPrefersLowCost() {
   assert.equal(gameState.buildingData.cursor.owned, 3, 'cheap strategy should prioritize lower-cost buildings');
 }
 
-
-function testAutoBuyerStrategyReserveKeepsSavings() {
+function testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias() {
   resetEngineState();
-  gameState.cookies = 100;
+  gameState.cookies = 1000;
   gameState.autoBuyerUnlocked = true;
   gameState.autoBuyerEnabled = true;
-  setAutoBuyerStrategy('reserve');
+  setAutoBuyerStrategy('Effizienz');
 
   const purchases = runAutoBuyerTick();
 
-  assert.ok(purchases >= 1, 'reserve strategy should still buy when budget allows');
-  assert.ok(gameState.cookies >= 20, 'reserve strategy should keep about 20% of cookies unspent');
+  assert.equal(purchases, 3, 'localized efficiency alias should still allow the auto-buyer to run');
+  assert.equal(gameState.buildingData.farm.owned, 3, 'efficiency strategy should keep prioritizing the best ROI building instead of the cheapest one');
+  assert.equal(gameState.buildingData.cursor.owned, 0, 'efficiency strategy should not drift back to cheapest purchases when a better ROI option is affordable');
 }
 
-function testAutoBuyerStrategyCustomUsesWeightsAndPersistsDecision() {
-  resetEngineState();
-  gameState.cookies = 60;
-  gameState.autoBuyerUnlocked = true;
-  gameState.autoBuyerEnabled = true;
-  setAutoBuyerStrategy('custom');
-  setAutoBuyerWeights(0, 1);
-
-  const purchases = runAutoBuyerTick();
-  const weights = getAutoBuyerWeights();
-  const status = getAutoBuyerStatus();
-
-  assert.equal(purchases, 3, 'custom strategy should still run purchase loop');
-  assert.equal(gameState.buildingData.cursor.owned, 3, 'custom strategy with cheap weight should prefer cursor');
-  assert.ok(weights.value >= 0 && weights.value <= 1, 'custom value weight should be clamped to [0,1]');
-  assert.ok(weights.cheap >= 0 && weights.cheap <= 1, 'custom cheap weight should be clamped to [0,1]');
-  assert.ok(String(status.decision).includes('cursor'), 'auto-buyer should store last decision for UI transparency');
-}
 
 function testBuyBuildingAppliesWorldDiscountModifier() {
   resetEngineState();
@@ -1698,8 +1678,7 @@ testBuyModeSanitizesFractionalValues();;
   testOfflineProgressUsesReducedRatioWithoutQuestProgress();
   testAutoBuyerPrioritizesBestValuePurchases();
   testAutoBuyerStrategyCheapPrefersLowCost();
-  testAutoBuyerStrategyReserveKeepsSavings();
-  testAutoBuyerStrategyCustomUsesWeightsAndPersistsDecision();
+  testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias();
   testBuyBuildingAppliesWorldDiscountModifier();
   testActiveBonusesExposeWorldAndAutomationState();
   testBuildingSynergyBoostsCps();

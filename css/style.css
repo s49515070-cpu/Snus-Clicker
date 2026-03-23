@@ -1784,6 +1784,15 @@ body.high-contrast {
     color: #0f172a;
 }
 
+.wordle-hint {
+    min-height: 22px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(224, 231, 255, 0.5);
+    color: #312e81;
+    font-weight: 700;
+}
+
 .wordle-board {
     display: grid;
     gap: 10px;

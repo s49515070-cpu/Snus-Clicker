@@ -14,7 +14,7 @@ import {
     scoreKeyboard,
     submitGuess
 } from "./wordle-logic.js";
-import { awardDiamonds } from "./engine.js";
+import { awardDiamonds, gameState, spendDiamonds } from "./engine.js";
 
 const KEYBOARD_ROWS = [
     ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
@@ -22,6 +22,7 @@ const KEYBOARD_ROWS = [
     ["ENTER", "Z", "X", "C", "V", "B", "N", "M", "⌫"]
 ];
 const WORDLE_WIN_DIAMONDS = 10;
+const WORDLE_HINT_COST = 8;
 const WORDLE_WIN_ADVANCE_DELAY_MS = 1500;
 
 const solutionWords = normalizeWordList(WORDLE_SOLUTIONS);
@@ -55,13 +56,26 @@ function createNewDailyState() {
     };
 }
 
-function createPracticeState(index = 0) {
-    const safeIndex = Math.abs(Number(index) || 0) % solutionWords.length;
+function createPracticeState(seed = Date.now()) {
+    const safeSeed = Math.abs(Math.trunc(Number(seed) || Date.now()));
     return {
-        ...createInitialGameState(solutionWords[safeIndex]),
-        seed: safeIndex,
+        ...createInitialGameState(getWordForSeed(safeSeed, solutionWords)),
+        seed: safeSeed,
         mode: "practice"
     };
+}
+
+function createRandomPracticeSeed(excludedSolution = "") {
+    const blockedSolution = String(excludedSolution || "").toUpperCase();
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+        const seed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+        if (!blockedSolution || getWordForSeed(seed, solutionWords) !== blockedSolution) {
+            return seed;
+        }
+    }
+
+    const fallbackIndex = solutionWords.findIndex((word) => word !== blockedSolution);
+    return fallbackIndex >= 0 ? fallbackIndex : 0;
 }
 
 function createStateCarryover(rawPersisted) {
@@ -131,16 +145,18 @@ export function initWordle() {
     const subtitleEl = document.getElementById("wordleSubtitle");
     const badgeEl = document.getElementById("wordleModeBadge");
     const statsEl = document.getElementById("wordleStats");
+    const hintEl = document.getElementById("wordleHint");
     const practiceButton = document.getElementById("wordlePracticeButton");
     const resetButton = document.getElementById("wordleResetButton");
+    const hintButton = document.getElementById("wordleHintButton");
     const hardModeInput = document.getElementById("wordleHardModeInput");
 
-    if (!floatingButton || !modal || !boardEl || !keyboardEl || !statusEl || !subtitleEl || !badgeEl || !statsEl) {
+    if (!floatingButton || !modal || !boardEl || !keyboardEl || !statusEl || !subtitleEl || !badgeEl || !statsEl || !hintEl) {
         return;
     }
 
     let state = loadWordleState();
-    let practiceSeed = state.mode === "practice" ? state.seed : 0;
+    let practiceSeed = state.mode === "practice" ? state.seed : createRandomPracticeSeed(state.solution);
     let autoAdvanceTimerId = null;
 
     const persist = () => safeStorageWrite(state);
@@ -159,8 +175,52 @@ export function initWordle() {
         }
     };
 
+    const getHintableLetters = () => Array.from(new Set(Array.from(state.solution).filter((letter) => !state.hintLetters.includes(letter))));
+
+    const renderHint = () => {
+        const revealedLetters = Array.isArray(state.hintLetters) ? state.hintLetters : [];
+        if (revealedLetters.length === 0) {
+            hintEl.textContent = `Tipp kostet ${WORDLE_HINT_COST} Diamanten: Du erfährst einen Buchstaben, aber nicht seine Position.`;
+            return;
+        }
+
+        const label = revealedLetters.length === 1 ? 'Enthaltener Buchstabe' : 'Enthaltene Buchstaben';
+        hintEl.textContent = `${label}: ${revealedLetters.join(', ')}`;
+    };
+
+    const buyHint = () => {
+        if (state.status !== 'playing') {
+            state = { ...state, message: 'Tipps gibt es nur während einer laufenden Runde.' };
+            render();
+            return;
+        }
+
+        const hintableLetters = getHintableLetters();
+        if (hintableLetters.length === 0) {
+            state = { ...state, message: 'Für dieses Wort wurden schon alle möglichen Buchstaben-Hinweise aufgedeckt.' };
+            render();
+            return;
+        }
+
+        const spent = spendDiamonds(WORDLE_HINT_COST);
+        if (spent < WORDLE_HINT_COST) {
+            state = { ...state, message: `Du brauchst ${WORDLE_HINT_COST} Diamanten für einen Tipp.` };
+            render();
+            return;
+        }
+
+        const letter = hintableLetters[Math.floor(Math.random() * hintableLetters.length)];
+        state = {
+            ...state,
+            hintLetters: [...state.hintLetters, letter],
+            message: `Tipp gekauft: Der Buchstabe ${letter} ist im Wort enthalten.`
+        };
+        refreshDiamondCount(gameState.diamonds);
+        render();
+    };
+
     const createNextSolvedRoundState = () => {
-        practiceSeed = state.seed + 1;
+        practiceSeed = createRandomPracticeSeed(state.solution);
         return {
             ...createPracticeState(practiceSeed),
             statistics: state.statistics,
@@ -221,15 +281,28 @@ export function initWordle() {
         });
 
         const summary = computeStatsSummary(state);
+        const hintableLetters = getHintableLetters();
         badgeEl.textContent = state.mode === "daily" ? "Tagesrätsel" : "Freies Spiel";
         subtitleEl.textContent = state.mode === "daily"
             ? `Heute wartet ein neues 5-Buchstaben-Wort. Versuche ${MAX_ATTEMPTS} stabile Züge.`
-            : `Trainingsrunde #${state.seed + 1}. Du kannst beliebig oft neu starten.`;
+            : "Trainingsrunde mit zufälligem Wort. Du kannst beliebig oft neu starten.";
         statusEl.textContent = state.message || (state.status === "playing"
             ? `Zeile ${Math.min(state.guesses.length + 1, MAX_ATTEMPTS)} von ${MAX_ATTEMPTS} · ${WORD_LENGTH} Buchstaben.`
             : state.status === "won"
                 ? `Gewonnen! Die Lösung war ${state.solution}.`
                 : `Verloren. Die Lösung war ${state.solution}.`);
+        renderHint();
+
+        if (hintButton) {
+            const canBuyHint = state.status === "playing" && hintableLetters.length > 0 && Number(gameState.diamonds || 0) >= WORDLE_HINT_COST;
+            hintButton.disabled = !canBuyHint;
+            hintButton.textContent = state.status !== "playing"
+                ? "💡 Tipp nur im Spiel"
+                : hintableLetters.length === 0
+                    ? "💡 Alle Tipps genutzt"
+                    : `💡 Tipp (${WORDLE_HINT_COST} 💎)`;
+        }
+
         statsEl.innerHTML = `
             <div class="wordle-stat-card"><strong>${summary.played}</strong><span>Spiele</span></div>
             <div class="wordle-stat-card"><strong>${summary.winRate}%</strong><span>Quote</span></div>
@@ -331,7 +404,7 @@ export function initWordle() {
 
     practiceButton?.addEventListener("click", () => {
         clearAutoAdvanceTimer();
-        practiceSeed += 1;
+        practiceSeed = createRandomPracticeSeed(state.solution);
         state = {
             ...createPracticeState(practiceSeed),
             statistics: state.statistics,
@@ -339,6 +412,8 @@ export function initWordle() {
         };
         render();
     });
+
+    hintButton?.addEventListener("click", buyHint);
 
     resetButton?.addEventListener("click", () => {
         clearAutoAdvanceTimer();

@@ -723,6 +723,20 @@ function testAutoBuyerStrategyCheapPrefersLowCost() {
   assert.equal(gameState.buildingData.cursor.owned, 3, 'cheap strategy should prioritize lower-cost buildings');
 }
 
+function testAutoBuyerSmartestMatchesBestBuyHighlight() {
+  resetEngineState();
+  gameState.cookies = 1000;
+  gameState.autoBuyerUnlocked = true;
+  gameState.autoBuyerEnabled = true;
+  setAutoBuyerStrategy('schlauste');
+
+  const purchases = runAutoBuyerTick();
+
+  assert.equal(purchases, 3, 'smartest strategy should still honor the purchase cap');
+  assert.equal(gameState.buildingData.farm.owned, 3, 'smartest strategy should buy the same best-buy building that the UI highlights');
+  assert.equal(gameState.buildingData.cursor.owned, 0, 'smartest strategy should not switch back to cheaper buildings while a better best-buy option exists');
+}
+
 function testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias() {
   resetEngineState();
   gameState.cookies = 1000;
@@ -1704,6 +1718,7 @@ testBuyModeSanitizesFractionalValues();;
   testOfflineProgressUsesReducedRatioWithoutQuestProgress();
   testAutoBuyerPrioritizesBestValuePurchases();
   testAutoBuyerStrategyCheapPrefersLowCost();
+  testAutoBuyerSmartestMatchesBestBuyHighlight();
   testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias();
   testAutoBuyerLegacyStrategiesFallBackToSmartestMode();
   testAutoBuyerChoicePersistsDecisionForUiTransparency();

@@ -899,6 +899,12 @@ async function testLoadGameNormalization() {
     cookies: -5,
     lifetimeCookies: -10,
     lifetimeCookiesAtLastPrestige: 999, 
+    activeBoostUntil: 1234,
+    activeBoostCooldownUntil: 5678,
+    clickBurstUntil: 9012,
+    clickBurstCooldownUntil: 3456,
+    discountBurstUntil: 7890,
+    discountBurstCooldownUntil: 2468,
     prestigeCookies: 3,
     currentWorld: 999,
     buyMode: -2,
@@ -932,6 +938,12 @@ async function testLoadGameNormalization() {
   assert.equal(gameState.prestigeMultiplier, getPrestigeMultiplierForLevel(3), 'prestige multiplier should be derived from prestige cookies on load');
   assert.equal(gameState.clickPower, 1, 'click power should clamp to min 1');
   assert.equal(gameState.buildingData.cursor.owned, 0, 'negative owned building count should clamp to 0');
+  assert.equal(gameState.activeBoostUntil, 1234, 'active boost timer should survive load normalization');
+  assert.equal(gameState.activeBoostCooldownUntil, 5678, 'active boost cooldown should survive load normalization');
+  assert.equal(gameState.clickBurstUntil, 9012, 'click burst timer should survive load normalization');
+  assert.equal(gameState.clickBurstCooldownUntil, 3456, 'click burst cooldown should survive load normalization');
+  assert.equal(gameState.discountBurstUntil, 7890, 'discount burst timer should survive load normalization');
+  assert.equal(gameState.discountBurstCooldownUntil, 2468, 'discount burst cooldown should survive load normalization');
   assert.equal(gameState.saveVersion, 3, 'save should be migrated to current save version');
   assert.equal(gameState.milestonePerks.discount_3, true, 'legacy milestonePeks field should migrate to milestonePerks');
   assert.equal(gameState.todayStats.clicks, 12, 'legacy dailyStats should migrate to todayStats');
@@ -1300,6 +1312,22 @@ async function testResetSaveAppliesWithoutReload() {
   assert.equal(localStorage.getItem('snus_clicker_save'), null, 'reset should remove persisted save');
   assert.equal(localStorage.getItem('snus_clicker_save_backup_1'), null, 'reset should remove backup saves');
   assert.equal(localStorage.getItem('snus_clicker_save_backup_2'), null, 'reset should remove all backup slots');
+}
+
+async function testResetSaveFallsBackWithoutConfirmApi() {
+  resetEngineState();
+  mockDomForUiImports();
+
+  gameState.cookies = 321;
+  localStorage.setItem('snus_clicker_save', JSON.stringify({ cookies: 123 }));
+
+  delete globalThis.confirm;
+
+  const { resetSave } = await import('../js/save.js');
+  resetSave();
+
+  assert.equal(gameState.cookies, 0, 'reset should still work when confirm api is unavailable');
+  assert.equal(localStorage.getItem('snus_clicker_save'), null, 'reset should remove persisted save without confirm api');
 }
 
 
@@ -1756,6 +1784,7 @@ testBuyModeSanitizesFractionalValues();;
   await testRestoreBackupCanBeCancelled();
   await testExportSaveFallbackCopyPath();
   await testResetSaveAppliesWithoutReload();
+  await testResetSaveFallsBackWithoutConfirmApi();
   
   console.log('All tests passed.');
 }

@@ -4,7 +4,7 @@
 
 
 import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, prestigeReset, getPotentialPrestigeGain, getClaimablePrestigeTrackRewards } from "./engine.js";
-import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyCookieHorizontalOffset, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
+import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
 import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";
 import { t } from "./i18n.js";
@@ -240,7 +240,6 @@ function initSettingsControls() {
             syncRangeTexts();
             restartAutosaveTimer();
             applyStaticTranslations();
-            applyCookieHorizontalOffset();
             refreshAllUI();
             showToast(t("settingsResetDone"), 1600, "info");
         });

@@ -1388,6 +1388,20 @@ function testWordleSubmitGuessTracksWinAndStatistics() {
   assert.equal(result.state.statistics.distribution[0], 1, 'distribution should record first-try win');
 }
 
+function testWordleAllowsFreeGuessingEvenWithHardModeEnabled() {
+  const state = {
+    ...createInitialGameState('AMPEL'),
+    guesses: ['ANGEL'],
+    currentGuess: 'TYPEN',
+    hardMode: true,
+  };
+
+  const result = submitGuess(state, new Set(['ANGEL', 'TYPEN']));
+
+  assert.equal(result.accepted, true, 'wordle should accept any valid guess even when hard mode was enabled');
+  assert.deepEqual(result.state.guesses, ['ANGEL', 'TYPEN'], 'the new guess should be appended without enforcing previous hints');
+}
+
 function testWordleDailySeedUsesLocalCalendarDay() {
   const lateEvening = new Date(2024, 0, 1, 23, 30);
   const shortlyAfterMidnight = new Date(2024, 0, 2, 0, 30);
@@ -1756,6 +1770,7 @@ testBuyModeSanitizesFractionalValues();;
   testDiscountBurstAppliesToPricePreviewAndMaxBuy();
   testWordleEvaluationHandlesDuplicateLetters();
   testWordleSubmitGuessTracksWinAndStatistics();
+  testWordleAllowsFreeGuessingEvenWithHardModeEnabled();
   testWordleBoardReflectsDraftInput();
   testWordleDailyRolloverPreservesStatisticsAndSettings();
   testWordleWinAwardsDiamondsAndStartsNextRound();

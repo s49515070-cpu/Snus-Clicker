@@ -120,6 +120,74 @@
 
     <div id="activeBonusesPanel" class="active-bonuses-panel" aria-live="polite"></div>
 
+    <button id="slotLauncherButton" class="slot-launcher-button glass" type="button">🎰 Le-Snus</button>
+
+    <div id="slotModal" class="slot-modal" hidden>
+        <div class="slot-panel glass highlight-panel" role="dialog" aria-modal="true" aria-labelledby="slotTitle">
+            <div class="slot-header">
+                <div>
+                    <div id="slotModeBadge" class="slot-mode-badge">Le-Snus</div>
+                    <h3 id="slotTitle">🎰 Le-Snus</h3>
+                    <p id="slotSubtitle" class="slot-subtitle">Öffentlich rekonstruierte Le-Bandit-Mechanik: 6x5 Cluster-Pays, Cascades, Golden Squares, Rainbow-Activation und Freispiele – mit All-In auf deinen kompletten Snus-Bestand.</p>
+                </div>
+                <button id="slotCloseButton" type="button" aria-label="Le-Snus schließen">✕</button>
+            </div>
+
+            <div class="slot-balance-row">
+                <div class="slot-balance-card">
+                    <span>Bankroll</span>
+                    <strong id="slotBankValue">0 Snus</strong>
+                </div>
+                <div class="slot-balance-card">
+                    <span>Einsatz</span>
+                    <strong id="slotBetValue">10 Snus</strong>
+                </div>
+                <div class="slot-balance-card">
+                    <span>Letzter Win</span>
+                    <strong id="slotPayoutValue">0 Snus</strong>
+                </div>
+                <div class="slot-balance-card">
+                    <span>Feature</span>
+                    <strong id="slotFeatureValue">Base Game</strong>
+                </div>
+            </div>
+
+            <div id="slotStatus" class="slot-status" aria-live="polite">Le-Snus ist bereit: 6x5 Cluster Pays, Cascades, Golden Squares und Rainbow-Activation.</div>
+
+            <div class="slot-machine-shell">
+                <div id="slotBoard" class="slot-board" aria-label="Le-Snus Spielfeld"></div>
+                <div class="slot-side-panel">
+                    <div class="slot-paytable">
+                        <h4>Feature-Flow</h4>
+                        <div id="slotFeatureList" class="slot-feature-list"></div>
+                    </div>
+                    <div class="slot-paytable">
+                        <h4>Freispiele</h4>
+                        <div class="slot-payouts">
+                            <div><strong>3x 🆓</strong><span>Luck of the Bandit</span></div>
+                            <div><strong>4x 🆓</strong><span>All That Glitters is Gold</span></div>
+                            <div><strong>5x 🆓</strong><span>Treasure at the End of the Rainbow</span></div>
+                            <div><strong>🌈</strong><span>Aktiviert Golden Squares</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slot-actions">
+                <button id="slotBetDownButton" type="button">− Einsatz</button>
+                <button id="slotBetUpButton" type="button">+ Einsatz</button>
+                <button id="slotSpinButton" type="button">🎰 Spin</button>
+                <button id="slotBonusHuntButton" type="button">🎯 BonusHunt 3x</button>
+                <button id="slotRainbowSpinsButton" type="button">🌈 Rainbow Spins 50x</button>
+                <button id="slotLuckBuyButton" type="button">📷 Luck Buy 100x</button>
+                <button id="slotGlitterBuyButton" type="button">💰 Gold Buy 250x</button>
+                <button id="slotTopUpButton" type="button">💨 Zurück zum Clicker</button>
+            </div>
+
+            <div id="slotLog" class="slot-log" aria-live="polite"></div>
+        </div>
+    </div>
+
     <button id="wordleLauncherButton" class="wordle-launcher-button glass" type="button">🟩 Wordle</button>
 
     <div id="wordleModal" class="wordle-modal" hidden>

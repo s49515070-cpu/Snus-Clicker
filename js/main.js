@@ -9,6 +9,7 @@ import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js
 import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";
 import { t } from "./i18n.js";
 import { initWordle } from "./wordle.js";
+import { initSlotMachine } from "./slot-machine.js";
 
 // ===============================
 // INITIALISIERUNG
@@ -426,6 +427,7 @@ function init() {
     initMilestonesControls();
     initTrophyPathControls();
     initSaveSyncListener();
+    initSlotMachine();
     initWordle();
     applyStaticTranslations();
 

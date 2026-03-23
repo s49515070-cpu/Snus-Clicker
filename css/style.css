@@ -869,6 +869,67 @@ body.high-contrast {
     font-size: .82rem;
 }
 
+.offline-reward-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.36);
+    z-index: 130;
+}
+
+.offline-reward-panel {
+    width: min(100%, 360px);
+    padding: 18px;
+}
+
+.offline-reward-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.offline-reward-header h3 {
+    margin: 0;
+}
+
+.offline-reward-header button {
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.offline-reward-message,
+.offline-reward-details {
+    margin: 0 0 10px;
+    color: #334155;
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.offline-reward-details {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.offline-reward-confirm {
+    width: 100%;
+    margin-top: 8px;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+}
+
 #cookieClickArea.is-crit-pulse #mainCookie {
     transform: scale(1.08);
 }

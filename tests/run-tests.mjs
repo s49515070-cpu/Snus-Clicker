@@ -33,6 +33,7 @@ import {
   activateDiscountBurst,
   awardCookies,
   spendCookies,
+  applyOfflineProgress,
 } from '../js/engine.js';
 
 import { buildings, getMaxAffordable, getMaxAffordableSummary } from '../js/buildings.js';
@@ -102,7 +103,7 @@ function resetEngineState() {
   gameState.unlockedWorldIds = [1];
   gameState.prestigeMultiplier = 1;
   gameState.clickPower = 1;
-  gameState.activeDailyQuestIds = quests.filter((quest) => quest.isDaily).slice(0, 2).map((quest) => quest.id);
+  gameState.activeDailyQuestIds = quests.filter((quest) => quest.isDaily).slice(0, 3).map((quest) => quest.id);
   gameState.goldenSnusAvailableUntil = 0;
   gameState.goldenSnusCooldownUntil = 0;
   gameState.goldenSnusReward = 0;
@@ -745,11 +746,25 @@ function testDailyQuestRotationMaintainsActiveSubset() {
   resetEngineState();
 
   const active = getActiveQuests().filter((quest) => quest.isDaily);
-  assert.equal(active.length, 2, 'daily rotation should keep exactly two active daily quests');
+  assert.equal(active.length, 3, 'daily rotation should keep exactly three active daily quests');
 
   active.forEach((quest) => {
     assert.equal(quest.isDaily, true, 'active rotated daily entries should be daily quests');
   });
+}
+
+function testOfflineProgressUsesReducedRatioWithoutQuestProgress() {
+  resetEngineState();
+  gameState.buildingData.cursor.owned = 10;
+  gameState.todayStats.earned = 0;
+  gameState.weeklyStats.earned = 0;
+
+  const cps = calculateCps();
+  const offline = applyOfflineProgress(10_000);
+
+  assert.equal(Math.round(offline.gained), Math.round(cps * 10 * 0.3), 'offline progress should only pay out 30% of normal earnings');
+  assert.equal(gameState.todayStats.earned, 0, 'offline gains should not advance daily earned quest progress');
+  assert.equal(gameState.weeklyStats.earned, 0, 'offline gains should not advance weekly earned quest progress');
 }
 
 function testConfigReset() {
@@ -1495,6 +1510,7 @@ testBuyModeSanitizesFractionalValues();;
   testMilestoneClaimingRewards();
   testMidgameQuestClaimingRewards();
   testDailyQuestRotationMaintainsActiveSubset();
+  testOfflineProgressUsesReducedRatioWithoutQuestProgress();
   testAutoBuyerPrioritizesBestValuePurchases();
   testAutoBuyerStrategyCheapPrefersLowCost();
   testAutoBuyerStrategyReserveKeepsSavings();

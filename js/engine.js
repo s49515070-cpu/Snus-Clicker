@@ -19,6 +19,8 @@ const GOLDEN_SNUS_RANDOM_COOLDOWN_MS = 40_000;
 
 export const AUTO_BUYER_UNLOCK_COST = 30_000;
 const AUTO_BUYER_MAX_PURCHASES_PER_TICK = 3;
+const OFFLINE_PROGRESS_RATIO = 0.3;
+const ACTIVE_DAILY_QUEST_COUNT = 3;
 
 export const AUTO_BUYER_STRATEGIES = ["value", "cheap", "balanced", "reserve", "custom"];
 const AUTO_BUYER_RESERVE_RATIO = 0.2;
@@ -224,6 +226,30 @@ export const quests = [
         isDaily: true
     },
     {
+        id: "daily_clicks_1000",
+        labelKey: "questDailyClicks1000Label",
+        descriptionKey: "questDailyClicks1000Description",
+        label: "Daily: 1.000 Klicks",
+        description: "Klicke heute 1.000x",
+        target: 1_000,
+        rewardCookies: 15_000,
+        rewardDiamonds: 1,
+        progress: (state) => state.todayStats.clicks,
+        isDaily: true
+    },
+    {
+        id: "daily_earned_750k",
+        labelKey: "questDailyEarn750kLabel",
+        descriptionKey: "questDailyEarn750kDescription",
+        label: "Daily: 750.000 Snus",
+        description: "Verdiene heute 750.000 Snus",
+        target: 750_000,
+        rewardCookies: 35_000,
+        rewardDiamonds: 2,
+        progress: (state) => state.todayStats.earned,
+        isDaily: true
+    },
+    {
         id: "weekly_earn_5m",
         labelKey: "questWeeklyEarn5mLabel",
         descriptionKey: "questWeeklyEarn5mDescription",
@@ -233,6 +259,41 @@ export const quests = [
         rewardCookies: 120_000,
         rewardDiamonds: 4,
         progress: (state) => Number(state.weeklyStats?.earned || 0),
+        isDaily: false
+    },
+    {
+        id: "weekly_earn_15m",
+        labelKey: "questWeeklyEarn15mLabel",
+        descriptionKey: "questWeeklyEarn15mDescription",
+        label: "Weekly: 15.000.000 Snus",
+        description: "Verdiene diese Woche 15.000.000 Snus",
+        target: 15_000_000,
+        rewardCookies: 320_000,
+        rewardDiamonds: 8,
+        progress: (state) => Number(state.weeklyStats?.earned || 0),
+        isDaily: false
+    },
+    {
+        id: "long_buildings_25",
+        labelKey: "questLongBuildings25Label",
+        descriptionKey: "questLongBuildings25Description",
+        label: "Long Run: 25 Gebäude",
+        description: "Besitze insgesamt 25 Gebäude",
+        target: 25,
+        rewardCookies: 5_000,
+        progress: (state) => buildings.reduce((sum, building) => sum + Number(state.buildingData[building.id]?.owned || 0), 0),
+        isDaily: false
+    },
+    {
+        id: "long_buildings_50",
+        labelKey: "questLongBuildings50Label",
+        descriptionKey: "questLongBuildings50Description",
+        label: "Long Run: 50 Gebäude",
+        description: "Besitze insgesamt 50 Gebäude",
+        target: 50,
+        rewardCookies: 12_500,
+        rewardDiamonds: 1,
+        progress: (state) => buildings.reduce((sum, building) => sum + Number(state.buildingData[building.id]?.owned || 0), 0),
         isDaily: false
     },
     {
@@ -248,6 +309,18 @@ export const quests = [
         isDaily: false
     },
     {
+        id: "long_clicks_20000",
+        labelKey: "questLongClicks20000Label",
+        descriptionKey: "questLongClicks20000Description",
+        label: "Long Run: 20.000 Klicks",
+        description: "Klicke insgesamt 20.000x",
+        target: 20_000,
+        rewardCookies: 45_000,
+        rewardDiamonds: 4,
+        progress: (state) => state.totalClicks,
+        isDaily: false
+    },
+    {
         id: "long_buildings_100",
         labelKey: "questLongBuildings100Label",
         descriptionKey: "questLongBuildings100Description",
@@ -257,6 +330,42 @@ export const quests = [
         rewardCookies: 25_000,
         rewardDiamonds: 2,
         progress: (state) => buildings.reduce((sum, building) => sum + Number(state.buildingData[building.id]?.owned || 0), 0),
+        isDaily: false
+    },
+    {
+        id: "long_buildings_250",
+        labelKey: "questLongBuildings250Label",
+        descriptionKey: "questLongBuildings250Description",
+        label: "Long Run: 250 Gebäude",
+        description: "Besitze insgesamt 250 Gebäude",
+        target: 250,
+        rewardCookies: 150_000,
+        rewardDiamonds: 8,
+        progress: (state) => buildings.reduce((sum, building) => sum + Number(state.buildingData[building.id]?.owned || 0), 0),
+        isDaily: false
+    },
+    {
+        id: "long_lifetime_250k",
+        labelKey: "questLongLifetime250kLabel",
+        descriptionKey: "questLongLifetime250kDescription",
+        label: "Long Run: 250.000 Snus",
+        description: "Erreiche insgesamt 250.000 Lifetime-Snus",
+        target: 250_000,
+        rewardCookies: 30_000,
+        rewardDiamonds: 2,
+        progress: (state) => state.lifetimeCookies,
+        isDaily: false
+    },
+    {
+        id: "long_lifetime_2m",
+        labelKey: "questLongLifetime2mLabel",
+        descriptionKey: "questLongLifetime2mDescription",
+        label: "Long Run: 2.000.000 Snus",
+        description: "Erreiche insgesamt 2.000.000 Lifetime-Snus",
+        target: 2_000_000,
+        rewardCookies: 250_000,
+        rewardDiamonds: 10,
+        progress: (state) => state.lifetimeCookies,
         isDaily: false
     }
 ];
@@ -336,23 +445,32 @@ function getDailyQuestPool() {
 
 function rotateDailyQuestsForToday() {
     const pool = getDailyQuestPool();
-    if (pool.length <= 2) {
+    if (pool.length <= ACTIVE_DAILY_QUEST_COUNT) {
         gameState.activeDailyQuestIds = pool.map((quest) => quest.id);
         return;
     }
 
     const key = getTodayKey();
     const seed = Array.from(key).reduce((sum, char) => sum + char.charCodeAt(0), 0);
-    const firstIndex = seed % pool.length;
-    const secondIndex = (seed + 1 + Math.floor(seed / 3)) % pool.length;
+    const ids = [];
 
-    const ids = [pool[firstIndex].id, pool[secondIndex].id];
-    gameState.activeDailyQuestIds = Array.from(new Set(ids));
-
-    if (gameState.activeDailyQuestIds.length < 2) {
-        const fallback = pool.find((quest) => !gameState.activeDailyQuestIds.includes(quest.id));
-        if (fallback) gameState.activeDailyQuestIds.push(fallback.id);
+    for (let offset = 0; ids.length < ACTIVE_DAILY_QUEST_COUNT && offset < pool.length * 2; offset += 1) {
+        const index = (seed + offset + Math.floor((seed * (offset + 1)) / 7)) % pool.length;
+        const questId = pool[index]?.id;
+        if (questId && !ids.includes(questId)) {
+            ids.push(questId);
+        }
     }
+
+    if (ids.length < ACTIVE_DAILY_QUEST_COUNT) {
+        pool.forEach((quest) => {
+            if (ids.length < ACTIVE_DAILY_QUEST_COUNT && !ids.includes(quest.id)) {
+                ids.push(quest.id);
+            }
+        });
+    }
+
+    gameState.activeDailyQuestIds = ids;
 }
 
 export function getActiveQuests() {
@@ -388,13 +506,17 @@ function getTotalBuildingsOwned() {
     return buildings.reduce((sum, building) => sum + Number(gameState.buildingData[building.id]?.owned || 0), 0);
 }
 
-function addCookies(amount) {
+function addCookies(amount, options = {}) {
     if (!Number.isFinite(amount) || amount <= 0) return;
+    const { trackQuestProgress = true } = options;
+
     gameState.cookies += amount;
     gameState.lifetimeCookies += amount;
-    ensureDailyStats();
-    gameState.todayStats.earned += amount;
-    gameState.weeklyStats.earned += amount;
+    if (trackQuestProgress) {
+        ensureDailyStats();
+        gameState.todayStats.earned += amount;
+        gameState.weeklyStats.earned += amount;
+    }
 }
 
 export function awardCookies(amount) {
@@ -1223,9 +1345,16 @@ export function gameLoop() {
 
 export function applyOfflineProgress(elapsedMs, capMs = 4 * 60 * 60 * 1000) {
     const safeElapsed = Math.max(0, Math.min(Number(elapsedMs) || 0, capMs));
-    const gained = calculateCps() * (safeElapsed / 1000);
-    addCookies(gained);
-    return { gained, elapsedMs: safeElapsed, capped: safeElapsed < (Number(elapsedMs) || 0) };
+    const baseEarned = calculateCps() * (safeElapsed / 1000);
+    const gained = baseEarned * OFFLINE_PROGRESS_RATIO;
+    addCookies(gained, { trackQuestProgress: false });
+    return {
+        gained,
+        baseEarned,
+        ratio: OFFLINE_PROGRESS_RATIO,
+        elapsedMs: safeElapsed,
+        capped: safeElapsed < (Number(elapsedMs) || 0)
+    };
 }
 
 export function clickCookie() {

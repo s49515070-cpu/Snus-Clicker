@@ -725,6 +725,20 @@ function testAutoBuyerStrategyCheapPrefersLowCost() {
   assert.equal(gameState.buildingData.cursor.owned, 3, 'cheap strategy should prioritize lower-cost buildings');
 }
 
+function testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias() {
+  resetEngineState();
+  gameState.cookies = 1000;
+  gameState.autoBuyerUnlocked = true;
+  gameState.autoBuyerEnabled = true;
+  setAutoBuyerStrategy('Effizienz');
+
+  const purchases = runAutoBuyerTick();
+
+  assert.equal(purchases, 3, 'localized efficiency alias should still allow the auto-buyer to run');
+  assert.equal(gameState.buildingData.farm.owned, 3, 'efficiency strategy should keep prioritizing the best ROI building instead of the cheapest one');
+  assert.equal(gameState.buildingData.cursor.owned, 0, 'efficiency strategy should not drift back to cheapest purchases when a better ROI option is affordable');
+}
+
 
 function testAutoBuyerStrategyReserveKeepsSavings() {
   resetEngineState();
@@ -1698,6 +1712,7 @@ testBuyModeSanitizesFractionalValues();;
   testOfflineProgressUsesReducedRatioWithoutQuestProgress();
   testAutoBuyerPrioritizesBestValuePurchases();
   testAutoBuyerStrategyCheapPrefersLowCost();
+  testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias();
   testAutoBuyerStrategyReserveKeepsSavings();
   testAutoBuyerStrategyCustomUsesWeightsAndPersistsDecision();
   testBuyBuildingAppliesWorldDiscountModifier();

@@ -10,6 +10,7 @@ const DEFAULT_CONFIG = {
     soundEnabled: true,
     language: "de",
     backgroundColor: "",
+    cookieHorizontalOffset: 0,
     reducedMotion: false,
     highContrast: false,
     numberFormat: "short"
@@ -47,6 +48,7 @@ export function loadConfig() {
         runtimeConfig.soundEnabled = typeof parsed.soundEnabled === "boolean" ? parsed.soundEnabled : DEFAULT_CONFIG.soundEnabled;
         runtimeConfig.language = parsed.language === "en" ? "en" : "de";
         runtimeConfig.backgroundColor = typeof parsed.backgroundColor === "string" ? parsed.backgroundColor : DEFAULT_CONFIG.backgroundColor;
+        runtimeConfig.cookieHorizontalOffset = clampConfigNumber(parsed.cookieHorizontalOffset, -260, 260, DEFAULT_CONFIG.cookieHorizontalOffset);
         runtimeConfig.reducedMotion = typeof parsed.reducedMotion === "boolean" ? parsed.reducedMotion : DEFAULT_CONFIG.reducedMotion;
         runtimeConfig.highContrast = typeof parsed.highContrast === "boolean" ? parsed.highContrast : DEFAULT_CONFIG.highContrast;
         runtimeConfig.numberFormat = parsed.numberFormat === "full" ? "full" : "short";
@@ -82,6 +84,7 @@ export function resetRuntimeConfig() {
     runtimeConfig.soundEnabled = DEFAULT_CONFIG.soundEnabled;
     runtimeConfig.language = DEFAULT_CONFIG.language;
     runtimeConfig.backgroundColor = DEFAULT_CONFIG.backgroundColor;
+    runtimeConfig.cookieHorizontalOffset = DEFAULT_CONFIG.cookieHorizontalOffset;
     runtimeConfig.reducedMotion = DEFAULT_CONFIG.reducedMotion;
     runtimeConfig.highContrast = DEFAULT_CONFIG.highContrast;
     runtimeConfig.numberFormat = DEFAULT_CONFIG.numberFormat;
@@ -114,6 +117,16 @@ export function updateBackgroundColor(value) {
 
 export function getBackgroundColor() {
     return runtimeConfig.backgroundColor;
+}
+
+export function updateCookieHorizontalOffset(value) {
+    runtimeConfig.cookieHorizontalOffset = clampConfigNumber(value, -260, 260, runtimeConfig.cookieHorizontalOffset);
+    saveConfig();
+    return runtimeConfig.cookieHorizontalOffset;
+}
+
+export function getCookieHorizontalOffset() {
+    return runtimeConfig.cookieHorizontalOffset;
 }
 
 export function getLanguage() {

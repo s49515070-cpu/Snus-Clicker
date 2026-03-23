@@ -200,6 +200,8 @@ body.high-contrast {
     justify-content: center;
     align-items: center;
     margin: 0 40px;
+    transform: translateX(var(--cookie-horizontal-offset, 0px));
+    transition: transform 0.2s ease;
 }
 
 #cookieClickArea {

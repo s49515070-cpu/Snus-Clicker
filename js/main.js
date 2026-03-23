@@ -4,9 +4,9 @@
 
 
 import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, prestigeReset, getPotentialPrestigeGain, getClaimablePrestigeTrackRewards } from "./engine.js";
-import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
+import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyCookieHorizontalOffset, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
-import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";
+import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getCookieHorizontalOffset, updateCookieHorizontalOffset, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";
 import { t } from "./i18n.js";
 import { initWordle } from "./wordle.js";
 import { initSlotMachine } from "./slot-machine.js";
@@ -97,6 +97,8 @@ function initSettingsControls() {
     const soundInput = document.getElementById("soundEnabledInput");
     const languageInput = document.getElementById("languageInput");
     const backgroundColorInput = document.getElementById("backgroundColorInput");
+    const cookieHorizontalOffsetInput = document.getElementById("cookieHorizontalOffsetInput");
+    const cookieHorizontalOffsetText = document.getElementById("cookieHorizontalOffsetText");
     const autosaveIntervalInput = document.getElementById("autosaveIntervalInput");
     const autosaveIntervalText = document.getElementById("autosaveIntervalText");
     const uiRefreshIntervalInput = document.getElementById("uiRefreshIntervalInput");
@@ -109,6 +111,12 @@ function initSettingsControls() {
     const collapseDurationMs = 220;
 
     const syncRangeTexts = () => {
+        if (cookieHorizontalOffsetText && cookieHorizontalOffsetInput) {
+            const value = Number(cookieHorizontalOffsetInput.value);
+            const prefix = value > 0 ? "+" : "";
+            cookieHorizontalOffsetText.textContent = `${prefix}${value.toLocaleString("de-DE")} px`;
+        }
+
         if (autosaveIntervalText && autosaveIntervalInput) {
             autosaveIntervalText.textContent = `${Number(autosaveIntervalInput.value).toLocaleString("de-DE")} ms`;
         }
@@ -179,6 +187,16 @@ function initSettingsControls() {
         });
     }
 
+    if (cookieHorizontalOffsetInput) {
+        cookieHorizontalOffsetInput.value = String(getCookieHorizontalOffset());
+        syncRangeTexts();
+        cookieHorizontalOffsetInput.addEventListener("input", () => {
+            updateCookieHorizontalOffset(cookieHorizontalOffsetInput.value);
+            syncRangeTexts();
+            applyCookieHorizontalOffset();
+        });
+    }
+
     if (autosaveIntervalInput) {
         autosaveIntervalInput.value = String(getAutosaveInterval());
         syncRangeTexts();
@@ -231,6 +249,7 @@ function initSettingsControls() {
             if (soundInput) soundInput.value = defaults.soundEnabled ? "on" : "off";
             if (languageInput) languageInput.value = defaults.language;
             if (backgroundColorInput) backgroundColorInput.value = defaults.backgroundColor || "#dff6ff";
+            if (cookieHorizontalOffsetInput) cookieHorizontalOffsetInput.value = String(defaults.cookieHorizontalOffset);
             if (autosaveIntervalInput) autosaveIntervalInput.value = String(defaults.autosaveIntervalMs);
             if (uiRefreshIntervalInput) uiRefreshIntervalInput.value = String(defaults.uiRefreshIntervalMs);
             if (numberFormatInput) numberFormatInput.value = defaults.numberFormat;
@@ -240,6 +259,7 @@ function initSettingsControls() {
             syncRangeTexts();
             restartAutosaveTimer();
             applyStaticTranslations();
+            applyCookieHorizontalOffset();
             refreshAllUI();
             showToast(t("settingsResetDone"), 1600, "info");
         });

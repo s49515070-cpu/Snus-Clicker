@@ -10,7 +10,6 @@ const DEFAULT_CONFIG = {
     soundEnabled: true,
     language: "de",
     backgroundColor: "",
-    cookieHorizontalOffset: 0,
     reducedMotion: false,
     highContrast: false,
     numberFormat: "short"

@@ -48,7 +48,7 @@ import { initToastSystem, showAutosave, showToast } from "./ui-toast.js";
 import { createTrophyPathController } from "./ui-trophy.js";
 import { createDiamondShopController } from "./ui-shop.js";
 import { t } from "./i18n.js";
-import { getBackgroundColor, getNumberFormat, getHighContrast, getReducedMotion } from "./config.js";
+import { getBackgroundColor, getCookieHorizontalOffset, getNumberFormat, getHighContrast, getReducedMotion } from "./config.js";
 import { playClickSound } from "./audio.js";
 
 const cookieCountEl = document.getElementById("cookieCount");
@@ -460,6 +460,7 @@ export function applyStaticTranslations() {
         ["settingSoundLabel", t("settingSound")],
         ["settingLanguageLabel", t("settingLanguage")],
         ["settingBackgroundLabel", t("settingBackground")],
+        ["settingCookieHorizontalOffsetLabel", t("settingCookieHorizontalOffset")],
         ["settingAutosaveIntervalLabel", t("settingAutosaveInterval")],
         ["settingUiRefreshIntervalLabel", t("settingUiRefreshInterval")],
         ["autoBuyerModeLabel", t("autoBuyerModeLabel")],
@@ -690,6 +691,10 @@ if (goldenSnusButton) {
     });
 }
 
+export function applyCookieHorizontalOffset() {
+    document.documentElement.style.setProperty("--cookie-horizontal-offset", `${getCookieHorizontalOffset()}px`);
+}
+
 export function applyWorldTheme() {
     const world = getWorldById(gameState.currentWorld);
     if (!world || !mainCookie) return;
@@ -698,6 +703,7 @@ export function applyWorldTheme() {
     document.body.style.background = customBackground || world.theme.background;
     document.body.classList.toggle("reduced-motion", getReducedMotion());
     document.body.classList.toggle("high-contrast", getHighContrast());
+    applyCookieHorizontalOffset();
     mainCookie.src = world.cookieImage;
     mainCookie.style.filter = `drop-shadow(0 0 20px ${world.theme.glow})`;
 }

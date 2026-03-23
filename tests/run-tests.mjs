@@ -49,6 +49,7 @@ import {
   createInitialGameState,
   evaluateGuess,
   getWordForSeed,
+  hydratePersistedState,
   normalizeWordList,
   submitGuess,
 } from '../js/wordle-logic.js';
@@ -194,8 +195,10 @@ function installWordleDocumentMock() {
     'wordleSubtitle',
     'wordleModeBadge',
     'wordleStats',
+    'wordleHint',
     'wordlePracticeButton',
     'wordleResetButton',
+    'wordleHintButton',
     'wordleHardModeInput',
     'diamondCount',
   ];
@@ -1418,6 +1421,29 @@ function testWordleDailySeedUsesLocalCalendarDay() {
   );
 }
 
+function testWordleSeedSelectionFeelsRandom() {
+  const words = normalizeWordList(WORDLE_SOLUTIONS);
+  const sample = Array.from({ length: 12 }, (_, index) => getWordForSeed(index, words));
+
+  assert.equal(sample.some((word, index) => word !== words[index]), true, 'seeded selection should not just follow the word list order');
+  assert.equal(sample[0], getWordForSeed(0, words), 'same seed should still resolve to the same word');
+}
+
+function testInitialWordleStateStartsWithoutHints() {
+  const state = createInitialGameState('APFEL');
+  assert.deepEqual(state.hintLetters, [], 'new wordle rounds should start without revealed hint letters');
+}
+
+function testWordleHydrationRestoresHintLetters() {
+  const restored = hydratePersistedState({
+    solution: 'APFEL',
+    hintLetters: ['a', 'P', 'AP'],
+    guesses: []
+  }, 'APFEL');
+
+  assert.deepEqual(restored.hintLetters, ['A', 'P'], 'persisted hint letters should be normalized and deduplicated');
+}
+
 function testWordleBoardReflectsDraftInput() {
   let state = createInitialGameState('APFEL');
   state = applyKeyInput(state, 'A');
@@ -1528,12 +1554,48 @@ function testWordleWinAwardsDiamondsAndStartsNextRound() {
 
     const persisted = JSON.parse(localStorage.getItem('snus_clicker_wordle_state_v1'));
     assert.equal(persisted.mode, 'practice', 'after a win the next round should continue in practice mode');
-    assert.equal(persisted.seed, 1, 'after a win the next round should advance to the next word');
+    assert.notEqual(persisted.seed, 0, 'after a win the next round should roll a fresh random seed');
     assert.notEqual(persisted.solution, 'APFEL', 'after a win the next round should use a fresh solution');
   } finally {
     globalThis.setTimeout = realSetTimeout;
     globalThis.clearTimeout = realClearTimeout;
   }
+}
+
+function testWordleHintCostsDiamondsAndRevealsLetterOnly() {
+  resetEngineState();
+  localStorage.clear();
+  const ui = installWordleDocumentMock();
+  gameState.diamonds = 8;
+
+  localStorage.setItem('snus_clicker_wordle_state_v1', JSON.stringify({
+    seed: 123,
+    mode: 'practice',
+    solution: 'APFEL',
+    guesses: [],
+    currentGuess: '',
+    status: 'playing',
+    hintLetters: [],
+    hardMode: false,
+    statistics: {
+      played: 0,
+      wins: 0,
+      currentStreak: 0,
+      maxStreak: 0,
+      distribution: [0, 0, 0, 0, 0, 0],
+    }
+  }));
+
+  initWordle();
+  ui.wordleLauncherButton.listeners.click();
+  ui.wordleHintButton.listeners.click();
+
+  const persisted = JSON.parse(localStorage.getItem('snus_clicker_wordle_state_v1'));
+  assert.equal(gameState.diamonds, 0, 'buying a hint should spend 8 diamonds');
+  assert.equal(persisted.hintLetters.length, 1, 'buying one hint should reveal exactly one letter');
+  assert.equal('APFEL'.includes(persisted.hintLetters[0]), true, 'revealed hint should be a letter from the solution');
+  assert.match(ui.wordleStatus.textContent, /ist im Wort enthalten/, 'hint should describe only that the letter exists in the word');
+  assert.equal(/position/i.test(ui.wordleStatus.textContent), false, 'hint should not reveal any position');
 }
 
 function testWordleDailyResetIsBlocked() {
@@ -1752,6 +1814,9 @@ testBuyModeSanitizesFractionalValues();;
   testPrestigeControllerAllowsBacklogTrackClaims();
   testBuyBuildingNormalizesOwnedType();
   testWordleDailySeedUsesLocalCalendarDay();
+  testWordleSeedSelectionFeelsRandom();
+  testInitialWordleStateStartsWithoutHints();
+  testWordleHydrationRestoresHintLetters();
   testBuildingPurchaseNeedsValidId();
   testMaxAffordableSummaryMatchesCount();
   testMilestoneClaimingRewards();
@@ -1774,6 +1839,7 @@ testBuyModeSanitizesFractionalValues();;
   testWordleBoardReflectsDraftInput();
   testWordleDailyRolloverPreservesStatisticsAndSettings();
   testWordleWinAwardsDiamondsAndStartsNextRound();
+  testWordleHintCostsDiamondsAndRevealsLetterOnly();
   testWordleDailyResetIsBlocked();
   testWordleDailyWinAwardsDiamondsWithoutAutoPracticeRound();
   testLeSnusClusterDetection();

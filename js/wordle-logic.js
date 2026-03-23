@@ -1,6 +1,7 @@
 const WORD_LENGTH = 5;
 const MAX_ATTEMPTS = 6;
 const STORAGE_KEY = "snus_clicker_wordle_state_v1";
+const WORDLE_DAILY_RANDOM_OFFSET = 2654435761;
 const WORDLE_EPOCH = "2024-01-01T00:00:00Z";
 
 export { WORD_LENGTH, MAX_ATTEMPTS, STORAGE_KEY };
@@ -32,8 +33,15 @@ export function getWordForSeed(seed, solutionWords) {
     if (!Array.isArray(solutionWords) || solutionWords.length === 0) {
         throw new Error("A non-empty solution word list is required.");
     }
-    const safeSeed = Math.abs(Number(seed) || 0);
-    return solutionWords[safeSeed % solutionWords.length];
+
+    const safeSeed = Math.abs(Math.trunc(Number(seed) || 0));
+    let state = (safeSeed ^ WORDLE_DAILY_RANDOM_OFFSET) >>> 0;
+    state = (state + 0x6D2B79F5) >>> 0;
+    let mixed = Math.imul(state ^ (state >>> 15), state | 1);
+    mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
+    const random = ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
+
+    return solutionWords[Math.floor(random * solutionWords.length) % solutionWords.length];
 }
 
 export function evaluateGuess(guess, solution) {
@@ -115,7 +123,8 @@ export function createInitialGameState(solution) {
             currentStreak: 0,
             maxStreak: 0,
             distribution: Array.from({ length: MAX_ATTEMPTS }, () => 0)
-        }
+        },
+        hintLetters: []
     };
 }
 
@@ -151,7 +160,12 @@ export function hydratePersistedState(rawState, fallbackSolution) {
         message: typeof rawState.message === "string" ? rawState.message : "",
         lastPlayedAt: Number(rawState.lastPlayedAt) || Date.now(),
         hardMode: Boolean(rawState.hardMode),
-        statistics
+        statistics,
+        hintLetters: Array.from(new Set(
+            Array.isArray(rawState.hintLetters)
+                ? rawState.hintLetters.map(sanitizeWord).filter((letter) => letter.length === 1)
+                : []
+        ))
     };
 }
 

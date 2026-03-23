@@ -17,6 +17,53 @@ import { initSlotMachine } from "./slot-machine.js";
 
 let autosaveTimerId;
 
+function initOfflineRewardModal() {
+    const modal = document.getElementById("offlineRewardModal");
+    const closeButton = document.getElementById("offlineRewardClose");
+    const confirmButton = document.getElementById("offlineRewardConfirm");
+
+    if (!modal) return { show() {} };
+
+    const hide = () => {
+        modal.hidden = true;
+    };
+
+    [closeButton, confirmButton].forEach((button) => {
+        if (button) {
+            button.addEventListener("click", hide);
+        }
+    });
+
+    modal.addEventListener("click", (event) => {
+        if (event.target === modal) hide();
+    });
+
+    return {
+        show(offline) {
+            const messageEl = document.getElementById("offlineRewardMessage");
+            const detailsEl = document.getElementById("offlineRewardDetails");
+            const ratioPercent = Math.round((Number(offline?.ratio) || 0) * 100);
+
+            if (messageEl) {
+                messageEl.textContent = t("offlineRewardMessage", {
+                    time: formatElapsedCompact(offline.elapsedMs),
+                    gained: Math.floor(offline.gained)
+                });
+            }
+
+            if (detailsEl) {
+                detailsEl.textContent = t("offlineRewardDetails", {
+                    percent: ratioPercent,
+                    base: Math.floor(offline.baseEarned || 0),
+                    cap: offline.capped ? t("offlineCapHit") : t("offlineNoCap")
+                });
+            }
+
+            modal.hidden = false;
+        }
+    };
+}
+
 function restartAutosaveTimer() {
     if (autosaveTimerId) {
         clearInterval(autosaveTimerId);
@@ -405,6 +452,7 @@ function formatElapsedCompact(ms) {
 }
 
 function init() {
+    const offlineRewardModal = initOfflineRewardModal();
 
     loadConfig();
     const loaded = loadGame();
@@ -417,6 +465,7 @@ function init() {
                 time: formatElapsedCompact(offline.elapsedMs),
                 cap: offline.capped ? t("offlineCapHit") : ""
             }), 2600, "info");
+            offlineRewardModal.show(offline);
         }
     }
     applyWorldTheme();

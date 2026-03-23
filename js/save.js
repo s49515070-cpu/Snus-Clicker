@@ -31,6 +31,7 @@ const SAVE_KEY = "snus_clicker_save";
 const SAVE_BACKUP_KEY_PREFIX = `${SAVE_KEY}_backup_`;
 const MAX_SAVE_BACKUPS = 3;
 const CURRENT_SAVE_VERSION = 3;
+const ACTIVE_DAILY_QUEST_COUNT = 3;
 
 function migrateV1ToV2(payload) {
     const migrated = { ...(payload || {}) };
@@ -207,10 +208,10 @@ function normalizeActiveDailyQuestIds(rawIds) {
     const sanitized = parsed.filter((id) => typeof id === "string" && dailyIds.includes(id));
 
     if (sanitized.length >= 1) {
-        return Array.from(new Set(sanitized));
+        return Array.from(new Set(sanitized)).slice(0, ACTIVE_DAILY_QUEST_COUNT);
     }
 
-    return dailyIds.slice(0, 2);
+    return dailyIds.slice(0, ACTIVE_DAILY_QUEST_COUNT);
 }
 
 function normalizeAutoBuyerWeights(rawWeights) {

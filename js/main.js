@@ -324,26 +324,32 @@ function initTrophyPathControls() {
 
 function initAchievementsControls() {
     const achievementsToggleButton = document.getElementById("achievementsToggleButton");
+    const achievementsModal = document.getElementById("achievementsModal");
     const achievementsPanel = document.getElementById("achievementsPanel");
     const achievementsCloseButton = document.getElementById("achievementsCloseButton");
 
-    const collapseDurationMs = 220;
+    const animationDurationMs = 220;
+    let closeTimerId = null;
 
     const setPanelVisibility = (visible) => {
-        if (!achievementsPanel) return;
+        if (!achievementsModal || !achievementsPanel) return;
 
+        if (closeTimerId) {
+            window.clearTimeout(closeTimerId);
+            closeTimerId = null;
+        }
         if (visible) {
-            achievementsPanel.hidden = false;
+            achievementsModal.hidden = false;
             requestAnimationFrame(() => {
                 achievementsPanel.classList.remove("is-collapsed");
             });
         } else {
             achievementsPanel.classList.add("is-collapsed");
-            window.setTimeout(() => {
+            closeTimerId = window.setTimeout(() => {
                 if (achievementsPanel.classList.contains("is-collapsed")) {
-                    achievementsPanel.hidden = true;
+                    achievementsModal.hidden = true;
                 }
-            }, collapseDurationMs);
+            }, animationDurationMs);
         }
 
         if (achievementsToggleButton) {
@@ -352,15 +358,21 @@ function initAchievementsControls() {
     };
 
     if (achievementsToggleButton) {
-        achievementsToggleButton.setAttribute("aria-controls", "achievementsPanel");
-        achievementsToggleButton.setAttribute("aria-expanded", "true");
+        achievementsToggleButton.setAttribute("aria-controls", "achievementsModal");
+        achievementsToggleButton.setAttribute("aria-expanded", "false");
         achievementsToggleButton.addEventListener("click", () => {
-            setPanelVisibility(Boolean(achievementsPanel?.hidden));
+            setPanelVisibility(Boolean(achievementsModal?.hidden));
         });
     }
 
     if (achievementsCloseButton) {
         achievementsCloseButton.addEventListener("click", () => setPanelVisibility(false));
+    }
+
+    if (achievementsModal) {
+        achievementsModal.addEventListener("click", (event) => {
+            if (event.target === achievementsModal) setPanelVisibility(false);
+        });
     }
 }
 

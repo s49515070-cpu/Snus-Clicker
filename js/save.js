@@ -3,7 +3,7 @@
 // LocalStorage Offline Save
 // =====================================
 
-import { gameState, prestigeUpgrades, milestones, resetGameState, AUTO_BUYER_STRATEGIES, quests, getPrestigeMultiplierForLevel } from "./engine.js";
+import { gameState, prestigeUpgrades, prestigeTalents, milestones, resetGameState, AUTO_BUYER_STRATEGIES, quests, getPrestigeMultiplierForLevel } from "./engine.js";
 import { buildings } from "./buildings.js";
 import { worlds } from "./worlds.js";
 
@@ -202,6 +202,20 @@ function normalizePrestigeUpgradeLevels(rawLevels) {
     return mergedPrestigeLevels;
 }
 
+function normalizePrestigeTalentLevels(rawLevels) {
+    const mergedTalentLevels = {
+        ...gameState.prestigeTalentLevels,
+        ...(rawLevels || {})
+    };
+
+    prestigeTalents.forEach((talent) => {
+        const rawLevel = Number(mergedTalentLevels[talent.id]);
+        mergedTalentLevels[talent.id] = Number.isFinite(rawLevel) && rawLevel >= 1 ? 1 : 0;
+    });
+
+    return mergedTalentLevels;
+}
+
 
 function normalizeActiveDailyQuestIds(rawIds) {
     const dailyIds = quests.filter((quest) => quest.isDaily).map((quest) => quest.id);
@@ -332,6 +346,8 @@ function normalizeSavePayload(parsed) {
         prestigeMultiplier,
         clickPower,
         prestigeUpgradeLevels: normalizePrestigeUpgradeLevels(migrated.prestigeUpgradeLevels),
+        prestigeTalentPoints: normalizeNumber(migrated.prestigeTalentPoints, 0, 0),
+        prestigeTalentLevels: normalizePrestigeTalentLevels(migrated.prestigeTalentLevels),
         milestonesClaimed: normalizeMilestonesClaimed(migrated.milestonesClaimed),
         questsClaimed: normalizeBooleanMap(migrated.questsClaimed, allowedQuestIds),
         prestigeTrackClaimed: normalizeBooleanMap(migrated.prestigeTrackClaimed, allowedPrestigeLevels),

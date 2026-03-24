@@ -1372,6 +1372,13 @@ body.high-contrast {
     font-weight: 700;
 }
 
+.trophy-prestige-preview {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: #1e3a8a;
+    line-height: 1.35;
+}
+
 .diamond-shop {
     margin-top: 14px;
     border: 1px solid rgba(14, 116, 144, 0.22);
@@ -1432,6 +1439,72 @@ body.high-contrast {
 .diamond-shop-description,
 .diamond-shop-meta {
     font-size: 0.8rem;
+    color: #334155;
+}
+
+.prestige-talent-box {
+    margin-top: 14px;
+    border: 1px solid rgba(99, 102, 241, 0.28);
+    border-radius: 14px;
+    padding: 12px;
+    background: rgba(238, 242, 255, 0.7);
+}
+
+.prestige-talent-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.prestige-talent-points {
+    font-weight: 700;
+    color: #3730a3;
+    font-size: 0.82rem;
+}
+
+.prestige-talent-tree {
+    display: grid;
+    gap: 8px;
+}
+
+.prestige-talent-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.prestige-talent-node {
+    border: 1px solid rgba(79, 70, 229, 0.28);
+    border-radius: 10px;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px;
+    cursor: pointer;
+}
+
+.prestige-talent-node.is-affordable {
+    border-color: rgba(34, 197, 94, 0.5);
+}
+
+.prestige-talent-node.is-owned {
+    border-color: rgba(245, 158, 11, 0.7);
+    background: rgba(255, 251, 235, 0.95);
+}
+
+.prestige-talent-node.is-locked {
+    opacity: 0.6;
+}
+
+.prestige-talent-title {
+    font-weight: 800;
+    font-size: 0.78rem;
+}
+
+.prestige-talent-description,
+.prestige-talent-meta {
+    font-size: 0.74rem;
     color: #334155;
 }
 

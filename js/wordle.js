@@ -179,7 +179,23 @@ export function initWordle() {
         }
     };
 
-    const getHintableLetters = () => Array.from(new Set(Array.from(state.solution).filter((letter) => !state.hintLetters.includes(letter))));
+    const getDiscoveredSolutionLetters = () => {
+        const discovered = new Set(Array.isArray(state.hintLetters) ? state.hintLetters : []);
+        state.guesses.forEach((guess) => {
+            const evaluation = evaluateGuess(guess, state.solution);
+            evaluation.forEach((tile) => {
+                if (tile.state === "correct" || tile.state === "present") {
+                    discovered.add(tile.letter);
+                }
+            });
+        });
+        return discovered;
+    };
+
+    const getHintableLetters = () => {
+        const discovered = getDiscoveredSolutionLetters();
+        return Array.from(new Set(Array.from(state.solution).filter((letter) => !discovered.has(letter))));
+    };
 
     const renderHint = () => {
         const revealedLetters = Array.isArray(state.hintLetters) ? state.hintLetters : [];

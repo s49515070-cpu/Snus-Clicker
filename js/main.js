@@ -446,7 +446,7 @@ function uiLoop(timestamp = 0) {
         }
 
         runAutoBuyerTick();
-        renderUI();
+        renderUI({ timestamp });
         refreshBuildingsIfNeeded();
         lastUiUpdateAt = timestamp;
         if (typeof localStorage !== "undefined") localStorage.setItem("snus_clicker_last_seen", String(Date.now()));

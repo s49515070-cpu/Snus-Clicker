@@ -207,6 +207,7 @@ body.high-contrast {
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-direction: column;
     margin: 0 40px;
     gap: 16px;
     transform: translateX(var(--cookie-horizontal-offset, 0px));
@@ -244,6 +245,7 @@ body.high-contrast {
     max-width: 220px;
     padding: 12px;
     border: 1px solid rgba(99, 102, 241, 0.2);
+    text-align: center;
 }
 
 .combo-hud.is-active {
@@ -561,11 +563,9 @@ body.high-contrast {
     }
 
     .action-bar {
-        width: min(96vw, 420px);
-        left: 50%;
-        transform: translateX(-50%);
+        width: min(96vw, 360px);
+        left: 10px;
         bottom: 10px;
-        grid-template-columns: 1fr;
     }
 
     .golden-snus-button {
@@ -897,25 +897,51 @@ body.high-contrast {
 .action-bar {
     position: fixed;
     bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    left: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     align-items: stretch;
     z-index: 30;
-    width: min(460px, calc(100vw - 20px));
-    padding: 10px;
+    width: min(380px, calc(100vw - 24px));
+    padding: 12px;
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(8px);
     box-shadow: 0 4px 18px rgba(0,0,0,0.12);
     border: 1px solid rgba(99, 102, 241, 0.18);
 }
 
+.action-group {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.action-group-title {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-weight: 800;
+    color: #334155;
+}
+
+.action-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+#boostButton {
+    grid-column: 1 / -1;
+}
+
 .action-bar button {
     border: none;
     border-radius: 10px;
-    padding: 6px 8px;
+    padding: 8px 10px;
     font-size: 0.78rem;
     font-weight: 650;
     cursor: pointer;
@@ -923,11 +949,13 @@ body.high-contrast {
 
 #boostStatus,
 #autoBuyerStatus {
-    font-size: 0.73rem;
+    font-size: 0.74rem;
     color: #334155;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-height: 18px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.28);
 }
 
 #autoBuyerButton.is-active {
@@ -938,6 +966,9 @@ body.high-contrast {
 .auto-buyer-mode-controls {
     display: grid;
     gap: 6px;
+    padding: 8px;
+    border-radius: 10px;
+    background: rgba(99, 102, 241, 0.08);
 }
 
 .auto-buyer-mode-label {

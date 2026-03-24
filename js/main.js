@@ -6,7 +6,7 @@
 import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, prestigeReset, getPotentialPrestigeGain, getClaimablePrestigeTrackRewards } from "./engine.js";
 import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyCookieHorizontalOffset, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
-import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat } from "./config.js";
+import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat, getOnboardingHintsEnabled, updateOnboardingHintsEnabled } from "./config.js";
 import { t } from "./i18n.js";
 import { initWordle } from "./wordle.js";
 import { initSlotMachine } from "./slot-machine.js";
@@ -104,6 +104,7 @@ function initSettingsControls() {
     const numberFormatInput = document.getElementById("numberFormatInput");
     const reducedMotionInput = document.getElementById("reducedMotionInput");
     const highContrastInput = document.getElementById("highContrastInput");
+    const onboardingHintsInput = document.getElementById("onboardingHintsInput");
     const resetSettingsButton = document.getElementById("resetSettingsButton");
     
     const collapseDurationMs = 220;
@@ -224,6 +225,13 @@ function initSettingsControls() {
         });
     }
 
+    if (onboardingHintsInput) {
+        onboardingHintsInput.value = getOnboardingHintsEnabled() ? "on" : "off";
+        onboardingHintsInput.addEventListener("change", () => {
+            updateOnboardingHintsEnabled(onboardingHintsInput.value === "on");
+        });
+    }
+
     if (resetSettingsButton) {
         resetSettingsButton.addEventListener("click", () => {
             const defaults = resetRuntimeConfig();
@@ -236,6 +244,7 @@ function initSettingsControls() {
             if (numberFormatInput) numberFormatInput.value = defaults.numberFormat;
             if (reducedMotionInput) reducedMotionInput.value = defaults.reducedMotion ? "on" : "off";
             if (highContrastInput) highContrastInput.value = defaults.highContrast ? "on" : "off";
+            if (onboardingHintsInput) onboardingHintsInput.value = defaults.onboardingHintsEnabled ? "on" : "off";
 
             syncRangeTexts();
             restartAutosaveTimer();

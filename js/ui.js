@@ -38,6 +38,7 @@ import {
     getEffectivePurchasePreview,
     getGoldenSnusState,
     claimGoldenSnus,
+    getClickComboState,
     getPrestigeProgressState,
     AUTO_BUYER_UNLOCK_COST
 } from "./engine.js";
@@ -48,7 +49,7 @@ import { initToastSystem, showAutosave, showToast } from "./ui-toast.js";
 import { createTrophyPathController } from "./ui-trophy.js";
 import { createDiamondShopController } from "./ui-shop.js";
 import { t } from "./i18n.js";
-import { getBackgroundColor, getNumberFormat, getHighContrast, getReducedMotion } from "./config.js";
+import { getBackgroundColor, getNumberFormat, getHighContrast, getReducedMotion, getOnboardingHintsEnabled } from "./config.js";
 import { playClickSound } from "./audio.js";
 
 const cookieCountEl = document.getElementById("cookieCount");
@@ -87,6 +88,10 @@ const autoBuyerCheapModeButton = document.getElementById("autoBuyerCheapModeButt
 const activeBonusesPanelEl = document.getElementById("activeBonusesPanel");
 const goldenSnusButton = document.getElementById("goldenSnusButton");
 const trophyPathListEl = document.getElementById("trophyPathList");
+const comboHudEl = document.getElementById("comboHud");
+const comboValueEl = document.getElementById("comboValue");
+const comboBarFillEl = document.getElementById("comboBarFill");
+const comboHintEl = document.getElementById("comboHint");
 
 initToastSystem(autosaveIndicator);
 
@@ -293,6 +298,62 @@ function renderDailySummary() {
     });
 }
 
+function maybeShowOnboardingHint() {
+    if (!getOnboardingHintsEnabled()) return;
+
+    if (!gameState.onboardingHintsShown || typeof gameState.onboardingHintsShown !== "object") {
+        gameState.onboardingHintsShown = {};
+    }
+
+    const hints = gameState.onboardingHintsShown;
+    const totalBuildingsOwned = buildings.reduce((sum, building) => sum + Number(gameState.buildingData?.[building.id]?.owned || 0), 0);
+    const clicksPerBuilding = totalBuildingsOwned > 0 ? gameState.totalClicks / totalBuildingsOwned : gameState.totalClicks;
+    const prefersClicking = clicksPerBuilding >= 25;
+    const nextAffordableBuilding = buildings
+        .map((building) => {
+            const owned = Number(gameState.buildingData?.[building.id]?.owned || 0);
+            const preview = getEffectivePurchasePreview(building, owned, 1, gameState.cookies);
+            const cpsGain = building.baseCps * Math.max(1, preview.quantity || 1);
+            const roi = preview.totalCost > 0 ? (cpsGain / preview.totalCost) : 0;
+            return {
+                building,
+                affordable: preview.totalCost > 0 && gameState.cookies >= preview.totalCost,
+                roi,
+                cost: preview.totalCost
+            };
+        })
+        .filter((entry) => entry.affordable)
+        .sort((a, b) => b.roi - a.roi || a.cost - b.cost)[0];
+
+    if (!hints.first_clicks && gameState.totalClicks >= 20) {
+        hints.first_clicks = true;
+        showToast(prefersClicking
+            ? "💡 Du klickst stark aktiv. Nutze Combo + Klickrausch für schnellen Push."
+            : "💡 Tipp: Jetzt lohnt sich ein erstes Gebäude für stabilen CPS.", 2400, "info");
+        return;
+    }
+
+    if (!hints.first_building && totalBuildingsOwned >= 1) {
+        hints.first_building = true;
+        showToast("🚀 Stark! Kombiniere jetzt Klicks + Gebäude für maximalen Start-Boost.", 2400, "success");
+        return;
+    }
+
+    if (!hints.first_world_goal && gameState.lifetimeCookies >= 1500) {
+        hints.first_world_goal = true;
+        const recommendation = nextAffordableBuilding
+            ? ` Nächster Kauf-Tipp: ${nextAffordableBuilding.building.name}.`
+            : "";
+        showToast(`🌍 Du bist nah an der nächsten Welt – achte auf den Fortschritt oben.${recommendation}`, 2600, "info");
+        return;
+    }
+
+    if (!hints.first_prestige_goal && gameState.lifetimeCookies >= 300000) {
+        hints.first_prestige_goal = true;
+        showToast("✨ Prestige wird bald relevant – plane deinen Reset für einen großen Schub.", 2600, "info");
+    }
+}
+
 function renderGoldenSnusButton() {
     if (!goldenSnusButton) return;
 
@@ -325,11 +386,26 @@ function renderActiveBonusesPanel() {
     if (bonuses.skillPowerPercent > 0) lines.push(t("bonusSkillPower", { percent: bonuses.skillPowerPercent }));
     if (bonuses.autoBuyerExtraPurchases > 0) lines.push(t("bonusAutoBuyerCap", { value: bonuses.autoBuyerExtraPurchases }));
     if (bonuses.goldenSnusAvailable && bonuses.goldenSnusReward > 0) lines.push(t("bonusGoldenSnusReady", { reward: formatNumber(bonuses.goldenSnusReward) }));
+    if (bonuses.comboBonusPercent > 0) lines.push(`🔥 Hype-Combo +${bonuses.comboBonusPercent}%`);
+    if (bonuses.earlyGameBoostPercent > 0) lines.push(`🚀 Start-Boost +${bonuses.earlyGameBoostPercent}%`);
 
     activeBonusesPanelEl.innerHTML = `
         <div class="goal-hints-title">${t("activeBonuses")}</div>
         <div class="goal-hints-list">${(lines.length ? lines : [t("bonusNone")]).map((line) => `<div>${line}</div>`).join("")}</div>
     `;
+}
+
+function renderComboHud() {
+    if (!comboHudEl || !comboValueEl || !comboBarFillEl || !comboHintEl) return;
+
+    const combo = getClickComboState();
+    comboHudEl.classList.toggle("is-active", combo.comboLevel > 0);
+    comboHudEl.classList.toggle("is-hot", combo.comboLevel >= 15);
+    comboValueEl.textContent = `x${combo.multiplier.toFixed(2)}`;
+    comboBarFillEl.style.width = `${Math.round(combo.meterProgress * 100)}%`;
+    comboHintEl.textContent = combo.comboLevel > 0
+        ? `Combo ${combo.comboLevel} · Crit +${combo.critBonusPercent}%`
+        : "Schnell klicken für mehr Multiplikator.";
 }
 
 export function renderUI() {
@@ -410,9 +486,11 @@ export function renderUI() {
     }
 
     renderGoldenSnusButton();
+    renderComboHud();
     renderBoostStatus();
     renderQuests();
     renderDailySummary();
+    maybeShowOnboardingHint();
     renderActiveBonusesPanel();
     renderAutoBuyerState();
     renderDiamondShop();
@@ -467,6 +545,7 @@ export function applyStaticTranslations() {
         ["settingNumberFormatLabel", t("settingNumberFormat")],
         ["settingReducedMotionLabel", t("settingReducedMotion")],
         ["settingHighContrastLabel", t("settingHighContrast")],
+        ["settingOnboardingHintsLabel", t("settingOnboardingHints")],
         ["exportSaveButton", t("exportSave")],
         ["importSaveButton", t("importSave")],
         ["resetSaveButton", t("resetSave")],
@@ -494,6 +573,7 @@ function createClickEffectAt(x, y) {
     const effect = document.createElement("div");
     effect.className = "click-effect";
     if (click.crit) effect.classList.add("is-crit");
+    if (click.comboLevel >= 10) effect.classList.add("is-combo");
     effect.textContent = `${click.crit ? "CRIT " : ""}+${formatNumber(amount)}`;
     effect.style.left = `${x}px`;
     effect.style.top = `${y}px`;

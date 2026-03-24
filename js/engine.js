@@ -13,6 +13,10 @@ const ACTIVE_BOOST_COOLDOWN_MS = 30_000;
 const ACTIVE_BOOST_MULTIPLIER = 3;
 const CLICK_BURST_MULTIPLIER = 4;
 const DISCOUNT_BURST_RATIO = 0.25;
+const CLICK_COMBO_WINDOW_MS = 900;
+const CLICK_COMBO_MAX_LEVEL = 50;
+const EARLY_RAMP_MAX_CLICKS = 180;
+const EARLY_RAMP_MAX_MULTIPLIER = 2.2;
 const GOLDEN_SNUS_DURATION_MS = 12_000;
 const GOLDEN_SNUS_BASE_COOLDOWN_MS = 50_000;
 const GOLDEN_SNUS_RANDOM_COOLDOWN_MS = 40_000;
@@ -186,7 +190,7 @@ export const quests = [
         label: "Daily: 200 Klicks",
         description: "Klicke heute 200x",
         target: 200,
-        rewardCookies: 2_500,
+        rewardCookies: 3_000,
         progress: (state) => state.todayStats.clicks,
         isDaily: true
     },
@@ -197,7 +201,7 @@ export const quests = [
         label: "Daily: 50.000 Snus",
         description: "Verdiene heute 50.000 Snus",
         target: 50_000,
-        rewardCookies: 6_000,
+        rewardCookies: 6_500,
         progress: (state) => state.todayStats.earned,
         isDaily: true
     },
@@ -208,7 +212,7 @@ export const quests = [
         label: "Daily: 500 Klicks",
         description: "Klicke heute 500x",
         target: 500,
-        rewardCookies: 6_500,
+        rewardCookies: 8_500,
         progress: (state) => state.todayStats.clicks,
         isDaily: true
     },
@@ -219,7 +223,7 @@ export const quests = [
         label: "Daily: 200.000 Snus",
         description: "Verdiene heute 200.000 Snus",
         target: 200_000,
-        rewardCookies: 16_000,
+        rewardCookies: 19_000,
         rewardDiamonds: 1,
         progress: (state) => state.todayStats.earned,
         isDaily: true
@@ -255,8 +259,8 @@ export const quests = [
         label: "Weekly: 5.000.000 Snus",
         description: "Verdiene diese Woche 5.000.000 Snus",
         target: 5_000_000,
-        rewardCookies: 120_000,
-        rewardDiamonds: 4,
+        rewardCookies: 150_000,
+        rewardDiamonds: 5,
         progress: (state) => Number(state.weeklyStats?.earned || 0),
         isDaily: false
     },
@@ -279,7 +283,7 @@ export const quests = [
         label: "Long Run: 25 Gebäude",
         description: "Besitze insgesamt 25 Gebäude",
         target: 25,
-        rewardCookies: 5_000,
+        rewardCookies: 8_000,
         progress: (state) => buildings.reduce((sum, building) => sum + Number(state.buildingData[building.id]?.owned || 0), 0),
         isDaily: false
     },
@@ -302,7 +306,7 @@ export const quests = [
         label: "Long Run: 5.000 Klicks",
         description: "Klicke insgesamt 5.000x",
         target: 5_000,
-        rewardCookies: 10_000,
+        rewardCookies: 13_000,
         rewardDiamonds: 2,
         progress: (state) => state.totalClicks,
         isDaily: false
@@ -314,7 +318,7 @@ export const quests = [
         label: "Long Run: 20.000 Klicks",
         description: "Klicke insgesamt 20.000x",
         target: 20_000,
-        rewardCookies: 45_000,
+        rewardCookies: 52_000,
         rewardDiamonds: 4,
         progress: (state) => state.totalClicks,
         isDaily: false
@@ -421,7 +425,11 @@ export const gameState = {
     goldenSnusAvailableUntil: 0,
     goldenSnusCooldownUntil: 0,
     goldenSnusReward: 0,
-    prestigeTrackClaimed: {}
+    prestigeTrackClaimed: {},
+    clickCombo: 0,
+    maxClickCombo: 0,
+    lastClickAt: 0,
+    onboardingHintsShown: {}
 };
 
 function getTodayKey() {
@@ -686,6 +694,10 @@ export function resetGameState() {
     gameState.goldenSnusAvailableUntil = 0;
     gameState.goldenSnusCooldownUntil = 0;
     gameState.goldenSnusReward = 0;
+    gameState.clickCombo = 0;
+    gameState.maxClickCombo = 0;
+    gameState.lastClickAt = 0;
+    gameState.onboardingHintsShown = {};
     
     rotateDailyQuestsForToday();
     resetBuildingData();
@@ -754,6 +766,23 @@ function getSkillPowerMultiplier() {
     const level = getUpgradeLevel("boostOverdrive");
     const perkBonus = gameState.milestonePerks?.skill_power ? 0.08 : 0;
     return 1 + level * 0.1 + perkBonus;
+}
+
+function computeComboMultiplier(comboLevel = Number(gameState.clickCombo || 0)) {
+    const safeLevel = Math.max(0, Math.floor(Number(comboLevel) || 0));
+    return 1 + Math.min(1, safeLevel * 0.02);
+}
+
+function computeComboCritBonus(comboLevel = Number(gameState.clickCombo || 0)) {
+    const safeLevel = Math.max(0, Math.floor(Number(comboLevel) || 0));
+    return Math.min(0.18, safeLevel * 0.002);
+}
+
+function getEarlyGameRampMultiplier() {
+    const clicks = Math.max(0, Number(gameState.totalClicks || 0));
+    if (clicks >= EARLY_RAMP_MAX_CLICKS) return 1;
+    const progress = clicks / EARLY_RAMP_MAX_CLICKS;
+    return 1 + ((1 - progress) * (EARLY_RAMP_MAX_MULTIPLIER - 1));
 }
 
 function isBoostActive() {
@@ -851,7 +880,23 @@ export function getActiveBonuses() {
         skillPowerPercent: Math.round((getSkillPowerMultiplier() - 1) * 100),
         autoBuyerExtraPurchases: getUpgradeLevel("automationCore") + (gameState.milestonePerks?.autobuyer_speed ? 1 : 0),
         goldenSnusAvailable: Date.now() < Number(gameState.goldenSnusAvailableUntil || 0),
-        goldenSnusReward: Math.max(0, Math.floor(Number(gameState.goldenSnusReward || 0)))
+        goldenSnusReward: Math.max(0, Math.floor(Number(gameState.goldenSnusReward || 0))),
+        comboBonusPercent: Math.round((computeComboMultiplier() - 1) * 100),
+        earlyGameBoostPercent: Math.max(0, Math.round((getEarlyGameRampMultiplier() - 1) * 100))
+    };
+}
+
+export function getClickComboState(now = Date.now()) {
+    const elapsedSinceLastClick = Math.max(0, now - Number(gameState.lastClickAt || 0));
+    const active = elapsedSinceLastClick <= CLICK_COMBO_WINDOW_MS;
+    const comboLevel = active ? Math.max(0, Math.floor(Number(gameState.clickCombo) || 0)) : 0;
+    const meterProgress = active ? Math.max(0, 1 - (elapsedSinceLastClick / CLICK_COMBO_WINDOW_MS)) : 0;
+    return {
+        comboLevel,
+        multiplier: computeComboMultiplier(comboLevel),
+        critBonusPercent: Math.round(computeComboCritBonus(comboLevel) * 100),
+        meterProgress,
+        maxCombo: Math.max(comboLevel, Math.floor(Number(gameState.maxClickCombo || 0)))
     };
 }
 
@@ -1383,6 +1428,9 @@ export function gameLoop() {
     const production = cps * delta;
 
     addCookies(production);
+    if (now - Number(gameState.lastClickAt || 0) > CLICK_COMBO_WINDOW_MS) {
+        gameState.clickCombo = 0;
+    }
 
     requestAnimationFrame(gameLoop);
 }
@@ -1403,19 +1451,36 @@ export function applyOfflineProgress(elapsedMs, capMs = 4 * 60 * 60 * 1000) {
 
 export function clickCookie() {
     ensureDailyStats();
+    const now = Date.now();
+    const elapsedSinceLastClick = Math.max(0, now - Number(gameState.lastClickAt || 0));
+    if (elapsedSinceLastClick <= CLICK_COMBO_WINDOW_MS) {
+        gameState.clickCombo = Math.min(CLICK_COMBO_MAX_LEVEL, Number(gameState.clickCombo || 0) + 1);
+    } else {
+        gameState.clickCombo = 1;
+    }
+    gameState.maxClickCombo = Math.max(Number(gameState.maxClickCombo || 0), Number(gameState.clickCombo || 0));
+    gameState.lastClickAt = now;
+
+    const comboMultiplier = computeComboMultiplier(gameState.clickCombo);
     const worldModifiers = getWorldModifiers();
     const worldMultiplier = worldModifiers.worldMultiplier * (1 + worldModifiers.clickBonus);
-    const crit = Math.random() < 0.12;
+    const crit = Math.random() < (0.12 + computeComboCritBonus(gameState.clickCombo));
     const cpsSupport = calculateCps() * getLateGameClickShare();
 
-    const base = gameState.clickPower * getClickUpgradeMultiplier() * worldMultiplier * gameState.prestigeMultiplier * getClickBurstMultiplier();
+    const base = gameState.clickPower
+        * getClickUpgradeMultiplier()
+        * worldMultiplier
+        * gameState.prestigeMultiplier
+        * getClickBurstMultiplier()
+        * comboMultiplier
+        * getEarlyGameRampMultiplier();
     const amount = (base + cpsSupport) * (crit ? 2 : 1);
 
     addCookies(amount);
     gameState.totalClicks += 1;
     gameState.todayStats.clicks += 1;
 
-    return { amount, crit };
+    return { amount, crit, comboLevel: gameState.clickCombo, comboMultiplier };
 }
 
 export function buyBuilding(buildingId) {

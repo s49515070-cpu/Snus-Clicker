@@ -12,7 +12,8 @@ const DEFAULT_CONFIG = {
     backgroundColor: "",
     reducedMotion: false,
     highContrast: false,
-    numberFormat: "short"
+    numberFormat: "short",
+    onboardingHintsEnabled: true
 };
 
 export const runtimeConfig = {
@@ -51,6 +52,9 @@ export function loadConfig() {
         runtimeConfig.reducedMotion = typeof parsed.reducedMotion === "boolean" ? parsed.reducedMotion : DEFAULT_CONFIG.reducedMotion;
         runtimeConfig.highContrast = typeof parsed.highContrast === "boolean" ? parsed.highContrast : DEFAULT_CONFIG.highContrast;
         runtimeConfig.numberFormat = parsed.numberFormat === "full" ? "full" : "short";
+        runtimeConfig.onboardingHintsEnabled = typeof parsed.onboardingHintsEnabled === "boolean"
+            ? parsed.onboardingHintsEnabled
+            : DEFAULT_CONFIG.onboardingHintsEnabled;
     } catch {
         // Bei kaputter Config mit Defaults weiterlaufen
     }
@@ -87,6 +91,7 @@ export function resetRuntimeConfig() {
     runtimeConfig.reducedMotion = DEFAULT_CONFIG.reducedMotion;
     runtimeConfig.highContrast = DEFAULT_CONFIG.highContrast;
     runtimeConfig.numberFormat = DEFAULT_CONFIG.numberFormat;
+    runtimeConfig.onboardingHintsEnabled = DEFAULT_CONFIG.onboardingHintsEnabled;
     saveConfig();
 
     return { ...runtimeConfig };
@@ -161,4 +166,14 @@ export function updateNumberFormat(value) {
 
 export function getNumberFormat() {
     return runtimeConfig.numberFormat;
+}
+
+export function updateOnboardingHintsEnabled(value) {
+    runtimeConfig.onboardingHintsEnabled = Boolean(value);
+    saveConfig();
+    return runtimeConfig.onboardingHintsEnabled;
+}
+
+export function getOnboardingHintsEnabled() {
+    return runtimeConfig.onboardingHintsEnabled;
 }

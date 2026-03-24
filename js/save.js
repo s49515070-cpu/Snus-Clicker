@@ -3,7 +3,7 @@
 // LocalStorage Offline Save
 // =====================================
 
-import { gameState, prestigeUpgrades, prestigeTalents, milestones, resetGameState, AUTO_BUYER_STRATEGIES, quests, getPrestigeMultiplierForLevel } from "./engine.js";
+import { gameState, prestigeUpgrades, prestigeTalents, achievements, resetGameState, AUTO_BUYER_STRATEGIES, quests, getPrestigeMultiplierForLevel } from "./engine.js";
 import { buildings } from "./buildings.js";
 import { worlds } from "./worlds.js";
 
@@ -271,17 +271,17 @@ function normalizeAutoBuyerWeights(rawWeights) {
 }
 
 
-function normalizeMilestonesClaimed(rawMilestonesClaimed) {
-    const mergedMilestones = {
-        ...gameState.milestonesClaimed,
-        ...(rawMilestonesClaimed || {})
+function normalizeAchievementsUnlocked(rawAchievementsUnlocked) {
+    const mergedAchievements = {
+        ...gameState.achievementsUnlocked,
+        ...(rawAchievementsUnlocked || {})
     };
 
-    milestones.forEach((milestone) => {
-        mergedMilestones[milestone.id] = Boolean(mergedMilestones[milestone.id]);
+    achievements.forEach((achievement) => {
+        mergedAchievements[achievement.id] = Boolean(mergedAchievements[achievement.id]);
     });
 
-    return mergedMilestones;
+    return mergedAchievements;
 }
 
 function sanitizePlainObject(value) {
@@ -326,12 +326,6 @@ function normalizeSavePayload(parsed) {
     const allowedPrestigeLevels = prestigeUpgrades
         ? Array.from({ length: 100 }, (_, index) => String(index + 1))
         : [];
-    const allowedPerks = Array.from(new Set(
-        milestones
-            .map((milestone) => milestone.rewardPerk)
-            .filter((perk) => typeof perk === "string" && perk.length > 0)
-    ));
-
     return {
         saveVersion: migrated.saveVersion,
         cookies,
@@ -348,7 +342,7 @@ function normalizeSavePayload(parsed) {
         prestigeUpgradeLevels: normalizePrestigeUpgradeLevels(migrated.prestigeUpgradeLevels),
         prestigeTalentPoints: normalizeNumber(migrated.prestigeTalentPoints, 0, 0),
         prestigeTalentLevels: normalizePrestigeTalentLevels(migrated.prestigeTalentLevels),
-        milestonesClaimed: normalizeMilestonesClaimed(migrated.milestonesClaimed),
+        achievementsUnlocked: normalizeAchievementsUnlocked(migrated.achievementsUnlocked || migrated.milestonesClaimed),
         questsClaimed: normalizeBooleanMap(migrated.questsClaimed, allowedQuestIds),
         prestigeTrackClaimed: normalizeBooleanMap(migrated.prestigeTrackClaimed, allowedPrestigeLevels),
         activeBoostUntil: normalizeNumber(migrated.activeBoostUntil, 0, 0),
@@ -374,7 +368,10 @@ function normalizeSavePayload(parsed) {
             earned: normalizeNumber(migrated.weeklyStats?.earned, 0, 0),
             resetWeekKey: typeof migrated.weeklyStats?.resetWeekKey === "string" ? migrated.weeklyStats.resetWeekKey : ""
         },
-        milestonePerks: normalizeBooleanMap(migrated.milestonePerks, allowedPerks),
+        achievementStats: {
+            maxTotalBuildings: normalizeNumber(migrated.achievementStats?.maxTotalBuildings, 0, 0),
+            diamondsSpent: normalizeNumber(migrated.achievementStats?.diamondsSpent, 0, 0)
+        },
         goldenSnusAvailableUntil: normalizeNumber(migrated.goldenSnusAvailableUntil, 0, 0),
         goldenSnusCooldownUntil: normalizeNumber(migrated.goldenSnusCooldownUntil, 0, 0),
         goldenSnusReward: normalizeNumber(migrated.goldenSnusReward, 0, 0),

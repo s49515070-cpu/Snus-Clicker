@@ -18,8 +18,7 @@ import {
     getPotentialPrestigeGain,
     getPrestigeTrackStatus,
     prestigeReset,
-    milestones,
-    getMilestoneProgress,
+    getAchievementsStatus,
     quests,
     getQuestProgress,
     getActiveQuests,
@@ -67,7 +66,7 @@ const prestigeTalentPointsEl = document.getElementById("prestigeTalentPoints");
 const prestigeTalentTreeEl = document.getElementById("prestigeTalentTree");
 const diamondShopListEl = document.getElementById("diamondShopList");
 const diamondShopBalanceEl = document.getElementById("diamondShopBalance");
-const milestonesListEl = document.getElementById("milestonesList");
+const achievementsListEl = document.getElementById("achievementsList");
 const leftColumn = document.getElementById("leftBuildings");
 const rightColumn = document.getElementById("rightBuildings");
 const cookieClickArea = document.getElementById("cookieClickArea");
@@ -153,38 +152,39 @@ function formatNumber(num) {
     return `${sign}${scaled.toFixed(decimals)}${suffixes[tier]}`;
 }
 
-function renderMilestones() {
-    if (!milestonesListEl) return;
-    milestonesListEl.innerHTML = "";
+function renderAchievements() {
+    if (!achievementsListEl) return;
+    achievementsListEl.innerHTML = "";
 
-    milestones.forEach((milestone) => {
-        const status = getMilestoneProgress(milestone.id);
-        const item = document.createElement("div");
-        item.className = "milestone-item";
-        item.classList.toggle("is-complete", status.completed);
-        item.classList.toggle("is-claimed", status.claimed);
+    getAchievementsStatus().forEach((achievement) => {
+        const item = document.createElement("article");
+        item.className = "achievement-item";
+        item.classList.toggle("is-unlocked", achievement.unlocked);
+        item.classList.toggle("is-locked", !achievement.unlocked);
 
-        const title = document.createElement("div");
-        title.className = "milestone-title";
-        title.textContent = milestone.labelKey ? t(milestone.labelKey) : milestone.label;
+        const current = Math.floor(Math.min(achievement.current, achievement.target));
+        const target = Math.floor(achievement.target);
 
-        const description = document.createElement("div");
-        description.className = "milestone-description";
-        description.textContent = milestone.descriptionKey ? t(milestone.descriptionKey) : milestone.description;
+        item.innerHTML = `
+            <div class="achievement-icon">${achievement.icon}</div>
+            <div class="achievement-content">
+                <div class="achievement-top-row">
+                    <div class="achievement-title">${t(achievement.titleKey)}</div>
+                    <div class="achievement-status">${achievement.unlocked ? t("achievementStatusUnlocked") : t("achievementStatusLocked")}</div>
+                </div>
+                <div class="achievement-description">${t(achievement.descriptionKey, { target })}</div>
+                <div class="achievement-meta">
+                    <span class="achievement-tier">${t("achievementTierLabel", { tier: achievement.tier })}</span>
+                    <span class="achievement-difficulty">${achievement.difficulty}</span>
+                </div>
+                <div class="achievement-progress-row">
+                    <div class="achievement-progress">${current} / ${target}</div>
+                    <div class="achievement-progress-bar"><span style="width: ${Math.round(achievement.progressRatio * 100)}%"></span></div>
+                </div>
+            </div>
+        `;
 
-        const progress = document.createElement("div");
-        progress.className = "milestone-progress";
-        progress.textContent = `${Math.floor(Math.min(status.current, status.target))} / ${Math.floor(status.target)}`;
-
-        const reward = document.createElement("div");
-        reward.className = "milestone-reward";
-        const rewardParts = [];
-        if (milestone.rewardCookies) rewardParts.push(`+${milestone.rewardCookies} ${t("snus")}`);
-        if (milestone.rewardDiamonds) rewardParts.push(`+${milestone.rewardDiamonds} ${t("diamonds")}`);
-        reward.textContent = rewardParts.length > 0 ? `${t("reward")}: ${rewardParts.join(" | ")}` : `${t("reward")}: —`;
-
-        item.append(title, description, progress, reward);
-        milestonesListEl.appendChild(item);
+        achievementsListEl.appendChild(item);
     });
 }
 
@@ -560,7 +560,7 @@ export function renderUI(options = {}) {
         maybeShowOnboardingHint();
         renderActiveBonusesPanel();
         renderDiamondShop();
-        renderMilestones();
+        renderAchievements();
         renderTrophyPath();
         renderPrestigeTalentTree();
         lastSlowPanelRenderAt = now;
@@ -579,7 +579,7 @@ export function refreshAllUI() {
     applyWorldTheme();
     renderBuildings();
     renderDiamondShop();
-    renderMilestones();
+    renderAchievements();
     renderQuests();
     renderTrophyPath();
     renderUI({ forceFull: true });
@@ -594,9 +594,9 @@ export function applyStaticTranslations() {
         ["worldButton", t("worldSwitch")],
         ["worldPickerTitle", t("worldPickerTitle")],
         ["settingsToggleButton", t("settingsOpen")],
-        ["milestonesToggleButton", t("milestonesTitle")],
+        ["achievementsToggleButton", t("achievementsTitle")],
         ["settingsTitle", t("settingsTitle")],
-        ["milestonesTitle", t("milestonesTitle")],
+        ["achievementsTitle", t("achievementsTitle")],
         ["questTitle", t("questTitle")],
         ["trophyPathButton", t("trophyPathButton")],
         ["trophyPathTitle", t("trophyPathTitle")],

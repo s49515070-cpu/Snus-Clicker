@@ -3,7 +3,7 @@
 // =====================================
 
 
-import { gameLoop, claimAvailableMilestones, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, prestigeReset, getPotentialPrestigeGain, getClaimablePrestigeTrackRewards } from "./engine.js";
+import { gameLoop, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, prestigeReset, getPotentialPrestigeGain, getClaimablePrestigeTrackRewards, unlockAvailableAchievements } from "./engine.js";
 import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyCookieHorizontalOffset, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
 import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat, getOnboardingHintsEnabled, updateOnboardingHintsEnabled } from "./config.js";
@@ -322,45 +322,45 @@ function initTrophyPathControls() {
     }
 }
 
-function initMilestonesControls() {
-    const milestonesToggleButton = document.getElementById("milestonesToggleButton");
-    const milestonesPanel = document.getElementById("milestonesPanel");
-    const milestonesCloseButton = document.getElementById("milestonesCloseButton");
+function initAchievementsControls() {
+    const achievementsToggleButton = document.getElementById("achievementsToggleButton");
+    const achievementsPanel = document.getElementById("achievementsPanel");
+    const achievementsCloseButton = document.getElementById("achievementsCloseButton");
 
     const collapseDurationMs = 220;
 
     const setPanelVisibility = (visible) => {
-        if (!milestonesPanel) return;
+        if (!achievementsPanel) return;
 
         if (visible) {
-            milestonesPanel.hidden = false;
+            achievementsPanel.hidden = false;
             requestAnimationFrame(() => {
-                milestonesPanel.classList.remove("is-collapsed");
+                achievementsPanel.classList.remove("is-collapsed");
             });
         } else {
-            milestonesPanel.classList.add("is-collapsed");
+            achievementsPanel.classList.add("is-collapsed");
             window.setTimeout(() => {
-                if (milestonesPanel.classList.contains("is-collapsed")) {
-                    milestonesPanel.hidden = true;
+                if (achievementsPanel.classList.contains("is-collapsed")) {
+                    achievementsPanel.hidden = true;
                 }
             }, collapseDurationMs);
         }
 
-        if (milestonesToggleButton) {
-            milestonesToggleButton.setAttribute("aria-expanded", visible ? "true" : "false");
+        if (achievementsToggleButton) {
+            achievementsToggleButton.setAttribute("aria-expanded", visible ? "true" : "false");
         }
     };
 
-    if (milestonesToggleButton) {
-        milestonesToggleButton.setAttribute("aria-controls", "milestonesPanel");
-        milestonesToggleButton.setAttribute("aria-expanded", "true");
-        milestonesToggleButton.addEventListener("click", () => {
-            setPanelVisibility(Boolean(milestonesPanel?.hidden));
+    if (achievementsToggleButton) {
+        achievementsToggleButton.setAttribute("aria-controls", "achievementsPanel");
+        achievementsToggleButton.setAttribute("aria-expanded", "true");
+        achievementsToggleButton.addEventListener("click", () => {
+            setPanelVisibility(Boolean(achievementsPanel?.hidden));
         });
     }
 
-    if (milestonesCloseButton) {
-        milestonesCloseButton.addEventListener("click", () => setPanelVisibility(false));
+    if (achievementsCloseButton) {
+        achievementsCloseButton.addEventListener("click", () => setPanelVisibility(false));
     }
 }
 
@@ -411,7 +411,7 @@ function init() {
     renderDiamondShop();
     initSaveControls();
     initSettingsControls();
-    initMilestonesControls();
+    initAchievementsControls();
     initTrophyPathControls();
     initSaveSyncListener();
     initSlotMachine();
@@ -432,10 +432,13 @@ let lastUiUpdateAt = 0;
 
 function uiLoop(timestamp = 0) {
     if (timestamp - lastUiUpdateAt >= getUiRefreshInterval()) {
-        const claimedMilestones = claimAvailableMilestones();
+        const unlockedAchievements = unlockAvailableAchievements();
         const claimedQuests = claimAvailableQuests();
-        if (claimedMilestones.length > 0 || claimedQuests.length > 0) {
-            [...claimedMilestones, ...claimedQuests].forEach((entry) => {
+        if (unlockedAchievements.length > 0 || claimedQuests.length > 0) {
+            unlockedAchievements.forEach((entry) => {
+                showToast(`🏅 ${t(entry.titleKey)} (${t("achievementTierLabel", { tier: entry.tier })})`, 1800, "success");
+            });
+            claimedQuests.forEach((entry) => {
                 const rewards = [];
                 if (entry.rewardCookies > 0) rewards.push(`+${entry.rewardCookies} ${t("snus")}`);
                 if (entry.rewardDiamonds > 0) rewards.push(`+${entry.rewardDiamonds} ${t("diamonds")}`);

@@ -16,9 +16,9 @@ import {
   buyWorld,
   changeWorld,
   isWorldPurchased,
-  claimAvailableMilestones,
+  unlockAvailableAchievements,
   claimAvailableQuests,
-  milestones,
+  achievements,
   quests,
   getActiveQuests,
   runAutoBuyerTick,
@@ -121,8 +121,8 @@ function resetEngineState() {
     gameState.prestigeUpgradeLevels[id] = 0;
   });
 
-  Object.keys(gameState.milestonesClaimed || {}).forEach((id) => {
-    gameState.milestonesClaimed[id] = false;
+  Object.keys(gameState.achievementsUnlocked || {}).forEach((id) => {
+    gameState.achievementsUnlocked[id] = false;
   });
 }
 
@@ -668,18 +668,16 @@ function testBuildingPurchaseNeedsValidId() {
 }
 
 
-function testMilestoneClaimingRewards() {
+function testAchievementUnlocking() {
   resetEngineState();
-  gameState.cookies = 0;
-  gameState.lifetimeCookies = 12_000;
+  gameState.lifetimeCookies = 120_000;
 
-  const claims = claimAvailableMilestones();
-  const rookie = milestones.find((m) => m.id === 'lifetime_10k');
+  const unlocked = unlockAvailableAchievements();
+  const tierOne = achievements.find((entry) => entry.id === 'lifetime_snus_tier_1');
 
-  assert.ok(rookie, 'rookie milestone should exist');
-  assert.ok(claims.some((m) => m.id === rookie.id), 'milestone should be claimed when target is met');
-  assert.equal(gameState.milestonesClaimed[rookie.id], true, 'claimed milestone should persist in state');
-  assert.ok(gameState.cookies >= rookie.rewardCookies, 'milestone claim should reward cookies');
+  assert.ok(tierOne, 'tier 1 lifetime achievement should exist');
+  assert.ok(unlocked.some((entry) => entry.id === tierOne.id), 'achievement should unlock when target is met');
+  assert.equal(gameState.achievementsUnlocked[tierOne.id], true, 'unlocked achievement should persist in state');
 }
 
 
@@ -817,14 +815,14 @@ function testActiveBonusesExposeWorldAndAutomationState() {
   gameState.autoBuyerUnlocked = true;
   gameState.autoBuyerEnabled = true;
   gameState.prestigeUpgradeLevels.automationCore = 2;
-  gameState.milestonePerks.autobuyer_speed = true;
+  
 
   const bonuses = getActiveBonuses();
 
   assert.ok(bonuses.worldClickBonusPercent > 0, 'world click bonus should be surfaced in active bonuses');
   assert.ok(bonuses.worldDiscountPercent > 0, 'world discount should be surfaced in active bonuses');
   assert.equal(bonuses.streakBonusPercent, 5, 'daily streak bonus should be reflected in active bonuses');
-  assert.equal(bonuses.autoBuyerExtraPurchases, 3, 'automation level + perk should affect auto-buyer cap preview');
+  assert.equal(bonuses.autoBuyerExtraPurchases, 2, 'automation level should affect auto-buyer cap preview');
 }
 
 
@@ -872,15 +870,15 @@ function testConfigReset() {
   assert.equal(getUiRefreshInterval(), 100, 'reset defaults should persist to storage');
 }
 
-function testLocalizedContentKeysForMilestonesAndQuests() {
+function testLocalizedContentKeysForAchievementsAndQuests() {
   updateLanguage('en');
   assert.equal(t('questDailyClicks200Label'), 'Daily: 200 clicks', 'quest label should be translated in english');
-  assert.equal(t('milestoneRookieDescription'), 'Reach 10,000 lifetime snus', 'milestone description should be translated in english');
+  assert.equal(t('achievementLifetimeSnusDescription', { target: '10,000' }), 'Earn a total of 10,000 lifetime snus', 'achievement description should be translated in english');
   assert.equal(t('saveMigrated', { version: 3 }), '💾 Save was migrated to version 3.', 'save migration message should be translated in english');
 
   updateLanguage('de');
   assert.equal(t('questDailyClicks200Label'), 'Daily: 200 Klicks', 'quest label should be translated in german');
-  assert.equal(t('milestoneRookieDescription'), 'Erreiche 10.000 Lifetime-Snus', 'milestone description should be translated in german');
+  assert.equal(t('achievementLifetimeSnusDescription', { target: '10,000' }), 'Verdiene insgesamt 10,000 Lifetime-Snus', 'achievement description should be translated in german');
   assert.equal(t('saveMigrated', { version: 3 }), '💾 Spielstand wurde auf Version 3 migriert.', 'save migration message should be translated in german');
 
   assert.equal(getLanguage(), 'de', 'language should be reset to default test language after assertions');
@@ -962,7 +960,7 @@ async function testLoadGameNormalization() {
   assert.equal(gameState.discountBurstUntil, 7890, 'discount burst timer should survive load normalization');
   assert.equal(gameState.discountBurstCooldownUntil, 2468, 'discount burst cooldown should survive load normalization');
   assert.equal(gameState.saveVersion, 3, 'save should be migrated to current save version');
-  assert.equal(gameState.milestonePerks.discount_3, true, 'legacy milestonePeks field should migrate to milestonePerks');
+  assert.equal(Boolean(gameState.achievementStats), true, 'achievement stats should exist after load normalization');
   assert.equal(gameState.todayStats.clicks, 12, 'legacy dailyStats should migrate to todayStats');
   assert.equal(gameState.autoBuyerWeights.value, 1, 'autoBuyerWeights value should clamp and normalize');
   assert.equal(gameState.autoBuyerWeights.cheap, 0, 'autoBuyerWeights cheap should clamp and normalize');
@@ -1185,7 +1183,7 @@ async function testImportSaveUsesNormalization() {
   assert.equal(stored.buyMode, 1, 'import should normalize invalid buy mode');
   assert.equal(stored.buildingData.cursor.owned, 0, 'import should normalize negative building counts');
   assert.equal(stored.saveVersion, 3, 'imported saves should be rewritten with current save version');
-  assert.equal(stored.milestonePerks.skill_power, true, 'import should migrate legacy milestonePeks field');
+  assert.equal(Boolean(stored.achievementStats), true, 'import should include normalized achievement stats');
   assert.equal(stored.todayStats.clicks, 5, 'import should migrate legacy dailyStats to todayStats');
   assert.equal(stored.autoBuyerWeights.value, 0.5, 'import should normalize explicit autoBuyerWeights value share');
   assert.equal(stored.autoBuyerWeights.cheap, 0.5, 'import should normalize explicit autoBuyerWeights cheap share');
@@ -1833,7 +1831,7 @@ testBuyModeSanitizesFractionalValues();;
   testWordleHydrationRestoresHintLetters();
   testBuildingPurchaseNeedsValidId();
   testMaxAffordableSummaryMatchesCount();
-  testMilestoneClaimingRewards();
+  testAchievementUnlocking();
   testMidgameQuestClaimingRewards();
   testDailyQuestRotationMaintainsActiveSubset();
   testOfflineProgressUsesReducedRatioWithoutQuestProgress();
@@ -1867,7 +1865,7 @@ testBuyModeSanitizesFractionalValues();;
   testGoldenSnusClaimRewardsCookies();
   testConfigClampingAndPersistence();
   testConfigReset();
-  testLocalizedContentKeysForMilestonesAndQuests();
+  testLocalizedContentKeysForAchievementsAndQuests();
   await testUiBuyModeButtonActiveState();
   await testLoadGameNormalization();
   await testLoadGamePreservesFutureSaveVersion();

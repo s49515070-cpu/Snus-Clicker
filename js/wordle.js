@@ -24,6 +24,7 @@ const KEYBOARD_ROWS = [
 const WORDLE_WIN_DIAMONDS = 10;
 const WORDLE_HINT_COST = 8;
 const WORDLE_WIN_ADVANCE_DELAY_MS = 1500;
+const WORDLE_MAX_HINTS_PER_ROUND = 1;
 
 const solutionWords = normalizeWordList(WORDLE_SOLUTIONS);
 const allowedWords = new Set(normalizeWordList([...WORDLE_ALLOWED_GUESSES, ...solutionWords]));
@@ -146,12 +147,13 @@ export function initWordle() {
     const badgeEl = document.getElementById("wordleModeBadge");
     const statsEl = document.getElementById("wordleStats");
     const hintEl = document.getElementById("wordleHint");
+    const solutionEl = document.getElementById("wordleSolution");
     const practiceButton = document.getElementById("wordlePracticeButton");
     const resetButton = document.getElementById("wordleResetButton");
     const hintButton = document.getElementById("wordleHintButton");
     const hardModeInput = document.getElementById("wordleHardModeInput");
 
-    if (!floatingButton || !modal || !boardEl || !keyboardEl || !statusEl || !subtitleEl || !badgeEl || !statsEl || !hintEl) {
+    if (!floatingButton || !modal || !boardEl || !keyboardEl || !statusEl || !subtitleEl || !badgeEl || !statsEl || !hintEl || !solutionEl) {
         return;
     }
 
@@ -184,13 +186,18 @@ export function initWordle() {
             return;
         }
 
-        const label = revealedLetters.length === 1 ? 'Enthaltener Buchstabe' : 'Enthaltene Buchstaben';
-        hintEl.textContent = `${label}: ${revealedLetters.join(', ')}`;
+        hintEl.innerHTML = `Tipp: Der Buchstabe <span class="wordle-hint-letter">${revealedLetters[0]}</span> ist im Wort enthalten.`;
     };
 
     const buyHint = () => {
         if (state.status !== 'playing') {
             state = { ...state, message: 'Tipps gibt es nur während einer laufenden Runde.' };
+            render();
+            return;
+        }
+
+        if (state.hintLetters.length >= WORDLE_MAX_HINTS_PER_ROUND) {
+            state = { ...state, message: "Du kannst pro Runde nur einen Tipp kaufen." };
             render();
             return;
         }
@@ -212,7 +219,7 @@ export function initWordle() {
         const letter = hintableLetters[Math.floor(Math.random() * hintableLetters.length)];
         state = {
             ...state,
-            hintLetters: [...state.hintLetters, letter],
+            hintLetters: [letter],
             message: `Tipp gekauft: Der Buchstabe ${letter} ist im Wort enthalten.`
         };
         refreshDiamondCount(gameState.diamonds);
@@ -291,13 +298,23 @@ export function initWordle() {
             : state.status === "won"
                 ? `Gewonnen! Die Lösung war ${state.solution}.`
                 : `Verloren. Die Lösung war ${state.solution}.`);
+        solutionEl.hidden = state.status === "playing";
+        solutionEl.innerHTML = state.status === "playing"
+            ? ""
+            : `Lösungswort: <span class="wordle-solution-word">${state.solution}</span>`;
         renderHint();
 
         if (hintButton) {
-            const canBuyHint = state.status === "playing" && hintableLetters.length > 0 && Number(gameState.diamonds || 0) >= WORDLE_HINT_COST;
+            const hasHintAlready = state.hintLetters.length >= WORDLE_MAX_HINTS_PER_ROUND;
+            const canBuyHint = state.status === "playing"
+                && !hasHintAlready
+                && hintableLetters.length > 0
+                && Number(gameState.diamonds || 0) >= WORDLE_HINT_COST;
             hintButton.disabled = !canBuyHint;
             hintButton.textContent = state.status !== "playing"
                 ? "💡 Tipp nur im Spiel"
+                : hasHintAlready
+                    ? "💡 Tipp bereits genutzt"
                 : hintableLetters.length === 0
                     ? "💡 Alle Tipps genutzt"
                     : `💡 Tipp (${WORDLE_HINT_COST} 💎)`;

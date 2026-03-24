@@ -32,6 +32,7 @@ const SAVE_BACKUP_KEY_PREFIX = `${SAVE_KEY}_backup_`;
 const MAX_SAVE_BACKUPS = 3;
 const CURRENT_SAVE_VERSION = 3;
 const ACTIVE_DAILY_QUEST_COUNT = 3;
+const MAX_IMPORT_SIZE_CHARS = 250_000;
 
 function migrateV1ToV2(payload) {
     const migrated = { ...(payload || {}) };
@@ -269,6 +270,23 @@ function normalizeMilestonesClaimed(rawMilestonesClaimed) {
     return mergedMilestones;
 }
 
+function sanitizePlainObject(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    const source = Object.assign({}, value);
+    delete source.__proto__;
+    delete source.constructor;
+    delete source.prototype;
+    return source;
+}
+
+function normalizeBooleanMap(rawMap, allowedKeys) {
+    const source = sanitizePlainObject(rawMap);
+    return allowedKeys.reduce((acc, key) => {
+        acc[key] = Boolean(source[key]);
+        return acc;
+    }, {});
+}
+
 function normalizeSavePayload(parsed) {
     if (!parsed || typeof parsed !== "object") {
         return null;
@@ -290,8 +308,17 @@ function normalizeSavePayload(parsed) {
     const clickPower = normalizeNumber(migrated.clickPower, 1, 1);
     const buyMode = migrated.buyMode === "max" ? "max" : Number(migrated.buyMode);
 
+    const allowedQuestIds = quests.map((quest) => quest.id);
+    const allowedPrestigeLevels = prestigeUpgrades
+        ? Array.from({ length: 100 }, (_, index) => String(index + 1))
+        : [];
+    const allowedPerks = Array.from(new Set(
+        milestones
+            .map((milestone) => milestone.rewardPerk)
+            .filter((perk) => typeof perk === "string" && perk.length > 0)
+    ));
+
     return {
-        ...migrated,
         saveVersion: migrated.saveVersion,
         cookies,
         lifetimeCookies,
@@ -306,8 +333,8 @@ function normalizeSavePayload(parsed) {
         clickPower,
         prestigeUpgradeLevels: normalizePrestigeUpgradeLevels(migrated.prestigeUpgradeLevels),
         milestonesClaimed: normalizeMilestonesClaimed(migrated.milestonesClaimed),
-        questsClaimed: { ...(gameState.questsClaimed || {}), ...(migrated.questsClaimed || {}) },
-        prestigeTrackClaimed: { ...(gameState.prestigeTrackClaimed || {}), ...(migrated.prestigeTrackClaimed || {}) },
+        questsClaimed: normalizeBooleanMap(migrated.questsClaimed, allowedQuestIds),
+        prestigeTrackClaimed: normalizeBooleanMap(migrated.prestigeTrackClaimed, allowedPrestigeLevels),
         activeBoostUntil: normalizeNumber(migrated.activeBoostUntil, 0, 0),
         activeBoostCooldownUntil: normalizeNumber(migrated.activeBoostCooldownUntil, 0, 0),
         clickBurstUntil: normalizeNumber(migrated.clickBurstUntil, 0, 0),
@@ -331,10 +358,14 @@ function normalizeSavePayload(parsed) {
             earned: normalizeNumber(migrated.weeklyStats?.earned, 0, 0),
             resetWeekKey: typeof migrated.weeklyStats?.resetWeekKey === "string" ? migrated.weeklyStats.resetWeekKey : ""
         },
-        milestonePerks: typeof migrated.milestonePerks === "object" && migrated.milestonePerks ? migrated.milestonePerks : {},
+        milestonePerks: normalizeBooleanMap(migrated.milestonePerks, allowedPerks),
         goldenSnusAvailableUntil: normalizeNumber(migrated.goldenSnusAvailableUntil, 0, 0),
         goldenSnusCooldownUntil: normalizeNumber(migrated.goldenSnusCooldownUntil, 0, 0),
         goldenSnusReward: normalizeNumber(migrated.goldenSnusReward, 0, 0),
+        clickCombo: normalizeNumber(migrated.clickCombo, 0, 0),
+        maxClickCombo: normalizeNumber(migrated.maxClickCombo, 0, 0),
+        lastClickAt: normalizeNumber(migrated.lastClickAt, 0, 0),
+        onboardingHintsShown: sanitizePlainObject(migrated.onboardingHintsShown),
         migrationMeta: migrationResult.migrationMeta
         
     };
@@ -596,6 +627,11 @@ export function exportSave() {
 export function importSave() {
     const input = prompt("Füge deinen Save-Code hier ein:");
     if (!input) return;
+
+    if (input.length > MAX_IMPORT_SIZE_CHARS) {
+        showToast("❌ Save-Code ist zu groß.", 1800, "error");
+        return;
+    }
  
     try {
         const parsed = JSON.parse(input);

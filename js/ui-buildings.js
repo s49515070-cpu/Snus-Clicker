@@ -178,7 +178,6 @@ export function createBuildingsUIController({ gameState, buildings, getBuildingC
        const bestBuyBuildingId = getBestBuyBuildingId();
 
         buildings.forEach((building) => {
-            updateBuildingCard(building);
             updateBuildingCard(building, bestBuyBuildingId);
         });
     }

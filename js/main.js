@@ -389,7 +389,13 @@ function init() {
     loadConfig();
     const loaded = loadGame();
     if (loaded && typeof localStorage !== "undefined") {
-        const lastSeen = Number(localStorage.getItem("snus_clicker_last_seen") || Date.now());
+        let lastSeen = Date.now();
+        try {
+            const storedLastSeen = localStorage.getItem("snus_clicker_last_seen");
+            lastSeen = Number(storedLastSeen || Date.now());
+        } catch {
+            lastSeen = Date.now();
+        }
         const offline = applyOfflineProgress(Date.now() - lastSeen);
         if (offline.gained > 0) {
             showToast(t("offlineProgressDetailed", {

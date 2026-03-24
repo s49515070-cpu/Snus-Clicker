@@ -97,15 +97,18 @@
         </div>
     </div>
 
-        <button id="milestonesToggleButton" class="milestones-toggle-button glass" type="button">🎯 Milestones</button>
+    <div id="achievementsWidget" class="achievements-widget glass highlight-panel">
+        <button id="achievementsOpenButton" class="achievements-open-button" type="button">🏅 Achievements</button>
+    </div>
 
-    <!-- Milestones -->
-    <div id="milestonesPanel" class="milestones-panel glass highlight-panel">
-        <div class="milestones-header">
-            <h3 id="milestonesTitle">🎯 Milestones</h3>
-            <button id="milestonesCloseButton" type="button">✕</button>
+    <div id="achievementsModal" class="achievements-modal" hidden>
+        <div id="achievementsPanel" class="achievements-panel glass highlight-panel" role="dialog" aria-modal="true" aria-labelledby="achievementsTitle">
+            <div class="achievements-header">
+                <h3 id="achievementsTitle">🏅 Achievements</h3>
+                <button id="achievementsCloseButton" type="button" aria-label="Achievements schließen">✕</button>
+            </div>
+            <div id="achievementsList" class="achievements-list"></div>
         </div>
-        <div id="milestonesList" class="milestones-list"></div>
     </div>
 
     <div id="questPanel" class="quest-panel glass highlight-panel">

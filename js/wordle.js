@@ -109,7 +109,8 @@ function loadWordleState() {
             ...persisted,
             solution: dailyState.solution,
             seed: dailyState.seed,
-            mode: "daily"
+            mode: "daily",
+            hardMode: carryover.hardMode
         };
     }
 
@@ -125,7 +126,8 @@ function loadWordleState() {
 
     return {
         ...dailyState,
-        ...carryover
+        ...carryover,
+        hardMode: carryover.hardMode
     };
 }
 
@@ -153,7 +155,7 @@ export function initWordle() {
     const hintButton = document.getElementById("wordleHintButton");
     const hardModeInput = document.getElementById("wordleHardModeInput");
 
-    if (!floatingButton || !modal || !boardEl || !keyboardEl || !statusEl || !subtitleEl || !badgeEl || !statsEl || !hintEl || !solutionEl) {
+    if (!floatingButton || !modal || !boardEl || !keyboardEl || !statusEl || !subtitleEl || !badgeEl || !statsEl || !hintEl) {
         return;
     }
 
@@ -298,10 +300,12 @@ export function initWordle() {
             : state.status === "won"
                 ? `Gewonnen! Die Lösung war ${state.solution}.`
                 : `Verloren. Die Lösung war ${state.solution}.`);
-        solutionEl.hidden = state.status === "playing";
-        solutionEl.innerHTML = state.status === "playing"
-            ? ""
-            : `Lösungswort: <span class="wordle-solution-word">${state.solution}</span>`;
+        if (solutionEl) {
+            solutionEl.hidden = state.status === "playing";
+            solutionEl.innerHTML = state.status === "playing"
+                ? ""
+                : `Lösungswort: <span class="wordle-solution-word">${state.solution}</span>`;
+        }
         renderHint();
 
         if (hintButton) {

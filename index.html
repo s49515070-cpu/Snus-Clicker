@@ -52,6 +52,14 @@
                 <img id="mainCookie" src="assets/cookies/world1.png" alt="Snus">
                 <div id="clickEffectContainer"></div>
             </div>
+            <div id="comboHud" class="combo-hud glass" aria-live="polite">
+                <div class="combo-title">🔥 Hype-Combo</div>
+                <div id="comboValue" class="combo-value">x1.00</div>
+                <div class="combo-bar">
+                    <div id="comboBarFill" class="combo-bar-fill"></div>
+                </div>
+                <div id="comboHint" class="combo-hint">Schnell klicken für mehr Multiplikator.</div>
+            </div>
         </div>
 
         <!-- Gebäude rechts -->
@@ -298,6 +306,13 @@
             <select id="highContrastInput">
                 <option value="off">Aus</option>
                 <option value="on">An</option>
+            </select>
+        </label>
+        <label>
+            <span id="settingOnboardingHintsLabel">Starter-Tipps</span>
+            <select id="onboardingHintsInput">
+                <option value="on">An</option>
+                <option value="off">Aus</option>
             </select>
         </label>
         <button id="resetSettingsButton" type="button">↺ Einstellungen zurücksetzen</button>

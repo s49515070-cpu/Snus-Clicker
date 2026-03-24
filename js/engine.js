@@ -20,6 +20,7 @@ const EARLY_RAMP_MAX_MULTIPLIER = 2.2;
 const GOLDEN_SNUS_DURATION_MS = 12_000;
 const GOLDEN_SNUS_BASE_COOLDOWN_MS = 50_000;
 const GOLDEN_SNUS_RANDOM_COOLDOWN_MS = 40_000;
+const GAME_LOOP_MAX_DELTA_SECONDS = 0.5;
 
 export const AUTO_BUYER_UNLOCK_COST = 30_000;
 const AUTO_BUYER_MAX_PURCHASES_PER_TICK = 3;
@@ -1419,7 +1420,10 @@ let lastUpdate = Date.now();
 
 export function gameLoop() {
     const now = Date.now();
-    const delta = (now - lastUpdate) / 1000;
+    const rawDelta = (now - lastUpdate) / 1000;
+    const delta = Number.isFinite(rawDelta)
+        ? Math.max(0, Math.min(rawDelta, GAME_LOOP_MAX_DELTA_SECONDS))
+        : 0;
     lastUpdate = now;
 
     tickGoldenSnus(now);

@@ -34,6 +34,8 @@ import {
     getAutoBuyerStrategy,
     getAutoBuyerStatus,
     getPrestigePreview,
+    getPrestigeTalentStatus,
+    buyPrestigeTalent,
     getBuildingSynergyBonusPercent,
     getEffectivePurchasePreview,
     getGoldenSnusState,
@@ -60,6 +62,9 @@ const worldNameEl = document.getElementById("worldName");
 const worldButton = document.getElementById("worldButton");
 const nextWorldProgressEl = document.getElementById("nextWorldProgress");
 const trophyPrestigeProgressEl = document.getElementById("trophyPrestigeProgress");
+const trophyPrestigePreviewEl = document.getElementById("trophyPrestigePreview");
+const prestigeTalentPointsEl = document.getElementById("prestigeTalentPoints");
+const prestigeTalentTreeEl = document.getElementById("prestigeTalentTree");
 const diamondShopListEl = document.getElementById("diamondShopList");
 const diamondShopBalanceEl = document.getElementById("diamondShopBalance");
 const milestonesListEl = document.getElementById("milestonesList");
@@ -96,6 +101,10 @@ const comboHintEl = document.getElementById("comboHint");
 initToastSystem(autosaveIndicator);
 
 let wasGoldenSnusAvailable = false;
+let lastSlowPanelRenderAt = 0;
+const SLOW_PANEL_REFRESH_MS = 600;
+const clickEffectPool = [];
+const activeClickEffects = new Set();
 
 const { renderBuildings, refreshBuildingsIfNeeded } = createBuildingsUIController({
     gameState,
@@ -408,9 +417,63 @@ function renderComboHud() {
         : "Schnell klicken für mehr Multiplikator.";
 }
 
-export function renderUI() {
+function renderPrestigePreview() {
+    if (!trophyPrestigePreviewEl) return;
+    const preview = getPrestigePreview();
+    const etaToRecoverText = Number.isFinite(preview.etaToRecoverSeconds)
+        ? formatEta(preview.etaToRecoverSeconds)
+        : "∞";
+    trophyPrestigePreviewEl.textContent = `Vorschau: +${preview.gain.prestigeCookies} Prestige | +${preview.gain.talentPoints} Talentpunkte | Verlust ${formatNumber(preview.lose.cookies)} Snus | Aufholzeit ${etaToRecoverText}`;
+}
+
+function renderPrestigeTalentTree() {
+    if (!prestigeTalentTreeEl) return;
+    const status = getPrestigeTalentStatus();
+    if (prestigeTalentPointsEl) {
+        prestigeTalentPointsEl.textContent = `Talentpunkte: ${status.availablePoints} frei (${status.spentPoints}/${status.totalPoints} genutzt)`;
+    }
+
+    prestigeTalentTreeEl.innerHTML = "";
+    const rows = [
+        status.entries.filter((entry) => entry.tier === 1),
+        status.entries.filter((entry) => entry.tier === 2),
+        status.entries.filter((entry) => entry.tier === 3)
+    ];
+
+    rows.forEach((rowEntries, rowIndex) => {
+        const rowEl = document.createElement("div");
+        rowEl.className = "prestige-talent-row";
+        rowEl.dataset.tier = String(rowIndex + 1);
+
+        rowEntries.forEach((entry) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "prestige-talent-node";
+            button.dataset.talentId = entry.id;
+            button.classList.toggle("is-owned", entry.owned);
+            button.classList.toggle("is-locked", !entry.unlocked && !entry.owned);
+            button.classList.toggle("is-affordable", entry.canBuy);
+            button.disabled = entry.owned || !entry.unlocked || !entry.canBuy;
+
+            const branchIcon = entry.branch === "click" ? "🖱️" : entry.branch === "idle" ? "🏭" : "⚖️";
+            button.innerHTML = `
+                <div class="prestige-talent-title">${branchIcon} ${entry.name}</div>
+                <div class="prestige-talent-description">${entry.description}</div>
+                <div class="prestige-talent-meta">${entry.owned ? "Gekauft" : !entry.unlocked ? "Gesperrt" : `Kosten: ${entry.cost}`}</div>
+            `;
+            rowEl.appendChild(button);
+        });
+
+        prestigeTalentTreeEl.appendChild(rowEl);
+    });
+}
+
+export function renderUI(options = {}) {
     if (!cookieCountEl || !cpsEl || !prestigeCountEl || !worldNameEl) return;
-    
+    const now = Number(options.timestamp) || Date.now();
+    const forceFull = Boolean(options.forceFull);
+    const shouldRenderSlowPanels = forceFull || (now - lastSlowPanelRenderAt >= SLOW_PANEL_REFRESH_MS);
+
     const cpsValue = calculateCps();
 
     cookieCountEl.textContent = formatNumber(gameState.cookies);
@@ -485,17 +548,23 @@ export function renderUI() {
         }
     }
 
+    renderPrestigePreview();
     renderGoldenSnusButton();
     renderComboHud();
     renderBoostStatus();
-    renderQuests();
-    renderDailySummary();
-    maybeShowOnboardingHint();
-    renderActiveBonusesPanel();
     renderAutoBuyerState();
-    renderDiamondShop();
-    renderMilestones();
-    renderTrophyPath();
+
+    if (shouldRenderSlowPanels) {
+        renderQuests();
+        renderDailySummary();
+        maybeShowOnboardingHint();
+        renderActiveBonusesPanel();
+        renderDiamondShop();
+        renderMilestones();
+        renderTrophyPath();
+        renderPrestigeTalentTree();
+        lastSlowPanelRenderAt = now;
+    }
 
     if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("snus:ui-rendered"));
@@ -513,7 +582,7 @@ export function refreshAllUI() {
     renderMilestones();
     renderQuests();
     renderTrophyPath();
-    renderUI();
+    renderUI({ forceFull: true });
 }
 
 export function applyStaticTranslations() {
@@ -570,13 +639,17 @@ function createClickEffectAt(x, y) {
     const amount = click.amount;
     playClickSound();
 
-    const effect = document.createElement("div");
+    const effect = clickEffectPool.pop() || document.createElement("div");
     effect.className = "click-effect";
+    effect.hidden = false;
     if (click.crit) effect.classList.add("is-crit");
     if (click.comboLevel >= 10) effect.classList.add("is-combo");
     effect.textContent = `${click.crit ? "CRIT " : ""}+${formatNumber(amount)}`;
     effect.style.left = `${x}px`;
     effect.style.top = `${y}px`;
+    effect.style.animation = "none";
+    effect.offsetHeight;
+    effect.style.animation = "";
 
     clickEffectContainer.appendChild(effect);
 
@@ -585,7 +658,14 @@ function createClickEffectAt(x, y) {
         setTimeout(() => cookieClickArea?.classList.remove("is-crit-pulse"), 220);
     }
 
-    setTimeout(() => effect.remove(), 1000);
+    activeClickEffects.add(effect);
+    setTimeout(() => {
+        effect.classList.remove("is-crit", "is-combo");
+        effect.textContent = "";
+        effect.hidden = true;
+        activeClickEffects.delete(effect);
+        clickEffectPool.push(effect);
+    }, 1000);
 }
 
 function handleCookiePointer(event) {
@@ -768,6 +848,23 @@ if (goldenSnusButton) {
             showToast(t("goldenSnusClaimed", { reward: formatNumber(reward) }), 1500, "success");
             renderUI();
         }
+    });
+}
+
+if (prestigeTalentTreeEl) {
+    prestigeTalentTreeEl.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target.closest(".prestige-talent-node") : null;
+        const talentId = target?.dataset.talentId;
+        if (!talentId) return;
+
+        const bought = buyPrestigeTalent(talentId);
+        if (!bought) {
+            showToast("Talent konnte nicht gekauft werden.", 1400, "warning");
+            return;
+        }
+
+        showToast("✅ Talent freigeschaltet.", 1400, "success");
+        renderUI({ forceFull: true });
     });
 }
 

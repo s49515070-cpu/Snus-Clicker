@@ -77,6 +77,18 @@ export const prestigeUpgrades = [
     }
 ];
 
+export const prestigeTalents = [
+    { id: "click_node_1", name: "Fingerfitness I", description: "+8% Klickstärke", branch: "click", tier: 1, cost: 1 },
+    { id: "click_node_2", name: "Fingerfitness II", description: "+12% Klickstärke", branch: "click", tier: 2, cost: 1 },
+    { id: "click_node_3", name: "Kritische Technik", description: "+10% Klickstärke", branch: "click", tier: 3, cost: 2 },
+    { id: "idle_node_1", name: "Passive Pipeline I", description: "+8% CPS", branch: "idle", tier: 1, cost: 1 },
+    { id: "idle_node_2", name: "Passive Pipeline II", description: "+12% CPS", branch: "idle", tier: 2, cost: 1 },
+    { id: "idle_node_3", name: "Factory Focus", description: "+10% CPS", branch: "idle", tier: 3, cost: 2 },
+    { id: "hybrid_node_1", name: "Boost-Synergie I", description: "+6% Skillstärke", branch: "hybrid", tier: 1, cost: 1 },
+    { id: "hybrid_node_2", name: "Boost-Synergie II", description: "+8% Skillstärke", branch: "hybrid", tier: 2, cost: 1 },
+    { id: "hybrid_node_3", name: "Budget Tuning", description: "-3% Gebäudekosten", branch: "hybrid", tier: 3, cost: 2 }
+];
+
 const prestigeTrackMilestoneRewards = new Map([
     [1, { rewardDiamonds: 5, title: "Bronze Trophy" }],
     [2, { rewardDiamonds: 8, title: "Silver Trophy" }],
@@ -397,6 +409,8 @@ export const gameState = {
     prestigeMultiplier: 1,
     clickPower: 1,
     prestigeUpgradeLevels: {},
+    prestigeTalentPoints: 0,
+    prestigeTalentLevels: {},
     milestonesClaimed: {},
     questsClaimed: {},
     activeBoostUntil: 0,
@@ -638,6 +652,13 @@ function resetPrestigeUpgrades() {
     });
 }
 
+function resetPrestigeTalents() {
+    gameState.prestigeTalentPoints = 0;
+    prestigeTalents.forEach((talent) => {
+        gameState.prestigeTalentLevels[talent.id] = 0;
+    });
+}
+
 function resetPrestigeTrack() {
     gameState.prestigeTrackClaimed = {};
     prestigeTrackRewards.forEach((reward) => {
@@ -703,6 +724,7 @@ export function resetGameState() {
     rotateDailyQuestsForToday();
     resetBuildingData();
     resetPrestigeUpgrades();
+    resetPrestigeTalents();
     resetPrestigeTrack();
     resetMilestones();
     resetQuests();
@@ -713,6 +735,74 @@ resetGameState();
 function getUpgradeLevel(upgradeId) {
     const value = Number(gameState.prestigeUpgradeLevels[upgradeId] || 0);
     return Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+}
+
+function getTalentLevel(talentId) {
+    const value = Number(gameState.prestigeTalentLevels?.[talentId] || 0);
+    return Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+}
+
+function getSpentTalentPoints() {
+    return prestigeTalents.reduce((sum, talent) => {
+        const level = getTalentLevel(talent.id);
+        return sum + (level > 0 ? Number(talent.cost || 0) : 0);
+    }, 0);
+}
+
+function getBranchSpentPoints(branch) {
+    return prestigeTalents
+        .filter((talent) => talent.branch === branch)
+        .reduce((sum, talent) => sum + (getTalentLevel(talent.id) > 0 ? Number(talent.cost || 0) : 0), 0);
+}
+
+export function getPrestigeTalentEffects() {
+    const has = (id) => getTalentLevel(id) > 0;
+
+    return {
+        clickBonusPercent: (has("click_node_1") ? 8 : 0) + (has("click_node_2") ? 12 : 0) + (has("click_node_3") ? 10 : 0),
+        cpsBonusPercent: (has("idle_node_1") ? 8 : 0) + (has("idle_node_2") ? 12 : 0) + (has("idle_node_3") ? 10 : 0),
+        skillPowerBonusPercent: (has("hybrid_node_1") ? 6 : 0) + (has("hybrid_node_2") ? 8 : 0),
+        discountBonusPercent: has("hybrid_node_3") ? 3 : 0
+    };
+}
+
+export function getPrestigeTalentStatus() {
+    const spentPoints = getSpentTalentPoints();
+    const availablePoints = Math.max(0, Math.floor(Number(gameState.prestigeTalentPoints || 0)) - spentPoints);
+
+    const entries = prestigeTalents.map((talent) => {
+        const owned = getTalentLevel(talent.id) > 0;
+        const branchPoints = getBranchSpentPoints(talent.branch);
+        const requiredPoints = Math.max(0, (Number(talent.tier) - 1) * 2);
+        const unlocked = branchPoints >= requiredPoints || owned || Number(talent.tier) <= 1;
+        const canBuy = !owned && unlocked && availablePoints >= Number(talent.cost || 0);
+        return {
+            ...talent,
+            owned,
+            unlocked,
+            canBuy
+        };
+    });
+
+    return {
+        totalPoints: Math.max(0, Math.floor(Number(gameState.prestigeTalentPoints || 0))),
+        spentPoints,
+        availablePoints,
+        entries
+    };
+}
+
+export function buyPrestigeTalent(talentId) {
+    const talent = prestigeTalents.find((entry) => entry.id === talentId);
+    if (!talent) return false;
+    if (getTalentLevel(talent.id) > 0) return false;
+
+    const status = getPrestigeTalentStatus();
+    const current = status.entries.find((entry) => entry.id === talent.id);
+    if (!current?.canBuy) return false;
+
+    gameState.prestigeTalentLevels[talent.id] = 1;
+    return true;
 }
 
 export function getPrestigeMultiplierForLevel(prestigeLevel) {
@@ -766,7 +856,8 @@ function getWorldModifiers() {
 function getSkillPowerMultiplier() {
     const level = getUpgradeLevel("boostOverdrive");
     const perkBonus = gameState.milestonePerks?.skill_power ? 0.08 : 0;
-    return 1 + level * 0.1 + perkBonus;
+    const talentBonus = getPrestigeTalentEffects().skillPowerBonusPercent / 100;
+    return 1 + level * 0.1 + perkBonus + talentBonus;
 }
 
 function computeComboMultiplier(comboLevel = Number(gameState.clickCombo || 0)) {
@@ -810,7 +901,8 @@ function getBuildingDiscountMultiplier() {
     const worldDiscount = getWorldModifiers().buildingDiscount;
     const burstDiscount = isDiscountBurstActive() ? DISCOUNT_BURST_RATIO : 0;
     const perkDiscount = gameState.milestonePerks?.discount_3 ? 0.03 : 0;
-    return Math.max(0.55, 1 - worldDiscount - burstDiscount - perkDiscount);
+    const talentDiscount = getPrestigeTalentEffects().discountBonusPercent / 100;
+    return Math.max(0.55, 1 - worldDiscount - burstDiscount - perkDiscount - talentDiscount);
 }
 
 export function getEffectivePurchasePreview(building, owned, mode, cookies = gameState.cookies) {
@@ -1204,13 +1296,18 @@ export function getPrestigeProgressState() {
 }
 
 export function getPrestigePreview() {
+    const progress = getPrestigeProgressState();
+    const cps = calculateCps();
+    const etaToRecoverSeconds = cps > 0 ? Math.floor(gameState.cookies / cps) : Infinity;
     return {
         lose: {
             cookies: Math.floor(gameState.cookies)
         },
         gain: {
-            prestigeCookies: getPotentialPrestigeGain()
-        }
+            prestigeCookies: progress.potentialGain,
+            talentPoints: progress.potentialGain
+        },
+        etaToRecoverSeconds
     };
 }
 
@@ -1255,6 +1352,7 @@ export function prestigeReset() {
 
     const previousPrestige = gameState.prestigeCookies;
     gameState.prestigeCookies += gained;
+    gameState.prestigeTalentPoints += gained;
     gameState.lifetimeCookiesAtLastPrestige += progress.spentLifetime
     gameState.prestigeMultiplier = getPrestigeMultiplierForLevel(gameState.prestigeCookies);
     claimPrestigeTrackRewards(previousPrestige, gameState.prestigeCookies);
@@ -1312,6 +1410,7 @@ export function calculateCps() {
     total *= gameState.prestigeMultiplier;
     total *= getCpsUpgradeMultiplier();
     total *= getActiveBoostMultiplier();
+    total *= 1 + (getPrestigeTalentEffects().cpsBonusPercent / 100);
 
     return total;
 }
@@ -1477,7 +1576,8 @@ export function clickCookie() {
         * gameState.prestigeMultiplier
         * getClickBurstMultiplier()
         * comboMultiplier
-        * getEarlyGameRampMultiplier();
+        * getEarlyGameRampMultiplier()
+        * (1 + (getPrestigeTalentEffects().clickBonusPercent / 100));
     const amount = (base + cpsSupport) * (crit ? 2 : 1);
 
     addCookies(amount);

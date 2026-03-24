@@ -566,6 +566,7 @@ body.high-contrast {
         width: min(96vw, 360px);
         left: 10px;
         bottom: 10px;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .golden-snus-button {
@@ -898,12 +899,11 @@ body.high-contrast {
     position: fixed;
     bottom: 16px;
     left: 16px;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
-    align-items: stretch;
     z-index: 30;
-    width: min(380px, calc(100vw - 24px));
+    width: min(620px, calc(100vw - 24px));
     padding: 12px;
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(8px);
@@ -915,6 +915,7 @@ body.high-contrast {
     display: grid;
     gap: 8px;
     padding: 10px;
+    min-height: 100%;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.5);
     border: 1px solid rgba(148, 163, 184, 0.22);

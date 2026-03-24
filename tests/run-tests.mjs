@@ -707,9 +707,9 @@ function testAutoBuyerPrioritizesBestValuePurchases() {
 
   const purchases = runAutoBuyerTick();
 
-  assert.equal(purchases, 3, 'auto-buyer should execute up to its per-tick purchase limit');
-  assert.equal(gameState.buildingData.farm.owned, 3, 'auto-buyer should prioritize best cps-per-cost purchases first');
-  assert.equal(gameState.buildingData.cursor.owned, 0, 'lower-value buildings should not be bought while better options are affordable');
+  assert.equal(purchases, 1, 'auto-buyer should stop when the smartest target is not affordable yet');
+  assert.equal(gameState.buildingData.farm.owned, 1, 'auto-buyer should pick the best value target first');
+  assert.equal(gameState.buildingData.cursor.owned, 0, 'lower-value buildings should not be bought as fallback in smartest mode');
 }
 
 
@@ -735,9 +735,23 @@ function testAutoBuyerSmartestMatchesBestBuyHighlight() {
 
   const purchases = runAutoBuyerTick();
 
-  assert.equal(purchases, 3, 'smartest strategy should still honor the purchase cap');
-  assert.equal(gameState.buildingData.farm.owned, 3, 'smartest strategy should buy the same best-buy building that the UI highlights');
+  assert.equal(purchases, 1, 'smartest strategy should buy only while the best-buy option is affordable');
+  assert.equal(gameState.buildingData.farm.owned, 1, 'smartest strategy should buy the same best-buy building that the UI highlights');
   assert.equal(gameState.buildingData.cursor.owned, 0, 'smartest strategy should not switch back to cheaper buildings while a better best-buy option exists');
+}
+
+function testAutoBuyerSmartestWaitsForBestBuyBudget() {
+  resetEngineState();
+  gameState.cookies = 89;
+  gameState.autoBuyerUnlocked = true;
+  gameState.autoBuyerEnabled = true;
+  setAutoBuyerStrategy('schlauste');
+
+  const purchases = runAutoBuyerTick();
+
+  assert.equal(purchases, 0, 'smartest strategy should wait when the best-buy building is not affordable yet');
+  assert.equal(gameState.buildingData.farm.owned, 0, 'smartest strategy should not buy less efficient alternatives while waiting for best buy');
+  assert.equal(gameState.buildingData.cursor.owned, 0, 'smartest strategy should avoid cheapest fallback purchases');
 }
 
 function testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias() {
@@ -749,8 +763,8 @@ function testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias()
 
   const purchases = runAutoBuyerTick();
 
-  assert.equal(purchases, 3, 'localized efficiency alias should still allow the auto-buyer to run');
-  assert.equal(gameState.buildingData.farm.owned, 3, 'efficiency strategy should keep prioritizing the best ROI building instead of the cheapest one');
+  assert.equal(purchases, 1, 'localized efficiency alias should still allow the auto-buyer to run');
+  assert.equal(gameState.buildingData.farm.owned, 1, 'efficiency strategy should keep prioritizing the best ROI building instead of the cheapest one');
   assert.equal(gameState.buildingData.cursor.owned, 0, 'efficiency strategy should not drift back to cheapest purchases when a better ROI option is affordable');
 }
 
@@ -763,8 +777,8 @@ function testAutoBuyerLegacyStrategiesFallBackToSmartestMode() {
 
   const purchases = runAutoBuyerTick();
 
-  assert.equal(purchases, 3, 'legacy strategies should still allow the auto-buyer to run');
-  assert.equal(gameState.buildingData.farm.owned, 3, 'legacy strategies should fall back to the smartest mode');
+  assert.equal(purchases, 1, 'legacy strategies should still allow the auto-buyer to run');
+  assert.equal(gameState.buildingData.farm.owned, 1, 'legacy strategies should fall back to the smartest mode');
 }
 
 function testAutoBuyerChoicePersistsDecisionForUiTransparency() {
@@ -1826,6 +1840,7 @@ testBuyModeSanitizesFractionalValues();;
   testAutoBuyerPrioritizesBestValuePurchases();
   testAutoBuyerStrategyCheapPrefersLowCost();
   testAutoBuyerSmartestMatchesBestBuyHighlight();
+  testAutoBuyerSmartestWaitsForBestBuyBudget();
   testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias();
   testAutoBuyerLegacyStrategiesFallBackToSmartestMode();
   testAutoBuyerChoicePersistsDecisionForUiTransparency();

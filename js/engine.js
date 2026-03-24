@@ -1172,7 +1172,7 @@ function getAutoBuyerChoice() {
             const owned = Number.isFinite(rawOwned) && rawOwned >= 0 ? Math.floor(rawOwned) : 0;
             const preview = getEffectivePurchasePreview(building, owned, 1, availableBudget);
             const cost = Number(preview.totalCost || 0);
-            if (cost <= 0 || preview.quantity < 1 || cost > availableBudget) return null;
+            if (cost <= 0 || preview.quantity < 1) return null;
 
             const synergyBonusPercent = Math.max(0, Number(getBuildingSynergyBonusPercent(building.id) || 0));
             const cpsGain = building.baseCps * (1 + synergyBonusPercent / 100);
@@ -1183,6 +1183,7 @@ function getAutoBuyerChoice() {
             return {
                 buildingId: building.id,
                 cost,
+                affordable: cost <= availableBudget,
                 owned,
                 cpsGain,
                 valueScore: Number.isFinite(valueScore) ? valueScore : 0,
@@ -1195,17 +1196,22 @@ function getAutoBuyerChoice() {
     if (!candidates.length) return null;
 
     if (strategy === "cheap") {
-        return candidates.reduce((best, candidate) => (
+        const affordableCandidates = candidates.filter((candidate) => candidate.affordable);
+        if (!affordableCandidates.length) return null;
+        return affordableCandidates.reduce((best, candidate) => (
             isCandidateBetterForStrategy(candidate, best, strategy) ? candidate : best
         ), null);
     }
 
-    return candidates.reduce((best, candidate) => {
+    const smartestCandidate = candidates.reduce((best, candidate) => {
         if (!best) return candidate;
         if (candidate.valueScore > best.valueScore) return candidate;
         if (candidate.valueScore < best.valueScore) return best;
         return isCandidateBetterForStrategy(candidate, best, strategy) ? candidate : best;
     }, null);
+
+    if (!smartestCandidate || !smartestCandidate.affordable) return null;
+    return smartestCandidate;
 }
 
 export function runAutoBuyerTick() {

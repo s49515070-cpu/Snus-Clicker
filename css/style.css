@@ -530,16 +530,17 @@ body.high-contrast {
         top: 185px;
     }
 
+    .achievements-modal {
+        padding: 10px;
+    }
+
     .achievements-panel {
-        left: 10px;
-        right: 10px;
-        width: auto;
-        top: 235px;
-        max-height: 320px;
+        width: 100%;
+        max-height: min(82vh, 760px);
     }
 
     .achievements-list {
-        max-height: 210px;
+        grid-template-columns: 1fr;
     }
    
     .prestige-toggle-button {
@@ -837,23 +838,32 @@ body.high-contrast {
    ACHIEVEMENTS
 =================================*/
 .achievements-panel {
-    position: fixed;
-    left: 20px;
-    top: 185px;
-    width: 280px;
-    max-height: 420px;
-    z-index: 25;
+    width: min(1000px, calc(100vw - 48px));
+    max-height: min(78vh, 760px);
+    z-index: 60;
     padding-top: 36px;
-    overflow: hidden;
-    transform-origin: top left;
-    transition: max-height 0.22s ease, opacity 0.18s ease, transform 0.22s ease;
+    padding-right: 12px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    transform: scale(1);
+    transition: transform 0.22s ease, opacity 0.18s ease;
 }
 
 .achievements-panel.is-collapsed {
-    max-height: 0;
     opacity: 0;
-    transform: scaleY(0.92);
+    transform: scale(0.97);
     pointer-events: none;
+}
+
+.achievements-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(2, 6, 23, 0.58);
+    display: grid;
+    place-items: center;
+    padding: 24px;
 }
 
 .achievements-header {
@@ -863,10 +873,9 @@ body.high-contrast {
 }
 
 .achievements-list {
-    max-height: 320px;
-    overflow-y: auto;
+    max-height: none;
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     padding-right: 4px;
 }
@@ -918,9 +927,7 @@ body.high-contrast {
 
 .achievement-title {
     font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
 }
 
 .achievement-meta {
@@ -958,6 +965,13 @@ body.high-contrast {
     font-size: 0.82rem;
     color: #2d3748;
 }
+
+@media (max-width: 1200px) {
+    .achievements-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 .action-bar {
     position: fixed;
     bottom: 16px;

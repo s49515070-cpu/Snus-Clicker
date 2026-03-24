@@ -73,17 +73,26 @@
 
     
     <div class="action-bar glass">
-        <button id="boostButton" type="button">⚡ Fokus-Boost (x3)</button>
-        <button id="clickBurstButton" type="button">🎯 Klickrausch (x4)</button>
-        <button id="discountBurstButton" type="button">🛍️ Rabatt-Phase (-25%)</button>
-        <div id="boostStatus" class="boost-status"></div>
-        <div id="autoBuyerStatus" class="boost-status"></div>
-        <button id="autoBuyerButton" type="button">🤖 Auto-Buyer (30K)</button>
-        <div id="autoBuyerModeControls" class="auto-buyer-mode-controls" hidden>
-            <div id="autoBuyerModeLabel" class="auto-buyer-mode-label">Auto-Buyer Modus</div>
-            <div class="auto-buyer-mode-buttons">
-                <button id="autoBuyerValueModeButton" type="button">Schlauste</button>
-                <button id="autoBuyerCheapModeButton" type="button">Günstigste</button>
+        <div class="action-group action-group--boosts">
+            <div class="action-group-title">⚡ Boosts</div>
+            <div class="action-buttons-grid">
+                <button id="boostButton" type="button">⚡ Fokus-Boost (x3)</button>
+                <button id="clickBurstButton" type="button">🎯 Klickrausch (x4)</button>
+                <button id="discountBurstButton" type="button">🛍️ Rabatt-Phase (-25%)</button>
+            </div>
+            <div id="boostStatus" class="boost-status"></div>
+        </div>
+
+        <div class="action-group action-group--autobuyer">
+            <div class="action-group-title">🤖 Auto-Buyer</div>
+            <button id="autoBuyerButton" type="button">🤖 Auto-Buyer (30K)</button>
+            <div id="autoBuyerStatus" class="boost-status"></div>
+            <div id="autoBuyerModeControls" class="auto-buyer-mode-controls" hidden>
+                <div id="autoBuyerModeLabel" class="auto-buyer-mode-label">Auto-Buyer Modus</div>
+                <div class="auto-buyer-mode-buttons">
+                    <button id="autoBuyerValueModeButton" type="button">Schlauste</button>
+                    <button id="autoBuyerCheapModeButton" type="button">Günstigste</button>
+                </div>
             </div>
         </div>
     </div>

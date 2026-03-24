@@ -137,63 +137,74 @@ export const prestigeTrackRewards = Array.from({ length: 100 }, (_, index) => {
     };
 });
 
-export const milestones = [
+const ACHIEVEMENT_DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
+
+const achievementBlueprints = [
     {
-        id: "lifetime_10k",
-        labelKey: "milestoneRookieLabel",
-        descriptionKey: "milestoneRookieDescription",
-        label: "Rookie Roller",
-        description: "Erreiche 10.000 Lifetime-Snus",
-        target: 10_000,
-        rewardCookies: 1_000,
-        progress: (state) => state.lifetimeCookies
+        key: "lifetime_snus",
+        icon: "💸",
+        titleKey: "achievementLifetimeSnusTitle",
+        descriptionKey: "achievementLifetimeSnusDescription",
+        thresholds: [100_000, 1_000_000, 10_000_000],
+        progress: (state) => Number(state.lifetimeCookies || 0)
     },
     {
-        id: "buildings_25",
-        labelKey: "milestoneForemanLabel",
-        descriptionKey: "milestoneForemanDescription",
-        label: "Factory Foreman",
-        description: "Besitze insgesamt 25 Gebäude",
-        target: 25,
-        rewardCookies: 5_000,
-        rewardPerk: "discount_3",
-        progress: (state) => buildings.reduce((sum, building) => sum + Number(state.buildingData[building.id]?.owned || 0), 0)
+        key: "total_clicks",
+        icon: "🖱️",
+        titleKey: "achievementTotalClicksTitle",
+        descriptionKey: "achievementTotalClicksDescription",
+        thresholds: [500, 5_000, 20_000],
+        progress: (state) => Number(state.totalClicks || 0)
     },
     {
-        id: "lifetime_100k",
-        labelKey: "milestoneSeasonedLabel",
-        descriptionKey: "milestoneSeasonedDescription",
-        label: "Seasoned Roller",
-        description: "Erreiche 100.000 Lifetime-Snus",
-        target: 100_000,
-        rewardCookies: 20_000,
-        progress: (state) => state.lifetimeCookies
+        key: "max_total_buildings",
+        icon: "🏗️",
+        titleKey: "achievementTotalBuildingsTitle",
+        descriptionKey: "achievementTotalBuildingsDescription",
+        thresholds: [25, 75, 150],
+        progress: (state) => Number(state.achievementStats?.maxTotalBuildings || 0)
     },
     {
-        id: "buildings_75",
-        labelKey: "milestoneIndustrialistLabel",
-        descriptionKey: "milestoneIndustrialistDescription",
-        label: "Industrialist",
-        description: "Besitze insgesamt 75 Gebäude",
-        target: 75,
-        rewardCookies: 35_000,
-        rewardDiamonds: 5,
-        rewardPerk: "autobuyer_speed",
-        progress: (state) => buildings.reduce((sum, building) => sum + Number(state.buildingData[building.id]?.owned || 0), 0)
+        key: "prestige_level",
+        icon: "🌟",
+        titleKey: "achievementPrestigeTitle",
+        descriptionKey: "achievementPrestigeDescription",
+        thresholds: [5, 15, 35],
+        progress: (state) => Number(state.prestigeCookies || 0)
     },
     {
-        id: "lifetime_1m",
-        labelKey: "milestoneTycoonLabel",
-        descriptionKey: "milestoneTycoonDescription",
-        label: "Snus Tycoon",
-        description: "Erreiche 1.000.000 Lifetime Snus",
-        target: 1_000_000,
-        rewardCookies: 100_000,
-        rewardPrestigeCookies: 1,
-        rewardPerk: "skill_power",
-        progress: (state) => state.lifetimeCookies
+        key: "diamond_spender",
+        icon: "💎",
+        titleKey: "achievementDiamondSpendTitle",
+        descriptionKey: "achievementDiamondSpendDescription",
+        thresholds: [50, 300, 1_200],
+        progress: (state) => Number(state.achievementStats?.diamondsSpent || 0)
+    },
+    {
+        key: "upgrade_levels",
+        icon: "⚙️",
+        titleKey: "achievementUpgradesTitle",
+        descriptionKey: "achievementUpgradesDescription",
+        thresholds: [8, 20, 40],
+        progress: (state) => Object.values(state.prestigeUpgradeLevels || {}).reduce((sum, level) => (
+            sum + Math.max(0, Number(level) || 0)
+        ), 0)
     }
 ];
+
+export const achievements = achievementBlueprints.flatMap((blueprint) => (
+    blueprint.thresholds.map((target, index) => ({
+        id: `${blueprint.key}_tier_${index + 1}`,
+        key: blueprint.key,
+        icon: blueprint.icon,
+        titleKey: blueprint.titleKey,
+        descriptionKey: blueprint.descriptionKey,
+        tier: index + 1,
+        difficulty: ACHIEVEMENT_DIFFICULTIES[index],
+        target,
+        progress: blueprint.progress
+    }))
+));
 
 export const quests = [
     {
@@ -411,7 +422,7 @@ export const gameState = {
     prestigeUpgradeLevels: {},
     prestigeTalentPoints: 0,
     prestigeTalentLevels: {},
-    milestonesClaimed: {},
+    achievementsUnlocked: {},
     questsClaimed: {},
     activeBoostUntil: 0,
     activeBoostCooldownUntil: 0,
@@ -436,7 +447,10 @@ export const gameState = {
         earned: 0,
         resetWeekKey: ""
     },
-    milestonePerks: {},
+    achievementStats: {
+        maxTotalBuildings: 0,
+        diamondsSpent: 0
+    },
     goldenSnusAvailableUntil: 0,
     goldenSnusCooldownUntil: 0,
     goldenSnusReward: 0,
@@ -563,6 +577,16 @@ function getTotalBuildingsOwned() {
     return buildings.reduce((sum, building) => sum + Number(gameState.buildingData[building.id]?.owned || 0), 0);
 }
 
+function syncAchievementStatsFromState() {
+    const currentTotalBuildings = getTotalBuildingsOwned();
+    const previousMaxBuildings = Math.max(0, Number(gameState.achievementStats?.maxTotalBuildings || 0));
+
+    gameState.achievementStats = {
+        maxTotalBuildings: Math.max(previousMaxBuildings, currentTotalBuildings),
+        diamondsSpent: Math.max(0, Number(gameState.achievementStats?.diamondsSpent || 0))
+    };
+}
+
 function addCookies(amount, options = {}) {
     if (!Number.isFinite(amount) || amount <= 0) return;
     const { trackQuestProgress = true } = options;
@@ -599,6 +623,7 @@ export function spendDiamonds(amount) {
     const safeAmount = Math.max(0, Number(amount) || 0);
     if (safeAmount <= 0 || Number(gameState.diamonds || 0) < safeAmount) return 0;
     gameState.diamonds = Number(gameState.diamonds || 0) - safeAmount;
+    gameState.achievementStats.diamondsSpent = Math.max(0, Number(gameState.achievementStats?.diamondsSpent || 0)) + safeAmount;
     return safeAmount;
 }
 
@@ -666,9 +691,9 @@ function resetPrestigeTrack() {
     });
 }
 
-function resetMilestones() {
-    milestones.forEach((milestone) => {
-        gameState.milestonesClaimed[milestone.id] = false;
+function resetAchievements() {
+    achievements.forEach((achievement) => {
+        gameState.achievementsUnlocked[achievement.id] = false;
     });
 }
 
@@ -712,7 +737,11 @@ export function resetGameState() {
         earned: 0,
         resetWeekKey: getWeekKey()
     };
-    gameState.milestonePerks = {};
+    gameState.achievementsUnlocked = {};
+    gameState.achievementStats = {
+        maxTotalBuildings: 0,
+        diamondsSpent: 0
+    };
     gameState.goldenSnusAvailableUntil = 0;
     gameState.goldenSnusCooldownUntil = 0;
     gameState.goldenSnusReward = 0;
@@ -726,7 +755,7 @@ export function resetGameState() {
     resetPrestigeUpgrades();
     resetPrestigeTalents();
     resetPrestigeTrack();
-    resetMilestones();
+    resetAchievements();
     resetQuests();
 }
 
@@ -855,9 +884,8 @@ function getWorldModifiers() {
 
 function getSkillPowerMultiplier() {
     const level = getUpgradeLevel("boostOverdrive");
-    const perkBonus = gameState.milestonePerks?.skill_power ? 0.08 : 0;
     const talentBonus = getPrestigeTalentEffects().skillPowerBonusPercent / 100;
-    return 1 + level * 0.1 + perkBonus + talentBonus;
+    return 1 + level * 0.1 + talentBonus;
 }
 
 function computeComboMultiplier(comboLevel = Number(gameState.clickCombo || 0)) {
@@ -900,9 +928,8 @@ function getClickBurstMultiplier() {
 function getBuildingDiscountMultiplier() {
     const worldDiscount = getWorldModifiers().buildingDiscount;
     const burstDiscount = isDiscountBurstActive() ? DISCOUNT_BURST_RATIO : 0;
-    const perkDiscount = gameState.milestonePerks?.discount_3 ? 0.03 : 0;
     const talentDiscount = getPrestigeTalentEffects().discountBonusPercent / 100;
-    return Math.max(0.55, 1 - worldDiscount - burstDiscount - perkDiscount - talentDiscount);
+    return Math.max(0.55, 1 - worldDiscount - burstDiscount - talentDiscount);
 }
 
 export function getEffectivePurchasePreview(building, owned, mode, cookies = gameState.cookies) {
@@ -971,7 +998,7 @@ export function getActiveBonuses() {
         discountBurstActive: discountBurstNow,
         streakBonusPercent: Math.round(streakBonus * 100),
         skillPowerPercent: Math.round((getSkillPowerMultiplier() - 1) * 100),
-        autoBuyerExtraPurchases: getUpgradeLevel("automationCore") + (gameState.milestonePerks?.autobuyer_speed ? 1 : 0),
+        autoBuyerExtraPurchases: getUpgradeLevel("automationCore"),
         goldenSnusAvailable: Date.now() < Number(gameState.goldenSnusAvailableUntil || 0),
         goldenSnusReward: Math.max(0, Math.floor(Number(gameState.goldenSnusReward || 0))),
         comboBonusPercent: Math.round((computeComboMultiplier() - 1) * 100),
@@ -1218,7 +1245,7 @@ export function runAutoBuyerTick() {
     if (!gameState.autoBuyerUnlocked || !gameState.autoBuyerEnabled) return 0;
 
     let purchases = 0;
-    const bonusPurchases = getUpgradeLevel("automationCore") + (gameState.milestonePerks?.autobuyer_speed ? 1 : 0);
+    const bonusPurchases = getUpgradeLevel("automationCore");
     const purchaseCap = AUTO_BUYER_MAX_PURCHASES_PER_TICK + bonusPurchases;
 
     while (purchases < purchaseCap) {
@@ -1424,28 +1451,10 @@ export function calculateCps() {
 function getLateGameClickShare() {
     const totalBuildings = getTotalBuildingsOwned();
     const prestigeLevel = Math.max(0, Math.floor(Number(gameState.prestigeCookies) || 0));
-    const milestoneBonus = gameState.milestonePerks?.skill_power ? 0.005 : 0;
     const buildingShare = Math.min(0.03, totalBuildings * 0.00012);
     const prestigeShare = Math.min(0.02, prestigeLevel * 0.0007);
 
-    return Math.min(0.06, 0.01 + buildingShare + prestigeShare + milestoneBonus);
-}
-
-export function getMilestoneProgress(milestoneId) {
-    const milestone = milestones.find((entry) => entry.id === milestoneId);
-    if (!milestone) return { current: 0, target: 0, completed: false, claimed: false };
-
-    const current = Number(milestone.progress(gameState)) || 0;
-    const target = milestone.target;
-    const completed = current >= target;
-    const claimed = Boolean(gameState.milestonesClaimed[milestone.id]);
-
-    return {
-        current,
-        target,
-        completed,
-        claimed
-    };
+    return Math.min(0.06, 0.01 + buildingShare + prestigeShare);
 }
 
 export function getQuestProgress(questId) {
@@ -1466,37 +1475,42 @@ export function getQuestProgress(questId) {
     };
 }
 
-export function claimAvailableMilestones() {
-    const claimedNow = [];
+export function getAchievementProgress(achievementId) {
+    const achievement = achievements.find((entry) => entry.id === achievementId);
+    if (!achievement) return null;
 
-    if (!gameState.milestonePerks || typeof gameState.milestonePerks !== "object") {
-        gameState.milestonePerks = {};
-    }
+    const current = Math.max(0, Number(achievement.progress(gameState)) || 0);
+    const target = Math.max(1, Number(achievement.target) || 1);
+    const progressRatio = Math.min(1, current / target);
+    const unlocked = Boolean(gameState.achievementsUnlocked[achievement.id]);
 
-    milestones.forEach((milestone) => {
-        const status = getMilestoneProgress(milestone.id);
-        if (!status.completed || status.claimed) return;
+    return {
+        ...achievement,
+        current,
+        target,
+        progressRatio,
+        unlocked
+    };
+}
 
-        gameState.milestonesClaimed[milestone.id] = true;
-        const rewardCookies = Number(milestone.rewardCookies || 0);
-        const rewardDiamonds = Number(milestone.rewardDiamonds || 0);
+export function getAchievementsStatus() {
+    syncAchievementStatsFromState();
+    return achievements
+        .map((achievement) => getAchievementProgress(achievement.id))
+        .filter(Boolean);
+}
 
-        if (rewardCookies > 0) {
-            addCookies(rewardCookies);
-        }
+export function unlockAvailableAchievements() {
+    const unlockedNow = [];
 
-        if (rewardDiamonds > 0) {
-            gameState.diamonds += rewardDiamonds;
-        }
-
-        if (milestone.rewardPerk) {
-            gameState.milestonePerks[milestone.rewardPerk] = true;
-        }
-
-        claimedNow.push({ id: milestone.id, label: milestone.label, rewardCookies, rewardDiamonds });
+    achievements.forEach((achievement) => {
+        const progress = getAchievementProgress(achievement.id);
+        if (!progress || progress.unlocked || progress.current < progress.target) return;
+        gameState.achievementsUnlocked[achievement.id] = true;
+        unlockedNow.push(progress);
     });
 
-    return claimedNow;
+    return unlockedNow;
 }
 
 export function claimAvailableQuests() {
@@ -1610,6 +1624,7 @@ export function buyBuilding(buildingId) {
     if (gameState.cookies >= totalCost && quantity > 0) {
         gameState.cookies -= totalCost;
         data.owned = owned + quantity;
+        syncAchievementStatsFromState();
         return true;
     }
 

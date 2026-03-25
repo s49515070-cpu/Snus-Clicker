@@ -1809,7 +1809,7 @@ function testSpendAndAwardCookiesHelpers() {
   assert.equal(gameState.cookies, 300, 'helpers should update the live cookie bank correctly');
 }
 
-function testGoldenSnusClaimRewardsCookies() {
+function testGoldenSnusBonusIsDisabled() {
   resetEngineState();
   const now = Date.now();
   gameState.goldenSnusAvailableUntil = now + 5000;
@@ -1820,9 +1820,10 @@ function testGoldenSnusClaimRewardsCookies() {
   const reward = claimGoldenSnus();
   const state = getGoldenSnusState();
 
-  assert.equal(reward, 1234, 'golden snus should return configured reward');
-  assert.equal(gameState.cookies, before + 1234, 'golden snus claim should add cookies');
-  assert.equal(state.available, false, 'golden snus should no longer be available after claim');
+  assert.equal(reward, 0, 'golden snus should not grant rewards anymore');
+  assert.equal(gameState.cookies, before, 'golden snus claim should no longer add cookies');
+  assert.equal(state.available, false, 'golden snus should always remain unavailable');
+  assert.equal(state.reward, 0, 'golden snus state reward should always be zero');
 }
 
 async function run() {
@@ -1881,7 +1882,7 @@ testBuyModeSanitizesFractionalValues();;
   testLeSnusFeatureRulesReflectPublicCoinRanges();
   testLeSnusLuckUpgradeKeepsOriginalSpinLabel();
   testLeSnusZeroStakeMentionsDiamonds();
-  testGoldenSnusClaimRewardsCookies();
+  testGoldenSnusBonusIsDisabled();
   testConfigClampingAndPersistence();
   testConfigReset();
   testLocalizedContentKeysForAchievementsAndQuests();

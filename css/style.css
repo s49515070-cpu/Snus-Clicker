@@ -63,6 +63,81 @@ body {
     margin-top: 4px;
 }
 
+#diamondCount.reward-counter-pulse {
+    animation: rewardCounterPulse 0.9s ease;
+}
+
+.reward-popup,
+.reward-fly,
+.reward-spark {
+    position: fixed;
+    z-index: 210;
+    pointer-events: none;
+}
+
+.reward-popup {
+    transform: translate(-50%, -50%);
+    font-weight: 800;
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 999px;
+    padding: 6px 12px;
+    box-shadow: 0 10px 26px rgba(99, 102, 241, 0.22);
+    animation: rewardPopupRise 1.4s ease forwards;
+}
+
+.reward-fly {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ffffff 0%, #f0abfc 26%, #a855f7 100%);
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.7);
+    transform: translate(-50%, -50%);
+    animation: rewardFlyToCounter 0.85s cubic-bezier(.2,.85,.2,1) forwards;
+}
+
+.reward-spark {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0.6);
+    background: radial-gradient(circle, rgba(255,255,255,0.95) 0, rgba(236,72,153,0.8) 34%, rgba(168,85,247,0) 72%);
+    animation: rewardSpark 0.8s ease-out forwards;
+}
+
+@keyframes rewardPopupRise {
+    0% { opacity: 0; transform: translate(-50%, -25%); }
+    14% { opacity: 1; transform: translate(-50%, -50%); }
+    80% { opacity: 1; transform: translate(-50%, -95%); }
+    100% { opacity: 0; transform: translate(-50%, -130%); }
+}
+
+@keyframes rewardFlyToCounter {
+    0% {
+        opacity: 0.2;
+        transform: translate(-50%, -50%) scale(0.6);
+    }
+    22% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--reward-dx)), calc(-50% + var(--reward-dy))) scale(0.15);
+    }
+}
+
+@keyframes rewardSpark {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+    28% { opacity: 1; transform: translate(-50%, -50%) scale(1.35); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(2.1); }
+}
+
+@keyframes rewardCounterPulse {
+    0%, 100% { text-shadow: 0 0 0 rgba(192, 132, 252, 0); }
+    40% { text-shadow: 0 0 14px rgba(192, 132, 252, 0.9); }
+}
+
 .world-section button {
     margin-left: 10px;
     padding: 6px 12px;

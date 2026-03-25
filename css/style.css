@@ -2059,6 +2059,165 @@ body.high-contrast {
     transform-origin: center;
 }
 
+/* ===============================
+   MINIMAL FLAT UI OVERRIDES
+=================================*/
+:root {
+    --flat-bg: #f3f4f6;
+    --flat-surface: #ffffff;
+    --flat-muted: #e5e7eb;
+    --flat-text: #111827;
+    --flat-text-soft: #4b5563;
+    --flat-accent: #2563eb;
+}
+
+body {
+    background: var(--flat-bg) !important;
+    color: var(--flat-text);
+}
+
+button,
+input,
+select,
+textarea,
+.glass,
+.highlight-panel,
+.building-card,
+.combo-hud,
+.world-picker-item,
+.prestige-upgrade,
+.achievement-item,
+.inventory-active-effects,
+.action-bar,
+.action-group,
+.auto-buyer-mode-controls,
+.quest-item,
+.offline-reward-details,
+.trophy-path-item,
+.diamond-shop,
+.diamond-shop-item,
+.prestige-talent-box,
+.prestige-talent-node,
+.slot-panel,
+.wordle-panel,
+.slot-balance-card,
+.slot-paytable,
+.slot-log,
+.slot-board,
+.slot-feature-list,
+.settings-panel,
+.achievements-panel,
+.prestige-panel,
+.world-picker-panel,
+.trophy-path-panel,
+.offline-reward-panel {
+    border: none !important;
+    box-shadow: none !important;
+    background-image: none !important;
+    backdrop-filter: none !important;
+}
+
+button {
+    border-radius: 10px;
+    background: var(--flat-surface) !important;
+    color: var(--flat-text) !important;
+}
+
+button:hover,
+button:active {
+    transform: none;
+    filter: none;
+    background: var(--flat-muted) !important;
+}
+
+.game-container,
+.building-column,
+.cookie-container,
+.action-bar,
+.action-group,
+.settings-panel,
+.achievements-list,
+.world-picker-list,
+.quest-list,
+.diamond-shop-list,
+.prestige-talent-tree,
+.slot-machine-shell {
+    gap: 12px;
+}
+
+.building-card,
+.world-picker-item,
+.prestige-upgrade,
+.achievement-item,
+.quest-item,
+.diamond-shop-item,
+.prestige-talent-node,
+.trophy-path-item,
+.slot-balance-card,
+.offline-reward-details {
+    background: var(--flat-surface) !important;
+}
+
+.combo-bar,
+.achievement-progress-bar {
+    background: var(--flat-muted);
+}
+
+.combo-bar-fill,
+.achievement-progress-bar span,
+.auto-buyer-mode-buttons button.is-selected,
+#autoBuyerButton.is-active {
+    background: var(--flat-accent) !important;
+    color: #ffffff !important;
+}
+
+.slot-launcher-button,
+.wordle-launcher-button,
+.golden-snus-button,
+.trophy-path-button {
+    background: var(--flat-surface) !important;
+    color: var(--flat-text) !important;
+}
+
+#autosaveIndicator,
+.slot-mode-badge,
+.boost-status,
+.offline-reward-message,
+.offline-reward-details,
+.quest-description,
+.quest-progress,
+.quest-reward,
+.diamond-shop-description,
+.diamond-shop-meta,
+.trophy-path-state,
+.achievement-meta,
+.achievement-description,
+.achievement-progress,
+.achievement-status,
+.slot-subtitle {
+    color: var(--flat-text-soft) !important;
+    text-shadow: none !important;
+}
+
+#cookieClickArea::after,
+.reward-spark,
+.reward-fly,
+.trophy-path-list::before,
+.trophy-path-node {
+    display: none !important;
+}
+
+#mainCookie,
+.click-effect,
+.reward-popup,
+.slot-launcher-button,
+.wordle-launcher-button,
+.trophy-prestige-button {
+    filter: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+}
+
 .slot-board[data-phase="spinning"] {
     filter: saturate(1.08) contrast(1.03);
 }
@@ -3173,4 +3332,15 @@ button:focus-visible {
         min-height: 56px;
         font-size: 1.06rem;
     }
+}
+
+/* FINAL OVERRIDES: force flat/minimal look */
+*, *::before, *::after {
+    border: none !important;
+    box-shadow: none !important;
+    background-image: none !important;
+}
+
+body {
+    background: #f3f4f6 !important;
 }

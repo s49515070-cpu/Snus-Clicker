@@ -18,6 +18,31 @@ import { createAchievementCelebrationController } from "./ui-achievement-effects
 // ===============================
 
 let autosaveTimerId;
+
+function toggleAnimatedModal(modalEl, open, animationDurationMs = 220) {
+    if (!modalEl) return;
+
+    if (open) {
+        modalEl.hidden = false;
+        const raf = typeof globalThis.requestAnimationFrame === "function"
+            ? globalThis.requestAnimationFrame.bind(globalThis)
+            : null;
+        if (raf) {
+            raf(() => modalEl.classList.add("is-open"));
+        } else {
+            modalEl.classList.add("is-open");
+        }
+        return;
+    }
+
+    modalEl.classList.remove("is-open");
+    window.setTimeout(() => {
+        if (!modalEl.classList.contains("is-open")) {
+            modalEl.hidden = true;
+        }
+    }, animationDurationMs);
+}
+
 const achievementCelebrationLayer = document.getElementById("achievementCelebrationLayer");
 const achievementCelebrationController = createAchievementCelebrationController({
     layerEl: achievementCelebrationLayer,
@@ -32,7 +57,7 @@ function initOfflineRewardModal() {
     if (!modal) return { show() {} };
 
     const hide = () => {
-        modal.hidden = true;
+        toggleAnimatedModal(modal, false, 220);
     };
 
     [closeButton, confirmButton].forEach((button) => {
@@ -66,7 +91,7 @@ function initOfflineRewardModal() {
                 });
             }
 
-            modal.hidden = false;
+            toggleAnimatedModal(modal, true, 220);
         }
     };
 }
@@ -308,7 +333,7 @@ function initTrophyPathControls() {
 
     const setOpen = (open) => {
         if (!trophyPathModal) return;
-        trophyPathModal.hidden = !open;
+        toggleAnimatedModal(trophyPathModal, open, 240);
         if (trophyPathButton) trophyPathButton.setAttribute("aria-expanded", open ? "true" : "false");
         if (open) {
             renderTrophyPath();
@@ -384,9 +409,11 @@ function initAchievementsControls() {
         if (visible) {
             achievementsModal.hidden = false;
             requestAnimationFrame(() => {
+                achievementsModal.classList.add("is-open");
                 achievementsPanel.classList.remove("is-collapsed");
             });
         } else {
+            achievementsModal.classList.remove("is-open");
             achievementsPanel.classList.add("is-collapsed");
             closeTimerId = window.setTimeout(() => {
                 if (achievementsPanel.classList.contains("is-collapsed")) {
@@ -438,9 +465,11 @@ function initInventoryControls() {
         if (visible) {
             inventoryModal.hidden = false;
             requestAnimationFrame(() => {
+                inventoryModal.classList.add("is-open");
                 inventoryPanel.classList.remove("is-collapsed");
             });
         } else {
+            inventoryModal.classList.remove("is-open");
             inventoryPanel.classList.add("is-collapsed");
             closeTimerId = window.setTimeout(() => {
                 if (inventoryPanel.classList.contains("is-collapsed")) {

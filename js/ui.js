@@ -131,6 +131,50 @@ const { renderTrophyPath } = createTrophyPathController({
     t
 });
 
+
+const animatedStatState = new WeakMap();
+
+function renderAnimatedStat(element, nextValue, formatter, durationMs = 320) {
+    if (!element) return;
+
+    const numericTarget = Number(nextValue);
+    if (!Number.isFinite(numericTarget)) {
+        element.textContent = formatter(nextValue);
+        return;
+    }
+
+    const prefersReducedMotion = document.body.classList.contains("reduced-motion");
+    const existing = animatedStatState.get(element);
+    const fromValue = existing && Number.isFinite(existing.current) ? existing.current : numericTarget;
+
+    if (prefersReducedMotion || Math.abs(numericTarget - fromValue) < 0.5) {
+        if (existing?.frameId) window.cancelAnimationFrame(existing.frameId);
+        element.textContent = formatter(numericTarget);
+        animatedStatState.set(element, { current: numericTarget, frameId: null });
+        return;
+    }
+
+    if (existing?.frameId) window.cancelAnimationFrame(existing.frameId);
+
+    const startedAt = performance.now();
+    const duration = Math.max(120, durationMs);
+    const tick = (timestamp) => {
+        const progress = Math.min(1, (timestamp - startedAt) / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = fromValue + ((numericTarget - fromValue) * eased);
+        element.textContent = formatter(current);
+        if (progress < 1) {
+            const frameId = window.requestAnimationFrame(tick);
+            animatedStatState.set(element, { current, frameId });
+            return;
+        }
+        animatedStatState.set(element, { current: numericTarget, frameId: null });
+    };
+
+    const frameId = window.requestAnimationFrame(tick);
+    animatedStatState.set(element, { current: fromValue, frameId });
+}
+
 const { renderDiamondShop } = createDiamondShopController({
     gameState,
     prestigeUpgrades,
@@ -546,10 +590,10 @@ export function renderUI(options = {}) {
 
     const cpsValue = calculateCps();
 
-    cookieCountEl.textContent = formatNumber(gameState.cookies);
-    cpsEl.textContent = formatNumber(cpsValue);
-    prestigeCountEl.textContent = gameState.prestigeCookies;
-    if (diamondCountEl) diamondCountEl.textContent = formatNumber(gameState.diamonds || 0);
+    renderAnimatedStat(cookieCountEl, gameState.cookies, formatNumber, 340);
+    renderAnimatedStat(cpsEl, cpsValue, formatNumber, 280);
+    renderAnimatedStat(prestigeCountEl, gameState.prestigeCookies, (value) => formatNumber(value), 340);
+    if (diamondCountEl) renderAnimatedStat(diamondCountEl, gameState.diamonds || 0, formatNumber, 340);
 
     const world = getWorldById(gameState.currentWorld);
     if (world) worldNameEl.textContent = world.name;
@@ -707,6 +751,32 @@ export function applyStaticTranslations() {
     if (discountButton) discountButton.textContent = t("discountBurstButton");
 }
 
+
+function setAnimatedModalState(modalEl, open, durationMs = 220) {
+    if (!modalEl) return;
+
+    if (open) {
+        modalEl.hidden = false;
+        
+        const raf = typeof globalThis.requestAnimationFrame === "function"
+            ? globalThis.requestAnimationFrame.bind(globalThis)
+            : null;
+        if (raf) {
+            raf(() => modalEl.classList.add("is-open"));
+        } else {
+            modalEl.classList.add("is-open");
+        }
+        return;
+    }
+
+    modalEl.classList.remove("is-open");
+    window.setTimeout(() => {
+        if (!modalEl.classList.contains("is-open")) {
+            modalEl.hidden = true;
+        }
+    }, durationMs);
+}
+
 function createClickEffectAt(x, y) {
     if (!clickEffectContainer) return;
 
@@ -787,7 +857,7 @@ updateBuyModeButtonState();
 
 function closeWorldPicker() {
     if (!worldPickerModal) return;
-    worldPickerModal.hidden = true;
+    setAnimatedModalState(worldPickerModal, false, 220);
 }
 
 function switchToWorld(worldId) {
@@ -865,7 +935,7 @@ function renderWorldPicker() {
 if (worldButton && worldPickerModal) {
     worldButton.addEventListener("click", () => {
         renderWorldPicker();
-        worldPickerModal.hidden = false;
+        setAnimatedModalState(worldPickerModal, true, 220);
     });
 }
 if (worldPickerClose) worldPickerClose.addEventListener("click", closeWorldPicker);

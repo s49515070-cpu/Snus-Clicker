@@ -120,6 +120,32 @@ function loadWordleState() {
     };
 }
 
+
+function setModalVisibility(modalEl, open, durationMs = 240) {
+    if (!modalEl) return;
+
+    if (open) {
+        modalEl.hidden = false;
+        
+        const raf = typeof globalThis.requestAnimationFrame === "function"
+            ? globalThis.requestAnimationFrame.bind(globalThis)
+            : null;
+        if (raf) {
+            raf(() => modalEl.classList.add("is-open"));
+        } else {
+            modalEl.classList.add("is-open");
+        }
+        return;
+    }
+
+    modalEl.classList.remove("is-open");
+    window.setTimeout(() => {
+        if (!modalEl.classList.contains("is-open")) {
+            modalEl.hidden = true;
+        }
+    }, durationMs);
+}
+
 function computeStatsSummary(state) {
     const { played, wins, currentStreak, maxStreak, distribution } = state.statistics;
     const winRate = played > 0 ? Math.round((wins / played) * 100) : 0;
@@ -408,13 +434,13 @@ export function initWordle() {
     };
 
     const openModal = () => {
-        modal.hidden = false;
+        setModalVisibility(modal, true, 240);
         floatingButton.setAttribute("aria-expanded", "true");
         render();
     };
 
     const closeModal = () => {
-        modal.hidden = true;
+        setModalVisibility(modal, false, 240);
         floatingButton.setAttribute("aria-expanded", "false");
     };
 

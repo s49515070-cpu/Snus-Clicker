@@ -53,7 +53,7 @@ import { initToastSystem, showAutosave, showToast } from "./ui-toast.js";
 import { createTrophyPathController } from "./ui-trophy.js";
 import { createDiamondShopController } from "./ui-shop.js";
 import { t } from "./i18n.js";
-import { getBackgroundColor, getNumberFormat, getHighContrast, getReducedMotion, getOnboardingHintsEnabled } from "./config.js";
+import { getBackgroundColor, getBackgroundImage, getNumberFormat, getHighContrast, getReducedMotion, getOnboardingHintsEnabled } from "./config.js";
 import { playClickSound } from "./audio.js";
 
 const cookieCountEl = document.getElementById("cookieCount");
@@ -714,6 +714,8 @@ export function applyStaticTranslations() {
         ["settingSoundLabel", t("settingSound")],
         ["settingLanguageLabel", t("settingLanguage")],
         ["settingBackgroundLabel", t("settingBackground")],
+        ["backgroundImageSelectButton", t("selectBackgroundImage")],
+        ["backgroundImageResetButton", t("resetBackground")],
         ["settingCookieHorizontalOffsetLabel", t("settingCookieHorizontalOffset")],
         ["settingAutosaveIntervalLabel", t("settingAutosaveInterval")],
         ["settingUiRefreshIntervalLabel", t("settingUiRefreshInterval")],
@@ -1050,12 +1052,24 @@ export function applyWorldTheme() {
     if (!world || !mainCookie) return;
 
     const customBackground = getBackgroundColor();
+    const customBackgroundImage = getBackgroundImage();
     document.body.style.background = customBackground || world.theme.background;
+    if (customBackgroundImage) {
+        document.body.style.backgroundImage = `url("${customBackgroundImage}")`;
+        document.body.style.backgroundPosition = "center";
+        document.body.style.backgroundSize = "cover";
+        document.body.style.backgroundRepeat = "no-repeat";
+    } else {
+        document.body.style.backgroundImage = "";
+        document.body.style.backgroundPosition = "";
+        document.body.style.backgroundSize = "";
+        document.body.style.backgroundRepeat = "";
+    }
     document.body.classList.toggle("reduced-motion", getReducedMotion());
     document.body.classList.toggle("high-contrast", getHighContrast());
     applyCookieHorizontalOffset();
     mainCookie.src = world.cookieImage;
-    mainCookie.style.filter = `drop-shadow(0 0 20px ${world.theme.glow})`;
+    mainCookie.style.filter = "none";
 }
 
 export { showAutosave, showToast };

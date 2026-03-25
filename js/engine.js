@@ -1278,6 +1278,7 @@ function getNormalizedCandidateScore(candidate, candidates, key) {
 function getAutoBuyerChoice() {
     const strategy = getAutoBuyerStrategy();
     const availableBudget = gameState.cookies;
+    const baselineCps = calculateCps();
 
     const candidates = buildings
         .map((building) => {
@@ -1290,8 +1291,11 @@ function getAutoBuyerChoice() {
             const cost = Number(preview.totalCost || 0);
             if (cost <= 0 || preview.quantity < 1) return null;
 
-            const synergyBonusPercent = Math.max(0, Number(getBuildingSynergyBonusPercent(building.id) || 0));
-            const cpsGain = building.baseCps * (1 + synergyBonusPercent / 100);
+            data.owned = owned + 1;
+            const projectedCps = calculateCps();
+            data.owned = owned;
+
+            const cpsGain = Math.max(0, projectedCps - baselineCps);
             const valueScore = cost > 0 && Number.isFinite(cpsGain) ? cpsGain / cost : 0;
             const affordabilityScore = cost > 0 ? 1 / cost : 0;
             const paybackSeconds = cpsGain > 0 ? cost / cpsGain : Number.POSITIVE_INFINITY;

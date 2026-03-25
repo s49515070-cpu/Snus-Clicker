@@ -55,9 +55,10 @@ export function createDiamondShopController({
             const canAfford = !maxed && (gameState.diamonds || 0) >= cost;
 
             entry.title.textContent = `${upgrade.name} (${t("levelShort")} ${level}/${upgrade.maxLevel})`;
-            entry.meta.textContent = maxed ? t("maxReached") : `${t("cost")}: ${cost} ${t("diamonds")}`;
+            entry.meta.textContent = maxed ? t("shopAlreadyPurchased") : `${t("cost")}: ${cost} ${t("diamonds")}`;
             entry.card.classList.toggle("is-affordable", canAfford);
             entry.card.classList.toggle("is-unaffordable", !canAfford);
+            entry.card.classList.toggle("is-maxed", maxed);
             entry.card.disabled = maxed;
         });
     }

@@ -66,9 +66,12 @@ button:focus-visible {
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    margin: 10px 12px;
-    padding: 8px 10px;
+    margin: 10px 12px 6px;
+    padding: 0;
     border: none;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
 }
 
 .stats div {
@@ -1670,6 +1673,12 @@ body.high-contrast {
     cursor: default;
 }
 
+.diamond-shop-item.is-maxed {
+    opacity: 0.45;
+    border-style: dashed;
+    filter: saturate(0.2);
+}
+
 .diamond-shop-title {
     font-weight: 800;
 }
@@ -2982,9 +2991,9 @@ button:focus-visible {
     position: sticky;
     top: 8px;
     z-index: 80;
-    border-radius: var(--ui-radius);
-    box-shadow: var(--ui-shadow);
-    background: rgba(255, 255, 255, 0.86);
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
 }
 
 .stats {
@@ -2993,10 +3002,10 @@ button:focus-visible {
 }
 
 .stats div {
-    padding: 8px 10px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.62);
-    border: 1px solid rgba(148, 163, 184, 0.25);
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: 0;
 }
 
 .game-container {

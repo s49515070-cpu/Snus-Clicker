@@ -108,6 +108,7 @@ let lastSlowPanelRenderAt = 0;
 const SLOW_PANEL_REFRESH_MS = 600;
 const clickEffectPool = [];
 const activeClickEffects = new Set();
+const pendingActionButtons = new WeakSet();
 
 const { renderBuildings, refreshBuildingsIfNeeded } = createBuildingsUIController({
     gameState,
@@ -328,11 +329,17 @@ function renderBoostStatus() {
     if (!boostButton || !boostStatusEl) return;
     const status = getBoostStatus();
     boostButton.disabled = !status.ready;
+    boostButton.classList.toggle("is-active", status.active);
+    boostButton.classList.toggle("is-cooldown", !status.ready || status.active);
+    boostButton.classList.toggle("is-disabled", pendingActionButtons.has(boostButton));
 
     if (clickBurstButton) {
         const clickActive = status.clickBurstActiveMs > 0;
         const clickCooldown = status.clickBurstCooldownMs > 0;
         clickBurstButton.disabled = clickCooldown;
+        clickBurstButton.classList.toggle("is-active", clickActive);
+        clickBurstButton.classList.toggle("is-cooldown", clickCooldown || clickActive);
+        clickBurstButton.classList.toggle("is-disabled", pendingActionButtons.has(clickBurstButton));
         if (clickActive) {
             clickBurstButton.textContent = t("clickBurstButtonActive", { seconds: Math.ceil(status.clickBurstActiveMs / 1000) });
         } else if (clickCooldown) {
@@ -346,6 +353,9 @@ function renderBoostStatus() {
         const discountActive = status.discountBurstActiveMs > 0;
         const discountCooldown = status.discountBurstCooldownMs > 0;
         discountBurstButton.disabled = discountCooldown;
+        discountBurstButton.classList.toggle("is-active", discountActive);
+        discountBurstButton.classList.toggle("is-cooldown", discountCooldown || discountActive);
+        discountBurstButton.classList.toggle("is-disabled", pendingActionButtons.has(discountBurstButton));
         if (discountActive) {
             discountBurstButton.textContent = t("discountBurstButtonActive", { seconds: Math.ceil(status.discountBurstActiveMs / 1000) });
         } else if (discountCooldown) {
@@ -372,12 +382,14 @@ function renderAutoBuyerState() {
     if (!gameState.autoBuyerUnlocked) {
         autoBuyerButton.textContent = t("autoBuyerUnlock", { cost: formatNumber(AUTO_BUYER_UNLOCK_COST) });
         autoBuyerButton.classList.remove("is-active");
+        autoBuyerButton.classList.toggle("is-disabled", pendingActionButtons.has(autoBuyerButton));
         if (autoBuyerModeControls) autoBuyerModeControls.hidden = true;
         return;
     }
 
     autoBuyerButton.textContent = gameState.autoBuyerEnabled ? t("autoBuyerOn") : t("autoBuyerOff");
     autoBuyerButton.classList.toggle("is-active", gameState.autoBuyerEnabled);
+    autoBuyerButton.classList.toggle("is-disabled", pendingActionButtons.has(autoBuyerButton));
 
     const strategy = getAutoBuyerStrategy();
     if (autoBuyerModeControls) autoBuyerModeControls.hidden = false;
@@ -926,30 +938,48 @@ if (typeof document.addEventListener === "function") {
 
 if (boostButton) {
     boostButton.addEventListener("click", () => {
+        if (pendingActionButtons.has(boostButton)) return;
+        pendingActionButtons.add(boostButton);
         if (activateProductionBoost()) showToast(t("boostActivated"), 1200, "success");
+        renderUI();
+        setTimeout(() => pendingActionButtons.delete(boostButton), 180);
     });
 }
 
 if (clickBurstButton) {
     clickBurstButton.addEventListener("click", () => {
+        if (pendingActionButtons.has(clickBurstButton)) return;
+        pendingActionButtons.add(clickBurstButton);
         if (activateClickBurst()) showToast(t("clickBurstActivated"), 1200, "success");
+        renderUI();
+        setTimeout(() => pendingActionButtons.delete(clickBurstButton), 180);
     });
 }
 
 if (discountBurstButton) {
     discountBurstButton.addEventListener("click", () => {
+        if (pendingActionButtons.has(discountBurstButton)) return;
+        pendingActionButtons.add(discountBurstButton);
         if (activateDiscountBurst()) showToast(t("discountBurstActivated"), 1200, "success");
+        renderUI();
+        setTimeout(() => pendingActionButtons.delete(discountBurstButton), 180);
     });
 }
 
 if (autoBuyerButton) {
     autoBuyerButton.addEventListener("click", () => {
+        if (pendingActionButtons.has(autoBuyerButton)) return;
+        pendingActionButtons.add(autoBuyerButton);
         if (!gameState.autoBuyerUnlocked) {
             const unlocked = unlockAutoBuyer();
             showToast(unlocked ? t("autoBuyerUnlocked") : t("autoBuyerNeedSnus", { cost: formatNumber(AUTO_BUYER_UNLOCK_COST) }), 1500, unlocked ? "success" : "warning");
+            renderUI();
+            setTimeout(() => pendingActionButtons.delete(autoBuyerButton), 180);
             return;
         }
         setAutoBuyerEnabled(!gameState.autoBuyerEnabled);
+        renderUI();
+        setTimeout(() => pendingActionButtons.delete(autoBuyerButton), 180);
     });
 }
 

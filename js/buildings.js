@@ -3,72 +3,9 @@
 // Skalierend, Icon-ready, erweiterbar
 // =====================================
 
-export const buildings = [
-    {
-        id: "cursor",
-        name: "Cursor",
-        baseCost: 12,
-        baseCps: 0.1,
-        growth: 1.17,
-        icon: "assets/buildings/cursor.png",
-        side: "left"
-    },
-    {
-        id: "farm",
-        name: "Snus Farm",
-        baseCost: 90,
-        baseCps: 1,
-        growth: 1.17,
-        icon: "assets/buildings/farm.png",
-        side: "right"
-    },
-    {
-        id: "factory",
-        name: "Snus Factory",
-        baseCost: 1100,
-        baseCps: 10,
-        growth: 1.17,
-        icon: "assets/buildings/factory.png",
-        side: "left"
-    },
-    {
-        id: "temple",
-        name: "Snus Temple",
-        baseCost: 8800,
-        baseCps: 95,
-        growth: 1.165,
-        icon: "assets/buildings/temple.png",
-        side: "right"
-            },
-    {
-        id: "lab",
-        name: "Snus Lab",
-        baseCost: 64000,
-        baseCps: 700,
-        growth: 1.168,
-        icon: "assets/buildings/factory.png",
-        side: "left"
-    },
-    {
-        id: "exchange",
-        name: "Snus Exchange",
-        baseCost: 420000,
-        baseCps: 4500,
-        growth: 1.17,
-        icon: "assets/buildings/temple.png",
-        side: "right"
-    },
-    {
-        id: "orbital",
-        name: "Orbital Refinery",
-        baseCost: 3000000,
-        baseCps: 32000,
-        growth: 1.172,
-        icon: "assets/buildings/temple.png",
-        side: "left"
-    }
-    
-];
+import { BUILDING_BALANCE } from "../data/balance.js";
+
+export const buildings = BUILDING_BALANCE.map((building) => ({ ...building }));
 
 
 // =====================================

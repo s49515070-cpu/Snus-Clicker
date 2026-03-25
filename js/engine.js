@@ -6,18 +6,19 @@
 import { buildings, getPurchaseCost, getBuildingCps } from "./buildings.js";
 import { getWorldById, worlds, isWorldUnlocked } from "./worlds.js";
 import { inventoryItems } from "./items.js";
+import { BUILDING_SYNERGY_BALANCE, ECONOMY_BALANCE, PRESTIGE_UPGRADE_BALANCE } from "../data/balance.js";
 
-export const PRESTIGE_THRESHOLD = 2_000_000;
-export const PRESTIGE_STEP_COST = 800_000;
+export const PRESTIGE_THRESHOLD = ECONOMY_BALANCE.prestigeThreshold;
+export const PRESTIGE_STEP_COST = ECONOMY_BALANCE.prestigeStepCost;
 const ACTIVE_BOOST_DURATION_MS = 30_000;
 const ACTIVE_BOOST_COOLDOWN_MS = 30_000;
-const ACTIVE_BOOST_MULTIPLIER = 3;
-const CLICK_BURST_MULTIPLIER = 4;
-const DISCOUNT_BURST_RATIO = 0.25;
+const ACTIVE_BOOST_MULTIPLIER = ECONOMY_BALANCE.activeBoostMultiplier;
+const CLICK_BURST_MULTIPLIER = ECONOMY_BALANCE.clickBurstMultiplier;
+const DISCOUNT_BURST_RATIO = ECONOMY_BALANCE.discountBurstRatio;
 const CLICK_COMBO_WINDOW_MS = 900;
 const CLICK_COMBO_MAX_LEVEL = 50;
-const EARLY_RAMP_MAX_CLICKS = 180;
-const EARLY_RAMP_MAX_MULTIPLIER = 2.2;
+const EARLY_RAMP_MAX_CLICKS = ECONOMY_BALANCE.earlyRampMaxClicks;
+const EARLY_RAMP_MAX_MULTIPLIER = ECONOMY_BALANCE.earlyRampMaxMultiplier;
 const GOLDEN_SNUS_DURATION_MS = 12_000;
 const GOLDEN_SNUS_BASE_COOLDOWN_MS = 50_000;
 const GOLDEN_SNUS_RANDOM_COOLDOWN_MS = 40_000;
@@ -35,45 +36,45 @@ export const prestigeUpgrades = [
         id: "clickMastery",
         name: "Click Mastery",
         description: "+12% Klickstärke pro Level",
-        baseCost: 5,
-        growth: 1.9,
-        maxLevel: 10,
+        baseCost: PRESTIGE_UPGRADE_BALANCE.clickMastery.baseCost,
+        growth: PRESTIGE_UPGRADE_BALANCE.clickMastery.growth,
+        maxLevel: PRESTIGE_UPGRADE_BALANCE.clickMastery.maxLevel,
         type: "click"
     },
     {
         id: "snusAlchemy",
         name: "Snus Alchemy",
         description: "+3% CPS pro Level",
-        baseCost: 8,
-        growth: 2.1,
-        maxLevel: 10,
+        baseCost: PRESTIGE_UPGRADE_BALANCE.snusAlchemy.baseCost,
+        growth: PRESTIGE_UPGRADE_BALANCE.snusAlchemy.growth,
+        maxLevel: PRESTIGE_UPGRADE_BALANCE.snusAlchemy.maxLevel,
         type: "cps"
     },
     {
         id: "automationCore",
         name: "Automation Core",
         description: "+1 Auto-Buyer Kauf pro Tick",
-        baseCost: 15,
-        growth: 2.45,
-        maxLevel: 6,
+        baseCost: PRESTIGE_UPGRADE_BALANCE.automationCore.baseCost,
+        growth: PRESTIGE_UPGRADE_BALANCE.automationCore.growth,
+        maxLevel: PRESTIGE_UPGRADE_BALANCE.automationCore.maxLevel,
         type: "automation"
     },
     {
         id: "boostOverdrive",
         name: "Boost Overdrive",
         description: "+6% Skillstärke pro Level",
-        baseCost: 18,
-        growth: 2.3,
-        maxLevel: 8,
+        baseCost: PRESTIGE_UPGRADE_BALANCE.boostOverdrive.baseCost,
+        growth: PRESTIGE_UPGRADE_BALANCE.boostOverdrive.growth,
+        maxLevel: PRESTIGE_UPGRADE_BALANCE.boostOverdrive.maxLevel,
         type: "active"
     },
     {
         id: "worldAttunement",
         name: "World Attunement",
         description: "+2% Welteneffekte pro Level",
-        baseCost: 22,
-        growth: 2.35,
-        maxLevel: 8,
+        baseCost: PRESTIGE_UPGRADE_BALANCE.worldAttunement.baseCost,
+        growth: PRESTIGE_UPGRADE_BALANCE.worldAttunement.growth,
+        maxLevel: PRESTIGE_UPGRADE_BALANCE.worldAttunement.maxLevel,
         type: "world"
     }
 ];
@@ -423,14 +424,7 @@ export const quests = [
 ];
 
 
-export const buildingSynergies = [
-    { sourceId: "farm", targetId: "cursor", bonusPerSource: 0.005, maxBonus: 0.4 },
-    { sourceId: "factory", targetId: "farm", bonusPerSource: 0.004, maxBonus: 0.5 },
-    { sourceId: "temple", targetId: "factory", bonusPerSource: 0.0035, maxBonus: 0.45 },
-    { sourceId: "lab", targetId: "temple", bonusPerSource: 0.003, maxBonus: 0.4 },
-    { sourceId: "exchange", targetId: "lab", bonusPerSource: 0.0025, maxBonus: 0.35 },
-    { sourceId: "orbital", targetId: "exchange", bonusPerSource: 0.002, maxBonus: 0.3 }
-];
+export const buildingSynergies = BUILDING_SYNERGY_BALANCE.map((entry) => ({ ...entry }));
 
 export const gameState = {
     cookies: 0,
@@ -880,7 +874,7 @@ export function buyPrestigeTalent(talentId) {
 
 export function getPrestigeMultiplierForLevel(prestigeLevel) {
     const safeLevel = Math.max(0, Math.floor(Number(prestigeLevel) || 0));
-    return 1 + (Math.log10(1 + safeLevel) * 0.16);
+    return 1 + (Math.log10(1 + safeLevel) * ECONOMY_BALANCE.prestigeLevelMultiplierLogFactor);
 }
 
 function getCpsUpgradeMultiplier() {
@@ -907,11 +901,26 @@ function getBuildingSynergyMultiplier(targetId) {
         .filter((entry) => entry.targetId === targetId)
         .reduce((sum, entry) => {
             const sourceOwned = getOwnedCount(entry.sourceId);
-            const rawBonus = sourceOwned * Number(entry.bonusPerSource || 0);
-            return sum + Math.min(Number(entry.maxBonus || 0), Math.max(0, rawBonus));
+            const maxBonus = Math.max(0, Number(entry.maxBonus || 0));
+            const linearBonus = Math.max(0, sourceOwned * Number(entry.bonusPerSource || 0));
+            const diminishingBonus = maxBonus <= 0
+                ? 0
+                : maxBonus * (1 - Math.exp(-(linearBonus / maxBonus)));
+            return sum + diminishingBonus;
         }, 0);
 
     return 1 + bonus;
+}
+
+function getLegacyRelevanceMultiplier(buildingIndex) {
+    const tierCount = Math.max(1, buildings.length - 1);
+    const tierFactor = 1 - (Math.max(0, buildingIndex) / tierCount);
+    const totalBuildings = getTotalBuildingsOwned();
+    const prestigeLevel = Math.max(0, Math.floor(Number(gameState.prestigeCookies) || 0));
+    const globalProgressBoost = (totalBuildings * ECONOMY_BALANCE.legacyRelevanceTotalBuildingsWeight)
+        + (prestigeLevel * ECONOMY_BALANCE.legacyRelevancePrestigeWeight);
+    const scaledBonus = Math.max(0, globalProgressBoost * tierFactor);
+    return 1 + Math.min(ECONOMY_BALANCE.legacyRelevanceMaxBonus, scaledBonus);
 }
 
 function getWorldModifiers() {
@@ -934,12 +943,12 @@ function getSkillPowerMultiplier() {
 
 function computeComboMultiplier(comboLevel = Number(gameState.clickCombo || 0)) {
     const safeLevel = Math.max(0, Math.floor(Number(comboLevel) || 0));
-    return 1 + Math.min(1, safeLevel * 0.02);
+    return 1 + Math.min(ECONOMY_BALANCE.comboBonusCap, safeLevel * ECONOMY_BALANCE.comboBonusPerLevel);
 }
 
 function computeComboCritBonus(comboLevel = Number(gameState.clickCombo || 0)) {
     const safeLevel = Math.max(0, Math.floor(Number(comboLevel) || 0));
-    return Math.min(0.18, safeLevel * 0.002);
+    return Math.min(ECONOMY_BALANCE.comboCritCap, safeLevel * ECONOMY_BALANCE.comboCritPerLevel);
 }
 
 function getEarlyGameRampMultiplier() {
@@ -1007,7 +1016,7 @@ function getBuildingDiscountMultiplier() {
     const burstDiscount = isDiscountBurstActive() ? DISCOUNT_BURST_RATIO : 0;
     const talentDiscount = getPrestigeTalentEffects().discountBonusPercent / 100;
     const itemDiscount = getInventoryEffectBonuses().upgradeDiscountRatio;
-    return Math.max(0.4, 1 - worldDiscount - burstDiscount - talentDiscount - itemDiscount);
+    return Math.max(ECONOMY_BALANCE.minBuildingDiscountMultiplier, 1 - worldDiscount - burstDiscount - talentDiscount - itemDiscount);
 }
 
 export function getEffectivePurchasePreview(building, owned, mode, cookies = gameState.cookies) {
@@ -1378,7 +1387,7 @@ export function getPotentialPrestigeGain() {
 
 export function getPrestigeCostForLevel(currentPrestigeLevel) {
     const level = Math.max(0, Math.floor(Number(currentPrestigeLevel) || 0));
-    const growthMultiplier = Math.pow(1.15, level);
+    const growthMultiplier = Math.pow(ECONOMY_BALANCE.prestigeCostGrowth, level);
     const linearRamp = level * PRESTIGE_STEP_COST;
     const baseCost = Math.floor((PRESTIGE_THRESHOLD * growthMultiplier) + linearRamp);
     return Math.floor(baseCost * getInventoryEffectBonuses().prestigeCostMultiplier);
@@ -1515,11 +1524,12 @@ export function buyPrestigeUpgrade(upgradeId) {
 export function calculateCps() {
     let total = 0;
 
-    buildings.forEach((b) => {
+    buildings.forEach((b, index) => {
         const rawOwned = Number(gameState.buildingData[b.id]?.owned);
         const owned = Number.isFinite(rawOwned) && rawOwned >= 0 ? Math.floor(rawOwned) : 0;
         const synergyMultiplier = getBuildingSynergyMultiplier(b.id);
-        total += getBuildingCps(b, owned) * synergyMultiplier;
+        const legacyMultiplier = getLegacyRelevanceMultiplier(index);
+        total += getBuildingCps(b, owned) * synergyMultiplier * legacyMultiplier;
     });
 
     const worldModifiers = getWorldModifiers();
@@ -1537,10 +1547,19 @@ export function calculateCps() {
 function getLateGameClickShare() {
     const totalBuildings = getTotalBuildingsOwned();
     const prestigeLevel = Math.max(0, Math.floor(Number(gameState.prestigeCookies) || 0));
-    const buildingShare = Math.min(0.03, totalBuildings * 0.00012);
-    const prestigeShare = Math.min(0.02, prestigeLevel * 0.0007);
+    const buildingShare = Math.min(
+        ECONOMY_BALANCE.lateGameClickBuildingShareCap,
+        totalBuildings * ECONOMY_BALANCE.lateGameClickBuildingSharePerBuilding
+    );
+    const prestigeShare = Math.min(
+        ECONOMY_BALANCE.lateGameClickPrestigeShareCap,
+        prestigeLevel * ECONOMY_BALANCE.lateGameClickPrestigeSharePerLevel
+    );
 
-    return Math.min(0.06, 0.01 + buildingShare + prestigeShare);
+    return Math.min(
+        ECONOMY_BALANCE.lateGameClickShareCap,
+        ECONOMY_BALANCE.lateGameClickBaseShare + buildingShare + prestigeShare
+    );
 }
 
 export function getQuestProgress(questId) {

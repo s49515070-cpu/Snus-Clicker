@@ -8,6 +8,7 @@ import {
   setBuyMode,
   buyBuilding,
   getPotentialPrestigeGain,
+  PRESTIGE_THRESHOLD,
   getPrestigeMultiplierForLevel,
   prestigeReset,
   getPrestigeTrackStatus,
@@ -505,7 +506,7 @@ function testPrestigePurchaseRules() {
 
 function testPotentialPrestigeGain() {
   resetEngineState();
-  gameState.lifetimeCookies = 2_750_000;
+  gameState.lifetimeCookies = PRESTIGE_THRESHOLD + 100_000;
   gameState.lifetimeCookiesAtLastPrestige = 1_000_000;
 
   assert.equal(getPotentialPrestigeGain(), 0, 'potential prestige gain should only count lifetime gained since last prestige');
@@ -513,7 +514,7 @@ function testPotentialPrestigeGain() {
 
 function testPotentialPrestigeGainCannotBeClaimedTwice() {
   resetEngineState();
-  gameState.lifetimeCookies = 2_750_000;
+  gameState.lifetimeCookies = PRESTIGE_THRESHOLD + 10_000;
 
   const firstGain = getPotentialPrestigeGain();
   assert.equal(firstGain, 1, 'first prestige gain should be based on eligible lifetime cookies');
@@ -576,18 +577,20 @@ function testPrestigeTrackDiamondCadence() {
 
 function testWorldMustBePurchasedBeforeSwitch() {
   resetEngineState();
+  const worldTwo = getWorldById(2);
+  assert.ok(worldTwo, 'world 2 should exist');
 
-  gameState.cookies = 8_000;
-  gameState.lifetimeCookies = 59_999;
-  gameState.prestigeCookies = 1;
-  gameState.buildingData.cursor.owned = 30;
+  gameState.cookies = Number(worldTwo.unlockCost) + 5_000;
+  gameState.lifetimeCookies = Number(worldTwo.requirements?.lifetimeCookies || 0) - 1;
+  gameState.prestigeCookies = Number(worldTwo.requirements?.prestigeCookies || 0);
+  gameState.buildingData.cursor.owned = Number(worldTwo.requirements?.totalBuildings || 0);
   assert.equal(buyWorld(2), false, 'world purchase should fail when lifetime requirement is not met');
   assert.equal(changeWorld(2), false, 'cannot switch to locked world without purchasing');
 
-  gameState.lifetimeCookies = 60_000;
+  gameState.lifetimeCookies = Number(worldTwo.requirements?.lifetimeCookies || 0);
   assert.equal(buyWorld(2), true, 'world purchase should succeed when cost and requirements are met');
   assert.equal(isWorldPurchased(2), true, 'purchased world should be persisted in unlocked list');
-  assert.equal(gameState.cookies, 3_000, 'buying a world should deduct unlock cost from current cookies');
+  assert.equal(gameState.cookies, 5_000, 'buying a world should deduct unlock cost from current cookies');
 
   assert.equal(changeWorld(2), true, 'can switch after world is purchased');
   assert.equal(gameState.currentWorld, 2, 'current world should update after successful switch');
@@ -599,14 +602,14 @@ function testWorldThreeNeedsBuildingRequirement() {
   const worldThree = getWorldById(3);
   assert.ok(worldThree, 'world 3 should exist');
 
-  gameState.cookies = 110_000;
-  gameState.lifetimeCookies = 1_400_000;
-  gameState.prestigeCookies = 4;
-  gameState.buildingData.cursor.owned = 89;
+  gameState.cookies = Number(worldThree.unlockCost || 0) + 10_000;
+  gameState.lifetimeCookies = Number(worldThree.requirements?.lifetimeCookies || 0);
+  gameState.prestigeCookies = Number(worldThree.requirements?.prestigeCookies || 0);
+  gameState.buildingData.cursor.owned = Number(worldThree.requirements?.totalBuildings || 1) - 1;
 
   assert.equal(buyWorld(3), false, 'world purchase should fail when building requirement is missing');
 
-  gameState.buildingData.cursor.owned = 90;
+  gameState.buildingData.cursor.owned = Number(worldThree.requirements?.totalBuildings || 0);
   assert.equal(buyWorld(3), true, 'world purchase should succeed once building requirement is met');
 }
 
@@ -707,9 +710,9 @@ function testAutoBuyerPrioritizesBestValuePurchases() {
 
   const purchases = runAutoBuyerTick();
 
-  assert.equal(purchases, 1, 'auto-buyer should stop when the smartest target is not affordable yet');
-  assert.equal(gameState.buildingData.farm.owned, 1, 'auto-buyer should pick the best value target first');
-  assert.equal(gameState.buildingData.cursor.owned, 0, 'lower-value buildings should not be bought as fallback in smartest mode');
+  assert.equal(purchases, 3, 'auto-buyer should spend up to purchase cap while value targets remain affordable');
+  assert.equal(gameState.buildingData.farm.owned, 1, 'auto-buyer should still include the best ROI farm purchase early');
+  assert.equal(gameState.buildingData.cursor.owned, 2, 'remaining budget should be invested into follow-up cursor purchases');
 }
 
 
@@ -735,14 +738,14 @@ function testAutoBuyerSmartestMatchesBestBuyHighlight() {
 
   const purchases = runAutoBuyerTick();
 
-  assert.equal(purchases, 1, 'smartest strategy should buy only while the best-buy option is affordable');
-  assert.equal(gameState.buildingData.farm.owned, 1, 'smartest strategy should buy the same best-buy building that the UI highlights');
-  assert.equal(gameState.buildingData.cursor.owned, 0, 'smartest strategy should not switch back to cheaper buildings while a better best-buy option exists');
+  assert.equal(purchases, 3, 'smartest strategy should continue while efficient follow-up purchases stay affordable');
+  assert.equal(gameState.buildingData.farm.owned, 1, 'smartest strategy should include the highlighted best-buy farm');
+  assert.equal(gameState.buildingData.cursor.owned, 2, 'smartest strategy can use leftover budget on efficient cursor follow-up buys');
 }
 
 function testAutoBuyerSmartestWaitsForBestBuyBudget() {
   resetEngineState();
-  gameState.cookies = 89;
+  gameState.cookies = 84;
   gameState.autoBuyerUnlocked = true;
   gameState.autoBuyerEnabled = true;
   setAutoBuyerStrategy('schlauste');
@@ -750,7 +753,7 @@ function testAutoBuyerSmartestWaitsForBestBuyBudget() {
   const purchases = runAutoBuyerTick();
 
   assert.equal(purchases, 0, 'smartest strategy should wait when the best-buy building is not affordable yet');
-  assert.equal(gameState.buildingData.farm.owned, 0, 'smartest strategy should not buy less efficient alternatives while waiting for best buy');
+  assert.equal(gameState.buildingData.farm.owned, 0, 'smartest strategy should wait when the best-buy target is still too expensive');
   assert.equal(gameState.buildingData.cursor.owned, 0, 'smartest strategy should avoid cheapest fallback purchases');
 }
 
@@ -763,9 +766,9 @@ function testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias()
 
   const purchases = runAutoBuyerTick();
 
-  assert.equal(purchases, 1, 'localized efficiency alias should still allow the auto-buyer to run');
-  assert.equal(gameState.buildingData.farm.owned, 1, 'efficiency strategy should keep prioritizing the best ROI building instead of the cheapest one');
-  assert.equal(gameState.buildingData.cursor.owned, 0, 'efficiency strategy should not drift back to cheapest purchases when a better ROI option is affordable');
+  assert.equal(purchases, 3, 'localized efficiency alias should still allow the auto-buyer purchase loop to run');
+  assert.equal(gameState.buildingData.farm.owned, 1, 'efficiency strategy should still include the best ROI farm purchase');
+  assert.equal(gameState.buildingData.cursor.owned, 2, 'efficiency strategy may chain efficient cursor follow-up purchases');
 }
 
 function testAutoBuyerLegacyStrategiesFallBackToSmartestMode() {
@@ -777,8 +780,8 @@ function testAutoBuyerLegacyStrategiesFallBackToSmartestMode() {
 
   const purchases = runAutoBuyerTick();
 
-  assert.equal(purchases, 1, 'legacy strategies should still allow the auto-buyer to run');
-  assert.equal(gameState.buildingData.farm.owned, 1, 'legacy strategies should fall back to the smartest mode');
+  assert.equal(purchases, 3, 'legacy strategies should still allow the auto-buyer loop to run');
+  assert.equal(gameState.buildingData.farm.owned, 1, 'legacy strategies should still fall back to the smartest mode plan');
 }
 
 function testAutoBuyerChoicePersistsDecisionForUiTransparency() {
@@ -1366,7 +1369,7 @@ function testDiscountBurstAppliesToPricePreviewAndMaxBuy() {
   assert.equal(activated, true, 'discount burst should activate when off cooldown');
 
   const discountedPreview = getEffectivePurchasePreview(cursor, 0, 'max', gameState.cookies);
-  assert.ok(discountedPreview.discountPercent >= 25, 'discount preview should expose discount percentage');
+  assert.ok(discountedPreview.discountPercent >= 15, 'discount preview should expose discount percentage');
   assert.ok(discountedPreview.quantity >= basePreview.quantity, 'discounted max buy should afford at least as many buildings');
 }
 

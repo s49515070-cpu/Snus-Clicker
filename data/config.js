@@ -8,6 +8,7 @@ const DEFAULT_CONFIG = {
     autosaveIntervalMs: 5000,
     uiRefreshIntervalMs: 100,
     soundEnabled: true,
+    soundVolume: 72,
     language: "de",
     backgroundColor: "",
     reducedMotion: false,
@@ -46,6 +47,7 @@ export function loadConfig() {
         runtimeConfig.autosaveIntervalMs = clampConfigNumber(parsed.autosaveIntervalMs, 1000, 60000, DEFAULT_CONFIG.autosaveIntervalMs);
         runtimeConfig.uiRefreshIntervalMs = clampConfigNumber(parsed.uiRefreshIntervalMs, 16, 1000, DEFAULT_CONFIG.uiRefreshIntervalMs);
         runtimeConfig.soundEnabled = typeof parsed.soundEnabled === "boolean" ? parsed.soundEnabled : DEFAULT_CONFIG.soundEnabled;
+        runtimeConfig.soundVolume = clampConfigNumber(parsed.soundVolume, 0, 100, DEFAULT_CONFIG.soundVolume);
         runtimeConfig.language = parsed.language === "en" ? "en" : "de";
         runtimeConfig.backgroundColor = typeof parsed.backgroundColor === "string" ? parsed.backgroundColor : DEFAULT_CONFIG.backgroundColor;
         runtimeConfig.cookieHorizontalOffset = clampConfigNumber(parsed.cookieHorizontalOffset, -260, 260, DEFAULT_CONFIG.cookieHorizontalOffset);
@@ -85,6 +87,7 @@ export function resetRuntimeConfig() {
     runtimeConfig.autosaveIntervalMs = DEFAULT_CONFIG.autosaveIntervalMs;
     runtimeConfig.uiRefreshIntervalMs = DEFAULT_CONFIG.uiRefreshIntervalMs;
     runtimeConfig.soundEnabled = DEFAULT_CONFIG.soundEnabled;
+    runtimeConfig.soundVolume = DEFAULT_CONFIG.soundVolume;
     runtimeConfig.language = DEFAULT_CONFIG.language;
     runtimeConfig.backgroundColor = DEFAULT_CONFIG.backgroundColor;
     runtimeConfig.cookieHorizontalOffset = DEFAULT_CONFIG.cookieHorizontalOffset;
@@ -111,6 +114,16 @@ export function updateLanguage(value) {
 
 export function getSoundEnabled() {
     return runtimeConfig.soundEnabled;
+}
+
+export function updateSoundVolume(value) {
+    runtimeConfig.soundVolume = clampConfigNumber(value, 0, 100, runtimeConfig.soundVolume ?? DEFAULT_CONFIG.soundVolume);
+    saveConfig();
+    return runtimeConfig.soundVolume;
+}
+
+export function getSoundVolume() {
+    return clampConfigNumber(runtimeConfig.soundVolume, 0, 100, DEFAULT_CONFIG.soundVolume);
 }
 
 export function updateBackgroundColor(value) {

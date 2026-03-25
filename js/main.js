@@ -6,10 +6,11 @@
 import { gameLoop, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, prestigeReset, getPotentialPrestigeGain, getClaimablePrestigeTrackRewards, unlockAvailableAchievements } from "./engine.js";
 import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyCookieHorizontalOffset, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
-import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat, getOnboardingHintsEnabled, updateOnboardingHintsEnabled } from "./config.js";
+import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat, getOnboardingHintsEnabled, updateOnboardingHintsEnabled, getSoundVolume, updateSoundVolume } from "./config.js";
 import { t } from "./i18n.js";
 import { initWordle } from "./wordle.js";
 import { initSlotMachine } from "./slot-machine.js";
+import { playUiClickSound, playUiHoverSound } from "./audio.js";
 
 // ===============================
 // INITIALISIERUNG
@@ -101,6 +102,8 @@ function initSettingsControls() {
     const autosaveIntervalText = document.getElementById("autosaveIntervalText");
     const uiRefreshIntervalInput = document.getElementById("uiRefreshIntervalInput");
     const uiRefreshIntervalText = document.getElementById("uiRefreshIntervalText");
+    const soundVolumeInput = document.getElementById("soundVolumeInput");
+    const soundVolumeText = document.getElementById("soundVolumeText");
     const numberFormatInput = document.getElementById("numberFormatInput");
     const reducedMotionInput = document.getElementById("reducedMotionInput");
     const highContrastInput = document.getElementById("highContrastInput");
@@ -116,6 +119,9 @@ function initSettingsControls() {
 
         if (uiRefreshIntervalText && uiRefreshIntervalInput) {
             uiRefreshIntervalText.textContent = `${Number(uiRefreshIntervalInput.value).toLocaleString("de-DE")} ms`;
+        }
+        if (soundVolumeText && soundVolumeInput) {
+            soundVolumeText.textContent = `${Number(soundVolumeInput.value)}%`;
         }
     };
 
@@ -158,6 +164,15 @@ function initSettingsControls() {
         soundInput.value = getSoundEnabled() ? "on" : "off";
         soundInput.addEventListener("change", () => {
             updateSoundEnabled(soundInput.value === "on");
+        });
+    }
+
+    if (soundVolumeInput) {
+        soundVolumeInput.value = String(getSoundVolume());
+        syncRangeTexts();
+        soundVolumeInput.addEventListener("input", () => {
+            updateSoundVolume(soundVolumeInput.value);
+            syncRangeTexts();
         });
     }
 
@@ -237,6 +252,7 @@ function initSettingsControls() {
             const defaults = resetRuntimeConfig();
 
             if (soundInput) soundInput.value = defaults.soundEnabled ? "on" : "off";
+            if (soundVolumeInput) soundVolumeInput.value = String(defaults.soundVolume ?? 72);
             if (languageInput) languageInput.value = defaults.language;
             if (backgroundColorInput) backgroundColorInput.value = defaults.backgroundColor || "#dff6ff";
             if (autosaveIntervalInput) autosaveIntervalInput.value = String(defaults.autosaveIntervalMs);
@@ -254,6 +270,27 @@ function initSettingsControls() {
             showToast(t("settingsResetDone"), 1600, "info");
         });
     }
+}
+
+function initGlobalUiSounds() {
+    const interactiveSelector = "button, .building-card, .world-picker-option, .inventory-use-button";
+    document.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target.closest(interactiveSelector) : null;
+        if (!target) return;
+        playUiClickSound();
+    });
+
+    document.addEventListener("mouseover", (event) => {
+        const target = event.target instanceof Element ? event.target.closest("button") : null;
+        if (!target || target.dataset.hoverSoundPlayed === "1") return;
+        target.dataset.hoverSoundPlayed = "1";
+        playUiHoverSound();
+    });
+    document.addEventListener("mouseout", (event) => {
+        const target = event.target instanceof Element ? event.target.closest("button") : null;
+        if (!target) return;
+        delete target.dataset.hoverSoundPlayed;
+    });
 }
 
 
@@ -480,6 +517,7 @@ function init() {
     initAchievementsControls();
     initInventoryControls();
     initTrophyPathControls();
+    initGlobalUiSounds();
     initSaveSyncListener();
     initSlotMachine();
     initWordle();

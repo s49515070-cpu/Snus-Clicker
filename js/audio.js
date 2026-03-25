@@ -1,4 +1,4 @@
-import { getSoundEnabled } from "./config.js";
+import { getSoundEnabled, getSoundVolume } from "./config.js";
 
 const clickAudio = typeof Audio === "function" ? new Audio("assets/sounds/click.mp3") : null;
 let audioContext;
@@ -24,11 +24,13 @@ function playToneSequence(steps = []) {
     }
 
     const now = context.currentTime;
+    const master = Math.max(0, Math.min(1, (Number(getSoundVolume()) || 0) / 100));
+    if (master <= 0.001) return;
     steps.forEach((step, index) => {
         const startAt = now + Number(step.delay || 0);
         const duration = Math.max(0.02, Number(step.duration || 0.1));
         const frequency = Math.max(40, Number(step.frequency || 220));
-        const gainValue = Math.min(0.18, Math.max(0.01, Number(step.gain || 0.06)));
+        const gainValue = Math.min(0.18, Math.max(0.005, Number(step.gain || 0.06) * master));
 
         const oscillator = context.createOscillator();
         const gain = context.createGain();
@@ -46,6 +48,7 @@ function playToneSequence(steps = []) {
 
 export function playClickSound() {
     if (!getSoundEnabled() || !clickAudio) return;
+    clickAudio.volume = Math.max(0, Math.min(1, ((Number(getSoundVolume()) || 0) / 100) * 0.35));
 
     clickAudio.currentTime = 0;
 
@@ -55,6 +58,19 @@ export function playClickSound() {
             // Browser blockiert Audio ggf. ohne User-Geste.
         });
     }
+}
+
+export function playUiClickSound() {
+    playToneSequence([
+        { frequency: 420, duration: 0.04, gain: 0.05, type: "triangle", delay: 0.00 },
+        { frequency: 520, duration: 0.045, gain: 0.04, type: "sine", delay: 0.03 }
+    ]);
+}
+
+export function playUiHoverSound() {
+    playToneSequence([
+        { frequency: 680, duration: 0.025, gain: 0.02, type: "sine", delay: 0.00 }
+    ]);
 }
 
 export function playSlotSpinSound() {
@@ -70,5 +86,69 @@ export function playSlotStopSound() {
     playToneSequence([
         { frequency: 440, duration: 0.08, gain: 0.09, type: "triangle", delay: 0.00 },
         { frequency: 620, duration: 0.12, gain: 0.11, type: "sine", delay: 0.07 }
+    ]);
+}
+
+export function playSlotImpactSound() {
+    playToneSequence([
+        { frequency: 180, duration: 0.07, gain: 0.1, type: "square", delay: 0.00 },
+        { frequency: 125, duration: 0.1, gain: 0.08, type: "triangle", delay: 0.03 }
+    ]);
+}
+
+export function playSlotFallSound(variation = 0) {
+    const seed = Math.max(0, Number(variation) || 0);
+    const drift = (Math.random() * 22) - 11;
+    const base = 220 + (seed * 8);
+    playToneSequence([
+        { frequency: base + drift, duration: 0.04, gain: 0.04 + (seed * 0.0015), type: "triangle", delay: 0.00 },
+        { frequency: (base * 1.22) + drift, duration: 0.03, gain: 0.035 + (seed * 0.0012), type: "sine", delay: 0.025 }
+    ]);
+}
+
+export function playSlotWinSound() {
+    playToneSequence([
+        { frequency: 460, duration: 0.08, gain: 0.08, type: "triangle", delay: 0.00 },
+        { frequency: 620, duration: 0.1, gain: 0.1, type: "triangle", delay: 0.06 },
+        { frequency: 740, duration: 0.12, gain: 0.12, type: "sine", delay: 0.13 }
+    ]);
+}
+
+export function playSlotWinByTier(stepMultiplier = 0) {
+    const tier = Number(stepMultiplier) || 0;
+    if (tier >= 10) {
+        playSlotBigWinSound();
+        return;
+    }
+    if (tier >= 3) {
+        playToneSequence([
+            { frequency: 392, duration: 0.08, gain: 0.07, type: "triangle", delay: 0.00 },
+            { frequency: 523, duration: 0.12, gain: 0.09, type: "triangle", delay: 0.06 },
+            { frequency: 659, duration: 0.14, gain: 0.11, type: "sine", delay: 0.14 }
+        ]);
+        return;
+    }
+    playToneSequence([
+        { frequency: 500, duration: 0.055, gain: 0.05, type: "triangle", delay: 0.00 },
+        { frequency: 630, duration: 0.08, gain: 0.06, type: "sine", delay: 0.05 }
+    ]);
+}
+
+export function playSlotCascadeSound(intensity = 0) {
+    const boost = Math.min(5, Math.max(0, Number(intensity) || 0));
+    const pitchLift = boost * 16;
+    const gainBoost = boost * 0.006;
+    playToneSequence([
+        { frequency: 330 + pitchLift, duration: 0.06, gain: 0.06 + gainBoost, type: "sawtooth", delay: 0.00 },
+        { frequency: 390 + pitchLift, duration: 0.08, gain: 0.08 + gainBoost, type: "triangle", delay: 0.06 }
+    ]);
+}
+
+export function playSlotBigWinSound() {
+    playToneSequence([
+        { frequency: 330, duration: 0.1, gain: 0.08, type: "sine", delay: 0.00 },
+        { frequency: 494, duration: 0.12, gain: 0.1, type: "sine", delay: 0.08 },
+        { frequency: 659, duration: 0.16, gain: 0.13, type: "triangle", delay: 0.18 },
+        { frequency: 988, duration: 0.2, gain: 0.15, type: "triangle", delay: 0.32 }
     ]);
 }

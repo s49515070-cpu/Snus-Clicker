@@ -237,6 +237,7 @@
                 <button id="slotBetDownButton" type="button">− Einsatz</button>
                 <button id="slotBetUpButton" type="button">+ Einsatz</button>
                 <button id="slotSpinButton" type="button">🎰 Spin</button>
+                <button id="slotInfoButton" type="button" class="slot-info-trigger">ℹ️ Symbole</button>
                 <button id="slotBonusHuntButton" type="button">🎯 BonusHunt 3x</button>
                 <button id="slotRainbowSpinsButton" type="button">🌈 Rainbow Spins 50x</button>
                 <button id="slotLuckBuyButton" type="button">📷 Luck Buy 100x</button>
@@ -245,6 +246,25 @@
             </div>
 
             <div id="slotLog" class="slot-log" aria-live="polite"></div>
+        </div>
+    </div>
+
+    <div id="slotInfoModal" class="slot-info-modal" hidden>
+        <div class="slot-info-panel glass highlight-panel" role="dialog" aria-modal="true" aria-labelledby="slotInfoTitle">
+            <div class="slot-info-header">
+                <h3 id="slotInfoTitle">ℹ️ Le-Snus Symbol-Erklärung</h3>
+                <button id="slotInfoCloseButton" type="button" aria-label="Symbol-Erklärung schließen">✕</button>
+            </div>
+            <div class="slot-info-groups">
+                <section class="slot-info-group">
+                    <h4>Normale Symbole</h4>
+                    <div id="slotInfoNormalSymbols" class="slot-symbol-list"></div>
+                </section>
+                <section class="slot-info-group">
+                    <h4>Spezielle Symbole & Effekte</h4>
+                    <div id="slotInfoSpecialSymbols" class="slot-symbol-list"></div>
+                </section>
+            </div>
         </div>
     </div>
 
@@ -294,6 +314,13 @@
                 <option value="on">An</option>
                 <option value="off">Aus</option>
             </select>
+        </label>
+        <label class="settings-range-control">
+            <span>Sound-Lautstärke</span>
+            <div class="settings-range-row">
+                <input id="soundVolumeInput" type="range" min="0" max="100" step="1" value="72">
+                <small id="soundVolumeText">72%</small>
+            </div>
         </label>
         <label>
             <span id="settingLanguageLabel">Sprache</span>

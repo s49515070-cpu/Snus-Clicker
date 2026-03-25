@@ -145,7 +145,7 @@ const achievementBlueprints = [
         icon: "💸",
         titleKey: "achievementLifetimeSnusTitle",
         descriptionKey: "achievementLifetimeSnusDescription",
-        thresholds: [250_000, 2_500_000, 25_000_000],
+        thresholds: [1_500_000, 15_000_000, 90_000_000],
         progress: (state) => Number(state.lifetimeCookies || 0)
     },
     {
@@ -153,7 +153,7 @@ const achievementBlueprints = [
         icon: "🖱️",
         titleKey: "achievementTotalClicksTitle",
         descriptionKey: "achievementTotalClicksDescription",
-        thresholds: [1_000, 10_000, 50_000],
+        thresholds: [6_000, 35_000, 120_000],
         progress: (state) => Number(state.totalClicks || 0)
     },
     {
@@ -161,7 +161,7 @@ const achievementBlueprints = [
         icon: "🏗️",
         titleKey: "achievementTotalBuildingsTitle",
         descriptionKey: "achievementTotalBuildingsDescription",
-        thresholds: [40, 120, 240],
+        thresholds: [80, 220, 420],
         progress: (state) => Number(state.achievementStats?.maxTotalBuildings || 0)
     },
     {
@@ -169,7 +169,7 @@ const achievementBlueprints = [
         icon: "🌟",
         titleKey: "achievementPrestigeTitle",
         descriptionKey: "achievementPrestigeDescription",
-        thresholds: [8, 24, 60],
+        thresholds: [15, 40, 90],
         progress: (state) => Number(state.prestigeCookies || 0)
     },
     {
@@ -177,7 +177,7 @@ const achievementBlueprints = [
         icon: "💎",
         titleKey: "achievementDiamondSpendTitle",
         descriptionKey: "achievementDiamondSpendDescription",
-        thresholds: [100, 600, 2_400],
+        thresholds: [250, 1_200, 4_000],
         progress: (state) => Number(state.achievementStats?.diamondsSpent || 0)
     },
     {
@@ -185,7 +185,7 @@ const achievementBlueprints = [
         icon: "⚙️",
         titleKey: "achievementUpgradesTitle",
         descriptionKey: "achievementUpgradesDescription",
-        thresholds: [12, 30, 60],
+        thresholds: [20, 50, 100],
         progress: (state) => Object.values(state.prestigeUpgradeLevels || {}).reduce((sum, level) => (
             sum + Math.max(0, Number(level) || 0)
         ), 0)
@@ -195,7 +195,7 @@ const achievementBlueprints = [
         icon: "🔥",
         titleKey: "achievementComboTitle",
         descriptionKey: "achievementComboDescription",
-        thresholds: [25, 75, 150],
+        thresholds: [40, 110, 220],
         progress: (state) => Number(state.maxClickCombo || 0)
     },
     {
@@ -203,7 +203,7 @@ const achievementBlueprints = [
         icon: "🌍",
         titleKey: "achievementWorldsTitle",
         descriptionKey: "achievementWorldsDescription",
-        thresholds: [3, 5, 7],
+        thresholds: [3, 4, 5],
         progress: (state) => (Array.isArray(state.unlockedWorldIds) ? state.unlockedWorldIds.length : 0)
     },
     {
@@ -211,7 +211,7 @@ const achievementBlueprints = [
         icon: "🏆",
         titleKey: "achievementTrophiesTitle",
         descriptionKey: "achievementTrophiesDescription",
-        thresholds: [3, 12, 30],
+        thresholds: [8, 24, 55],
         progress: (state) => Object.values(state.prestigeTrackClaimed || {}).filter(Boolean).length
     }
 ];

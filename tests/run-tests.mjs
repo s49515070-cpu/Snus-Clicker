@@ -670,7 +670,7 @@ function testBuildingPurchaseNeedsValidId() {
 
 function testAchievementUnlocking() {
   resetEngineState();
-  gameState.lifetimeCookies = 300_000;
+  gameState.lifetimeCookies = 2_000_000;
 
   const unlocked = unlockAvailableAchievements();
   const tierOne = achievements.find((entry) => entry.id === 'lifetime_snus_tier_1');

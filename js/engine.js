@@ -925,6 +925,21 @@ function getLegacyRelevanceMultiplier(buildingIndex) {
     return 1 + Math.min(ECONOMY_BALANCE.legacyRelevanceMaxBonus, scaledBonus);
 }
 
+function getBuildingSoftcapMultiplier(owned) {
+    const safeOwned = Math.max(0, Math.floor(Number(owned) || 0));
+    const softcapStart = Math.max(1, Number(ECONOMY_BALANCE.buildingSoftcapStart) || 35);
+    const minMultiplier = Math.max(
+        0.05,
+        Math.min(1, Number(ECONOMY_BALANCE.buildingSoftcapMinMultiplier) || 0.38)
+    );
+    const strength = Math.max(0, Number(ECONOMY_BALANCE.buildingSoftcapStrength) || 0);
+
+    if (safeOwned <= softcapStart || strength <= 0) return 1;
+    const overCap = safeOwned - softcapStart;
+    const diminishingPart = Math.exp(-overCap * strength);
+    return minMultiplier + ((1 - minMultiplier) * diminishingPart);
+}
+
 function getWorldModifiers() {
     const world = getWorldById(gameState.currentWorld);
     const attunement = 1 + getUpgradeLevel("worldAttunement") * 0.02;
@@ -1532,7 +1547,8 @@ export function calculateCps() {
         const owned = Number.isFinite(rawOwned) && rawOwned >= 0 ? Math.floor(rawOwned) : 0;
         const synergyMultiplier = getBuildingSynergyMultiplier(b.id);
         const legacyMultiplier = getLegacyRelevanceMultiplier(index);
-        total += getBuildingCps(b, owned) * synergyMultiplier * legacyMultiplier;
+        const softcapMultiplier = getBuildingSoftcapMultiplier(owned);
+        total += getBuildingCps(b, owned) * synergyMultiplier * legacyMultiplier * softcapMultiplier;
     });
 
     const worldModifiers = getWorldModifiers();

@@ -4,13 +4,13 @@
 // =====================================
 
 export const BUILDING_BALANCE = [
-    { id: "cursor", name: "Cursor", baseCost: 10, baseCps: 0.11, growth: 1.145, icon: "assets/buildings/cursor.png", side: "left" },
-    { id: "farm", name: "Snus Farm", baseCost: 85, baseCps: 0.95, growth: 1.152, icon: "assets/buildings/farm.png", side: "right" },
-    { id: "factory", name: "Snus Factory", baseCost: 950, baseCps: 8.2, growth: 1.158, icon: "assets/buildings/factory.png", side: "left" },
-    { id: "temple", name: "Snus Temple", baseCost: 10_800, baseCps: 72, growth: 1.163, icon: "assets/buildings/temple.png", side: "right" },
-    { id: "lab", name: "Snus Lab", baseCost: 120_000, baseCps: 620, growth: 1.168, icon: "assets/buildings/factory.png", side: "left" },
-    { id: "exchange", name: "Snus Exchange", baseCost: 1_450_000, baseCps: 4_900, growth: 1.172, icon: "assets/buildings/temple.png", side: "right" },
-    { id: "orbital", name: "Orbital Refinery", baseCost: 17_500_000, baseCps: 37_000, growth: 1.176, icon: "assets/buildings/temple.png", side: "left" }
+    { id: "cursor", name: "Cursor", baseCost: 10, baseCps: 0.095, growth: 1.155, icon: "assets/buildings/cursor.png", side: "left" },
+    { id: "farm", name: "Snus Farm", baseCost: 90, baseCps: 0.9, growth: 1.185, icon: "assets/buildings/farm.png", side: "right" },
+    { id: "factory", name: "Snus Factory", baseCost: 1_050, baseCps: 6.7, growth: 1.176, icon: "assets/buildings/factory.png", side: "left" },
+    { id: "temple", name: "Snus Temple", baseCost: 13_500, baseCps: 57, growth: 1.186, icon: "assets/buildings/temple.png", side: "right" },
+    { id: "lab", name: "Snus Lab", baseCost: 165_000, baseCps: 480, growth: 1.196, icon: "assets/buildings/factory.png", side: "left" },
+    { id: "exchange", name: "Snus Exchange", baseCost: 2_150_000, baseCps: 3_550, growth: 1.206, icon: "assets/buildings/temple.png", side: "right" },
+    { id: "orbital", name: "Orbital Refinery", baseCost: 30_000_000, baseCps: 25_500, growth: 1.216, icon: "assets/buildings/temple.png", side: "left" }
 ];
 
 export const BUILDING_SYNERGY_BALANCE = [
@@ -75,28 +75,32 @@ export const ECONOMY_BALANCE = {
     prestigeCostGrowth: 1.175,
     prestigeLevelMultiplierLogFactor: 0.125,
 
-    activeBoostMultiplier: 2.35,
-    clickBurstMultiplier: 2.9,
-    discountBurstRatio: 0.18,
+    activeBoostMultiplier: 2.05,
+    clickBurstMultiplier: 2.35,
+    discountBurstRatio: 0.16,
 
-    earlyRampMaxClicks: 220,
-    earlyRampMaxMultiplier: 1.8,
+    earlyRampMaxClicks: 260,
+    earlyRampMaxMultiplier: 1.75,
 
-    comboBonusPerLevel: 0.013,
-    comboBonusCap: 0.62,
+    comboBonusPerLevel: 0.011,
+    comboBonusCap: 0.5,
     comboCritPerLevel: 0.0014,
     comboCritCap: 0.13,
 
-    lateGameClickBaseShare: 0.008,
-    lateGameClickBuildingSharePerBuilding: 0.00008,
-    lateGameClickBuildingShareCap: 0.018,
-    lateGameClickPrestigeSharePerLevel: 0.00032,
-    lateGameClickPrestigeShareCap: 0.012,
-    lateGameClickShareCap: 0.03,
+    lateGameClickBaseShare: 0.006,
+    lateGameClickBuildingSharePerBuilding: 0.000055,
+    lateGameClickBuildingShareCap: 0.012,
+    lateGameClickPrestigeSharePerLevel: 0.00024,
+    lateGameClickPrestigeShareCap: 0.009,
+    lateGameClickShareCap: 0.022,
 
-    legacyRelevanceMaxBonus: 0.55,
-    legacyRelevancePrestigeWeight: 0.015,
-    legacyRelevanceTotalBuildingsWeight: 0.0015,
+    legacyRelevanceMaxBonus: 0.45,
+    legacyRelevancePrestigeWeight: 0.012,
+    legacyRelevanceTotalBuildingsWeight: 0.00125,
+
+    buildingSoftcapStart: 35,
+    buildingSoftcapStrength: 0.0065,
+    buildingSoftcapMinMultiplier: 0.38,
 
     minBuildingDiscountMultiplier: 0.48
 };

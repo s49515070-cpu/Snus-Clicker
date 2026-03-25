@@ -508,7 +508,7 @@ function testPotentialPrestigeGain() {
   gameState.lifetimeCookies = 2_750_000;
   gameState.lifetimeCookiesAtLastPrestige = 1_000_000;
 
-  assert.equal(getPotentialPrestigeGain(), 1, 'potential prestige gain should only count lifetime gained since last prestige');
+  assert.equal(getPotentialPrestigeGain(), 0, 'potential prestige gain should only count lifetime gained since last prestige');
 }
 
 function testPotentialPrestigeGainCannotBeClaimedTwice() {
@@ -516,10 +516,10 @@ function testPotentialPrestigeGainCannotBeClaimedTwice() {
   gameState.lifetimeCookies = 2_750_000;
 
   const firstGain = getPotentialPrestigeGain();
-  assert.equal(firstGain, 2, 'first prestige gain should be based on eligible lifetime cookies');
+  assert.equal(firstGain, 1, 'first prestige gain should be based on eligible lifetime cookies');
 
   const earned = prestigeReset();
-  assert.equal(earned, 2, 'prestige reset should award expected amount once');
+  assert.equal(earned, 1, 'prestige reset should award expected amount once');
   assert.equal(getPotentialPrestigeGain(), 0, 'prestige should not be re-claimable without new lifetime progress');
 }
 
@@ -577,16 +577,17 @@ function testPrestigeTrackDiamondCadence() {
 function testWorldMustBePurchasedBeforeSwitch() {
   resetEngineState();
 
-  gameState.cookies = 300;
-  gameState.lifetimeCookies = 1_999;
-  gameState.buildingData.cursor.owned = 15;
+  gameState.cookies = 8_000;
+  gameState.lifetimeCookies = 59_999;
+  gameState.prestigeCookies = 1;
+  gameState.buildingData.cursor.owned = 30;
   assert.equal(buyWorld(2), false, 'world purchase should fail when lifetime requirement is not met');
   assert.equal(changeWorld(2), false, 'cannot switch to locked world without purchasing');
 
-  gameState.lifetimeCookies = 2_000;
+  gameState.lifetimeCookies = 60_000;
   assert.equal(buyWorld(2), true, 'world purchase should succeed when cost and requirements are met');
   assert.equal(isWorldPurchased(2), true, 'purchased world should be persisted in unlocked list');
-  assert.equal(gameState.cookies, 50, 'buying a world should deduct unlock cost from current cookies');
+  assert.equal(gameState.cookies, 3_000, 'buying a world should deduct unlock cost from current cookies');
 
   assert.equal(changeWorld(2), true, 'can switch after world is purchased');
   assert.equal(gameState.currentWorld, 2, 'current world should update after successful switch');
@@ -598,13 +599,14 @@ function testWorldThreeNeedsBuildingRequirement() {
   const worldThree = getWorldById(3);
   assert.ok(worldThree, 'world 3 should exist');
 
-  gameState.cookies = 6_000;
-  gameState.lifetimeCookies = 150_000;
-  gameState.buildingData.cursor.owned = 59;
+  gameState.cookies = 110_000;
+  gameState.lifetimeCookies = 1_400_000;
+  gameState.prestigeCookies = 4;
+  gameState.buildingData.cursor.owned = 89;
 
   assert.equal(buyWorld(3), false, 'world purchase should fail when building requirement is missing');
 
-  gameState.buildingData.cursor.owned = 60;
+  gameState.buildingData.cursor.owned = 90;
   assert.equal(buyWorld(3), true, 'world purchase should succeed once building requirement is met');
 }
 

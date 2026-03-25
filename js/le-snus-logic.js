@@ -669,3 +669,52 @@ export function getLeSnusFeatureRules() {
         "3/4/5 Free Spins trigger Luck of the Bandit / All That Glitters is Gold / Treasure at the End of the Rainbow."
     ];
 }
+
+export function getLeSnusSymbolGuide() {
+    return {
+        normal: PAY_SYMBOL_IDS.map((symbolId) => {
+            const symbol = getSymbol(symbolId);
+            const firstThreshold = Object.keys(symbol.payouts || {}).map(Number).sort((a, b) => a - b)[0] || CLUSTER_MIN_SIZE;
+            const maxThreshold = Math.max(...Object.keys(symbol.payouts || {}).map(Number));
+            return {
+                id: symbol.id,
+                icon: symbol.icon,
+                label: symbol.label,
+                description: `Cluster-Pay Symbol. Auszahlung ab ${firstThreshold} Treffern.`,
+                minCluster: firstThreshold,
+                maxCluster: Number.isFinite(maxThreshold) ? maxThreshold : firstThreshold,
+                payouts: symbol.payouts || {}
+            };
+        }),
+        special: [
+            {
+                id: "fs",
+                icon: SYMBOLS.fs.icon,
+                label: SYMBOLS.fs.label,
+                description: "3/4/5 Symbole starten Luck, Glitter oder Treasure Freispiele.",
+                effect: "Feature Trigger"
+            },
+            {
+                id: "rainbow",
+                icon: SYMBOLS.rainbow.icon,
+                label: SYMBOLS.rainbow.label,
+                description: "Aktiviert alle Golden Squares auf dem Feld.",
+                effect: "Golden-Square Aktivierung"
+            },
+            {
+                id: "golden-square",
+                icon: "🟨",
+                label: "Golden Square",
+                description: "Entsteht aus Wins und bleibt je nach Feature erhalten.",
+                effect: "Token-Reveal beim 🌈"
+            },
+            {
+                id: "gold-token",
+                icon: "🥇",
+                label: "Gold/Silver/Bronze",
+                description: "Token-Reveals zahlen Multiplikatoren aus; Clover boostet Nachbarn, Pot sammelt Werte.",
+                effect: "0.2x bis 500x + Combos"
+            }
+        ]
+    };
+}

@@ -1,7 +1,8 @@
 import { awardDiamonds, gameState, spendDiamonds } from "./engine.js";
 import { renderUI, showToast } from "./ui.js";
-import { getLeSnusFeatureRules, runLeSnusRound } from "./le-snus-logic.js";
-import { playSlotSpinSound, playSlotStopSound } from "./audio.js";
+import { getLeSnusFeatureRules, getLeSnusSymbolGuide, runLeSnusRound } from "./le-snus-logic.js";
+import { playSlotBigWinSound, playSlotSpinSound } from "./audio.js";
+import { animateCascadeStep, animateDrop, animateSpinIntro, animateWinStep, renderBoard } from "./slot-animations.js";
 
 const BET_STEPS = [1, 2, 5, 10];
 const DIAMOND_DOLLAR_VALUE = 10;
@@ -42,39 +43,11 @@ function wait(ms) {
     return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-function nextFrame() {
-    return new Promise((resolve) => window.requestAnimationFrame(resolve));
-}
-
-function createSet(positions = []) {
-    return new Set(positions.map((position) => `${position.row}:${position.col}`));
-}
-
 function getNextBet(currentBet, direction) {
     const index = BET_STEPS.findIndex((step) => step >= currentBet);
     const currentIndex = index >= 0 ? index : BET_STEPS.length - 1;
     const nextIndex = Math.max(0, Math.min(BET_STEPS.length - 1, currentIndex + direction));
     return BET_STEPS[nextIndex];
-}
-
-function renderBoard(boardEl, board, goldenPositions = [], winningPositions = []) {
-    if (!boardEl || !Array.isArray(board)) return;
-    const goldenSet = createSet(goldenPositions);
-    const winningSet = createSet(winningPositions);
-
-    boardEl.innerHTML = board.map((row, rowIndex) => row.map((cell, colIndex) => {
-        const key = `${rowIndex}:${colIndex}`;
-        const classes = ["slot-cell"];
-        if (goldenSet.has(key)) classes.push("is-golden");
-        if (winningSet.has(key)) classes.push("is-winning");
-        if (cell.special) classes.push("is-special");
-        return `
-            <div class="${classes.join(" ")}" data-row="${rowIndex}" data-col="${colIndex}">
-                <span class="slot-cell-icon">${cell.icon}</span>
-                <small>${cell.label}</small>
-            </div>
-        `;
-    }).join("")).join("");
 }
 
 function randomReelBoard(rows = 5, columns = 6) {
@@ -132,6 +105,12 @@ export function initSlotMachine() {
     const betEl = document.getElementById("slotBetValue");
     const payoutEl = document.getElementById("slotPayoutValue");
     const featureEl = document.getElementById("slotFeatureValue");
+    const infoButton = document.getElementById("slotInfoButton");
+    const infoModal = document.getElementById("slotInfoModal");
+    const infoCloseButton = document.getElementById("slotInfoCloseButton");
+    const infoNormalList = document.getElementById("slotInfoNormalSymbols");
+    const infoSpecialList = document.getElementById("slotInfoSpecialSymbols");
+    const panelEl = modal?.querySelector(".slot-panel");
 
     if (!launcherButton || !modal || !spinButton || !statusEl || !boardEl || !logEl) {
         return;
@@ -140,13 +119,17 @@ export function initSlotMachine() {
     let isSpinning = false;
     let lastRound = null;
     let currentBet = 1;
+    let displayedPayout = 0;
+    const setSpinPhase = (phase) => {
+        boardEl.dataset.phase = phase;
+    };
 
     const getBank = () => Math.max(0, Number(gameState.diamonds || 0));
     const getModeCost = (mode) => Math.floor(currentBet * MODE_CONFIG[mode].costMultiplier);
 
     const syncBalances = () => {
         const currentBank = getBank();
-        const lastPayout = Math.max(0, Math.floor(Number(lastRound?.totalPayout) || 0));
+        const lastPayout = Math.max(0, Math.floor(Number(displayedPayout) || 0));
         if (bankEl) bankEl.textContent = `${formatDiamondAmount(currentBank)} · ${formatDollarEquivalent(currentBank)}`;
         if (betEl) betEl.textContent = `${formatDiamondAmount(currentBet)} · ${formatDollarEquivalent(currentBet)}`;
         if (payoutEl) payoutEl.textContent = `${formatDiamondAmount(lastPayout)} · ${formatDollarEquivalent(lastPayout)}`;
@@ -166,9 +149,25 @@ export function initSlotMachine() {
         if (statusEl) statusEl.textContent = message;
     };
 
+    const animatePayoutCounter = async (toValue) => {
+        const fromValue = Math.max(0, Number(displayedPayout) || 0);
+        const target = Math.max(0, Number(toValue) || 0);
+        const duration = 460;
+        const startAt = performance.now();
+        while (true) {
+            const progress = Math.min(1, (performance.now() - startAt) / duration);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            displayedPayout = Math.round(fromValue + ((target - fromValue) * eased));
+            syncBalances();
+            if (progress >= 1) break;
+            await wait(16);
+        }
+    };
+
     const resetPreviewBoard = () => {
         const preview = runLeSnusRound(currentBet);
-        renderBoard(boardEl, preview.board, [], []);
+        renderBoard(boardEl, preview.board);
+        setSpinPhase("idle");
     };
 
     const openModal = () => {
@@ -176,7 +175,8 @@ export function initSlotMachine() {
         launcherButton.setAttribute("aria-expanded", "true");
         renderFeatureRules(featureListEl);
         if (lastRound) {
-            renderBoard(boardEl, lastRound.board, lastRound.goldenPositions);
+            displayedPayout = Math.max(0, Number(lastRound.totalPayout) || 0);
+            renderBoard(boardEl, lastRound.board, { goldenPositions: lastRound.goldenPositions });
             renderTimeline(logEl, lastRound);
             setStatus(lastRound.summaryLines.join(" · "));
         } else {
@@ -192,53 +192,83 @@ export function initSlotMachine() {
         launcherButton.setAttribute("aria-expanded", "false");
     };
 
+    const renderSymbolInfo = () => {
+        const symbolGuide = getLeSnusSymbolGuide();
+        if (infoNormalList) {
+            infoNormalList.innerHTML = symbolGuide.normal.map((symbol) => {
+                const payoutText = Object.entries(symbol.payouts)
+                    .map(([count, multi]) => `${count}+ → ${Number(multi).toFixed(2)}x`)
+                    .join(" · ");
+                return `
+                    <article class="slot-symbol-entry">
+                        <div class="slot-symbol-icon">${symbol.icon}</div>
+                        <div class="slot-symbol-content">
+                            <strong>${symbol.label}</strong>
+                            <p>${symbol.description}</p>
+                            <small>${payoutText}</small>
+                        </div>
+                    </article>
+                `;
+            }).join("");
+        }
+
+        if (infoSpecialList) {
+            infoSpecialList.innerHTML = symbolGuide.special.map((symbol) => `
+                <article class="slot-symbol-entry slot-symbol-entry--special">
+                    <div class="slot-symbol-icon">${symbol.icon}</div>
+                    <div class="slot-symbol-content">
+                        <strong>${symbol.label}</strong>
+                        <p>${symbol.description}</p>
+                        <small>${symbol.effect}</small>
+                    </div>
+                </article>
+            `).join("");
+        }
+    };
+
+    const openInfoModal = () => {
+        if (!infoModal) return;
+        renderSymbolInfo();
+        infoModal.hidden = false;
+    };
+
+    const closeInfoModal = () => {
+        if (!infoModal) return;
+        infoModal.hidden = true;
+    };
+
     const animateRound = async (round) => {
-        const cascadeEntries = round.timeline.filter((entry) => entry.type === "cascade" || entry.type === "activation");
-        if (cascadeEntries.length === 0) {
-            renderBoard(boardEl, round.board, round.goldenPositions);
+        const sequenceEntries = round.timeline.filter((entry) => entry.type === "cascade" || entry.type === "activation");
+        if (sequenceEntries.length === 0) {
+            await animateDrop(boardEl, round.board, { goldenPositions: round.goldenPositions, phaseClass: "is-spinning" });
             return;
         }
 
-        for (const entry of cascadeEntries) {
-            renderBoard(boardEl, entry.board, entry.goldenPositions, entry.winningPositions);
+        let previousBoard = randomReelBoard();
+        let cascadeStep = 0;
+        for (const entry of sequenceEntries) {
+            if (entry.type === "cascade" && Array.isArray(entry.winningPositions) && entry.winningPositions.length > 0) {
+                setSpinPhase("evaluating");
+                await animateWinStep(boardEl, entry.board, entry);
+                setStatus(`${entry.label}: ${entry.notes || ""}`.trim());
+                continue;
+            }
+            setSpinPhase("cascading");
+            cascadeStep += 1;
+            await animateCascadeStep(boardEl, previousBoard, entry, cascadeStep);
             setStatus(`${entry.label}: ${entry.notes || ""}`.trim());
-            await wait(entry.type === "activation" ? 520 : 340);
+            previousBoard = entry.board;
         }
 
-        renderBoard(boardEl, round.board, round.goldenPositions);
+        renderBoard(boardEl, round.board, { goldenPositions: round.goldenPositions });
+        setSpinPhase("idle");
     };
 
     const animateSpinReels = async () => {
         if (!boardEl) return;
-        boardEl.classList.add("is-spinning");
-        let lastTick = performance.now();
-        const startTime = performance.now();
-        const totalDuration = 1750;
+        setSpinPhase("spinning");
         playSlotSpinSound();
-
-        while (true) {
-            const now = performance.now();
-            const progress = Math.min(1, (now - startTime) / totalDuration);
-            const speedWindow = progress < 0.22
-                ? 180 - (progress / 0.22) * 120
-                : progress > 0.72
-                    ? 58 + ((progress - 0.72) / 0.28) * 190
-                    : 58;
-
-            if (now - lastTick >= speedWindow) {
-                renderBoard(boardEl, randomReelBoard());
-                lastTick = now;
-            }
-
-            if (progress >= 1) break;
-            await nextFrame();
-        }
-
-        boardEl.classList.remove("is-spinning");
-        boardEl.classList.add("is-stop-flash");
-        playSlotStopSound();
-        await wait(430);
-        boardEl.classList.remove("is-stop-flash");
+        await animateSpinIntro(boardEl, randomReelBoard);
     };
 
     const handleSpin = async (mode = "base") => {
@@ -253,6 +283,7 @@ export function initSlotMachine() {
         }
 
         isSpinning = true;
+        setSpinPhase("spinning");
         syncBalances();
         renderUI();
         setStatus(`${MODE_CONFIG[mode].label} läuft mit Einsatz ${formatDiamondAmount(currentBet)} / ${formatDollarEquivalent(currentBet)} (Kosten ${formatDiamondAmount(spent)}).`);
@@ -267,6 +298,7 @@ export function initSlotMachine() {
 
         lastRound = round;
         isSpinning = false;
+        setSpinPhase("idle");
         renderTimeline(logEl, round);
         setStatus(round.summaryLines.join(" · "));
         if (round.economy?.nearMiss) {
@@ -276,6 +308,14 @@ export function initSlotMachine() {
         }
         syncBalances();
         renderUI();
+        await animatePayoutCounter(round.totalPayout);
+
+        if (round.totalMultiplier >= 10 && panelEl) {
+            panelEl.classList.add("is-big-win");
+            playSlotBigWinSound();
+            await wait(360);
+            panelEl.classList.remove("is-big-win");
+        }
 
         if (round.totalPayout > currentBet) {
             showToast(`🎉 ${MODE_CONFIG[mode].label}: ${formatDiamondAmount(round.totalPayout)} ausgezahlt.`, 2200, "success");
@@ -290,6 +330,8 @@ export function initSlotMachine() {
     launcherButton.setAttribute("aria-expanded", "false");
     launcherButton.addEventListener("click", openModal);
     closeButton?.addEventListener("click", closeModal);
+    infoButton?.addEventListener("click", openInfoModal);
+    infoCloseButton?.addEventListener("click", closeInfoModal);
     topUpButton?.addEventListener("click", closeModal);
     spinButton.addEventListener("click", () => handleSpin("base").catch(() => { isSpinning = false; syncBalances(); }));
     bonusHuntButton?.addEventListener("click", () => handleSpin("bonusHunt").catch(() => { isSpinning = false; syncBalances(); }));
@@ -302,10 +344,14 @@ export function initSlotMachine() {
     modal.addEventListener("click", (event) => {
         if (event.target === modal) closeModal();
     });
+    infoModal?.addEventListener("click", (event) => {
+        if (event.target === infoModal) closeInfoModal();
+    });
 
     document.addEventListener("keydown", (event) => {
         if (modal.hidden) return;
         if (event.key === "Escape") {
+            closeInfoModal();
             closeModal();
             return;
         }

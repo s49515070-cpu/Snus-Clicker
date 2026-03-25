@@ -6,7 +6,7 @@
 import { gameLoop, claimAvailableQuests, runAutoBuyerTick, applyOfflineProgress, prestigeReset, getPotentialPrestigeGain, getClaimablePrestigeTrackRewards, unlockAvailableAchievements } from "./engine.js";
 import { renderUI, renderBuildings, renderDiamondShop, renderTrophyPath, applyCookieHorizontalOffset, applyWorldTheme, refreshBuildingsIfNeeded, showToast, refreshAllUI, applyStaticTranslations } from "./ui.js";
 import { loadGame, saveGame, exportSave, importSave, resetSave } from "./save.js";
-import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat, getOnboardingHintsEnabled, updateOnboardingHintsEnabled, getSoundVolume, updateSoundVolume } from "./config.js";
+import { loadConfig, getAutosaveInterval, getUiRefreshInterval, updateAutosaveInterval, updateUiRefreshInterval, resetRuntimeConfig, getLanguage, getSoundEnabled, updateLanguage, updateSoundEnabled, getBackgroundColor, updateBackgroundColor, getBackgroundImage, updateBackgroundImage, getReducedMotion, updateReducedMotion, getHighContrast, updateHighContrast, getNumberFormat, updateNumberFormat, getOnboardingHintsEnabled, updateOnboardingHintsEnabled, getSoundVolume, updateSoundVolume } from "./config.js";
 import { t } from "./i18n.js";
 import { initWordle } from "./wordle.js";
 import { initSlotMachine } from "./slot-machine.js";
@@ -129,6 +129,9 @@ function initSettingsControls() {
     const soundInput = document.getElementById("soundEnabledInput");
     const languageInput = document.getElementById("languageInput");
     const backgroundColorInput = document.getElementById("backgroundColorInput");
+    const backgroundImageInput = document.getElementById("backgroundImageInput");
+    const backgroundImageSelectButton = document.getElementById("backgroundImageSelectButton");
+    const backgroundImageResetButton = document.getElementById("backgroundImageResetButton");
     const autosaveIntervalInput = document.getElementById("autosaveIntervalInput");
     const autosaveIntervalText = document.getElementById("autosaveIntervalText");
     const uiRefreshIntervalInput = document.getElementById("uiRefreshIntervalInput");
@@ -226,6 +229,47 @@ function initSettingsControls() {
         });
     }
 
+    if (backgroundImageSelectButton && backgroundImageInput) {
+        backgroundImageSelectButton.addEventListener("click", () => {
+            backgroundImageInput.click();
+        });
+    }
+
+    if (backgroundImageInput) {
+        backgroundImageInput.addEventListener("change", () => {
+            const file = backgroundImageInput.files?.[0];
+            if (!file) return;
+
+            if (!file.type.startsWith("image/")) {
+                showToast(t("backgroundImageInvalid"), 1600, "warning");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.addEventListener("load", () => {
+                const result = typeof reader.result === "string" ? reader.result : "";
+                if (!result) {
+                    showToast(t("backgroundImageInvalid"), 1600, "warning");
+                    return;
+                }
+                updateBackgroundImage(result);
+                applyWorldTheme();
+                showToast(t("backgroundImageUpdated"), 1400, "success");
+            });
+            reader.readAsDataURL(file);
+            backgroundImageInput.value = "";
+        });
+    }
+
+    if (backgroundImageResetButton) {
+        backgroundImageResetButton.addEventListener("click", () => {
+            const hadCustomImage = Boolean(getBackgroundImage());
+            updateBackgroundImage("");
+            applyWorldTheme();
+            showToast(hadCustomImage ? t("backgroundReset") : t("backgroundUpdated"), 1400, "info");
+        });
+    }
+
     if (autosaveIntervalInput) {
         autosaveIntervalInput.value = String(getAutosaveInterval());
         syncRangeTexts();
@@ -286,6 +330,7 @@ function initSettingsControls() {
             if (soundVolumeInput) soundVolumeInput.value = String(defaults.soundVolume ?? 72);
             if (languageInput) languageInput.value = defaults.language;
             if (backgroundColorInput) backgroundColorInput.value = defaults.backgroundColor || "#dff6ff";
+            updateBackgroundImage("");
             if (autosaveIntervalInput) autosaveIntervalInput.value = String(defaults.autosaveIntervalMs);
             if (uiRefreshIntervalInput) uiRefreshIntervalInput.value = String(defaults.uiRefreshIntervalMs);
             if (numberFormatInput) numberFormatInput.value = defaults.numberFormat;

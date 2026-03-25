@@ -11,6 +11,7 @@ const DEFAULT_CONFIG = {
     soundVolume: 72,
     language: "de",
     backgroundColor: "",
+    backgroundImage: "",
     reducedMotion: false,
     highContrast: false,
     numberFormat: "short",
@@ -50,6 +51,7 @@ export function loadConfig() {
         runtimeConfig.soundVolume = clampConfigNumber(parsed.soundVolume, 0, 100, DEFAULT_CONFIG.soundVolume);
         runtimeConfig.language = parsed.language === "en" ? "en" : "de";
         runtimeConfig.backgroundColor = typeof parsed.backgroundColor === "string" ? parsed.backgroundColor : DEFAULT_CONFIG.backgroundColor;
+        runtimeConfig.backgroundImage = typeof parsed.backgroundImage === "string" ? parsed.backgroundImage : DEFAULT_CONFIG.backgroundImage;
         runtimeConfig.cookieHorizontalOffset = clampConfigNumber(parsed.cookieHorizontalOffset, -260, 260, DEFAULT_CONFIG.cookieHorizontalOffset);
         runtimeConfig.reducedMotion = typeof parsed.reducedMotion === "boolean" ? parsed.reducedMotion : DEFAULT_CONFIG.reducedMotion;
         runtimeConfig.highContrast = typeof parsed.highContrast === "boolean" ? parsed.highContrast : DEFAULT_CONFIG.highContrast;
@@ -90,6 +92,7 @@ export function resetRuntimeConfig() {
     runtimeConfig.soundVolume = DEFAULT_CONFIG.soundVolume;
     runtimeConfig.language = DEFAULT_CONFIG.language;
     runtimeConfig.backgroundColor = DEFAULT_CONFIG.backgroundColor;
+    runtimeConfig.backgroundImage = DEFAULT_CONFIG.backgroundImage;
     runtimeConfig.cookieHorizontalOffset = DEFAULT_CONFIG.cookieHorizontalOffset;
     runtimeConfig.reducedMotion = DEFAULT_CONFIG.reducedMotion;
     runtimeConfig.highContrast = DEFAULT_CONFIG.highContrast;
@@ -134,6 +137,16 @@ export function updateBackgroundColor(value) {
 
 export function getBackgroundColor() {
     return runtimeConfig.backgroundColor;
+}
+
+export function updateBackgroundImage(value) {
+    runtimeConfig.backgroundImage = typeof value === "string" ? value.trim() : "";
+    saveConfig();
+    return runtimeConfig.backgroundImage;
+}
+
+export function getBackgroundImage() {
+    return runtimeConfig.backgroundImage;
 }
 
 export function updateCookieHorizontalOffset(value) {

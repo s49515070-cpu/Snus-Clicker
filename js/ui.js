@@ -62,7 +62,6 @@ const prestigeCountEl = document.getElementById("prestigeCount");
 const diamondCountEl = document.getElementById("diamondCount");
 const worldNameEl = document.getElementById("worldName");
 const worldButton = document.getElementById("worldButton");
-const nextWorldProgressEl = document.getElementById("nextWorldProgress");
 const trophyPrestigeProgressEl = document.getElementById("trophyPrestigeProgress");
 const trophyPrestigePreviewEl = document.getElementById("trophyPrestigePreview");
 const prestigeTalentPointsEl = document.getElementById("prestigeTalentPoints");
@@ -597,29 +596,6 @@ export function renderUI(options = {}) {
 
     const world = getWorldById(gameState.currentWorld);
     if (world) worldNameEl.textContent = world.name;
-
-    if (nextWorldProgressEl) {
-        const nextWorld = worlds.find((item) => !isWorldPurchased(item.id));
-        if (!nextWorld) {
-            nextWorldProgressEl.textContent = "";
-            nextWorldProgressEl.hidden = true;
-        } else {
-            nextWorldProgressEl.hidden = false;
-            const progress = Math.min(gameState.cookies, nextWorld.unlockCost);
-            const remaining = Math.max(0, nextWorld.unlockCost - gameState.cookies);
-            let worldProgressText = t("worldUnlockProgressSnus", {
-                remaining: formatNumber(remaining),
-                current: formatNumber(progress),
-                target: formatNumber(nextWorld.unlockCost)
-            });
-            
-            if (remaining > 0 && cpsValue > 0) {
-                worldProgressText += ` ${t("worldUnlockEta", { eta: formatEta(remaining / cpsValue) })}`;
-            }
-
-            nextWorldProgressEl.textContent = worldProgressText;
-        }
-    }
 
     if (trophyPrestigeProgressEl) {
         const prestigeProgress = getPrestigeProgressState();

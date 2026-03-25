@@ -27,6 +27,7 @@ export function renderBoard(boardEl, board, options = {}) {
     const goldenSet = createPositionSet(options.goldenPositions);
     const winningSet = createPositionSet(options.winningPositions);
     const droppingSet = createPositionSet(options.droppingPositions);
+    const removingSet = createPositionSet(options.removingPositions);
 
     boardEl.innerHTML = board.map((row, rowIndex) => row.map((cell, colIndex) => {
         const key = `${rowIndex}:${colIndex}`;
@@ -34,6 +35,7 @@ export function renderBoard(boardEl, board, options = {}) {
         if (goldenSet.has(key)) classes.push("is-golden");
         if (winningSet.has(key)) classes.push("is-winning");
         if (droppingSet.has(key)) classes.push("is-dropping");
+        if (removingSet.has(key)) classes.push("is-removing");
         if (cell.special) classes.push("is-special");
         const dropDelay = (rowIndex * 18) + (colIndex * 10);
 
@@ -51,23 +53,27 @@ export async function animateDrop(boardEl, board, options = {}) {
     boardEl.classList.add(phaseClass);
     renderBoard(boardEl, board, options);
     playSlotFallSound((options.droppingPositions?.length || 0) / 4);
+    await wait(Math.max(80, Math.floor((options.duration ?? 380) * 0.6)));
     playSlotImpactSound();
-    await wait(options.duration ?? 290);
+    boardEl.classList.add("is-drop-impact");
+    await wait(Math.max(120, Math.floor((options.duration ?? 380) * 0.4)));
+    boardEl.classList.remove("is-drop-impact");
     boardEl.classList.remove(phaseClass);
 }
 
 export async function animateSpinIntro(boardEl, randomBoardFactory) {
-    boardEl.classList.add("is-spinning");
-    await wait(240);
-    const frames = 7;
-    for (let i = 0; i < frames; i += 1) {
-        renderBoard(boardEl, randomBoardFactory(), { droppingPositions: [] });
-        await wait(80);
-    }
-    boardEl.classList.remove("is-spinning");
+    const introBoard = randomBoardFactory();
+    const droppingPositions = introBoard.flatMap((row, rowIndex) => row.map((_, colIndex) => ({ row: rowIndex, col: colIndex })));
+    boardEl.classList.add("is-pre-drop");
+    await animateDrop(boardEl, introBoard, {
+        droppingPositions,
+        duration: 360,
+        phaseClass: "is-spinning"
+    });
+    boardEl.classList.remove("is-pre-drop");
     boardEl.classList.add("is-stop-flash");
     playSlotStopSound();
-    await wait(270);
+    await wait(220);
     boardEl.classList.remove("is-stop-flash");
 }
 
@@ -77,8 +83,16 @@ export async function animateWinStep(boardEl, board, entry = {}) {
         winningPositions: entry.winningPositions
     });
     boardEl.classList.add("is-evaluating");
+    boardEl.classList.add("is-win-impact");
     playSlotWinByTier(entry.stepMultiplier);
-    await wait(280);
+    await wait(260);
+    boardEl.classList.remove("is-win-impact");
+    renderBoard(boardEl, board, {
+        goldenPositions: entry.goldenPositions,
+        winningPositions: entry.winningPositions,
+        removingPositions: entry.winningPositions
+    });
+    await wait(180);
     boardEl.classList.remove("is-evaluating");
 }
 

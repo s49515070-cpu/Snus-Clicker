@@ -152,8 +152,9 @@ export function initSlotMachine() {
     const animatePayoutCounter = async (toValue) => {
         const fromValue = Math.max(0, Number(displayedPayout) || 0);
         const target = Math.max(0, Number(toValue) || 0);
-        const duration = 460;
+        const duration = Math.min(1200, 380 + (Math.abs(target - fromValue) * 16));
         const startAt = performance.now();
+        payoutEl?.classList.add("is-counting");
         while (true) {
             const progress = Math.min(1, (performance.now() - startAt) / duration);
             const eased = 1 - Math.pow(1 - progress, 3);
@@ -162,6 +163,7 @@ export function initSlotMachine() {
             if (progress >= 1) break;
             await wait(16);
         }
+        payoutEl?.classList.remove("is-counting");
     };
 
     const resetPreviewBoard = () => {

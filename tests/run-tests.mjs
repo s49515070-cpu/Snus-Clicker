@@ -943,6 +943,10 @@ async function testLoadGameNormalization() {
     },
     autoBuyerWeight: 0.6,
     autoBuyerWeights: { value: 5, cheap: -3 },
+    achievementsUnlocked: {},
+    milestonesClaimed: {
+      lifetime_snus_tier_1: true
+    },
     milestonePeks: {
       discount_3: true
     }
@@ -969,6 +973,7 @@ async function testLoadGameNormalization() {
   assert.equal(gameState.todayStats.clicks, 12, 'legacy dailyStats should migrate to todayStats');
   assert.equal(gameState.autoBuyerWeights.value, 1, 'autoBuyerWeights value should clamp and normalize');
   assert.equal(gameState.autoBuyerWeights.cheap, 0, 'autoBuyerWeights cheap should clamp and normalize');
+  assert.equal(gameState.achievementsUnlocked.lifetime_snus_tier_1, true, 'legacy milestonesClaimed should merge into achievements even when achievementsUnlocked exists');
   assert.equal(Array.isArray(gameState.migrationMeta.steps), true, 'migration metadata should include migration steps');
   assert.ok(gameState.migrationMeta.steps.includes('v1_to_v2'), 'migration metadata should record applied migration step');
   assert.ok(gameState.migrationMeta.steps.includes('v2_to_v3'), 'migration metadata should record v2 to v3 migration step');

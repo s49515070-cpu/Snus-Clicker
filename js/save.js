@@ -344,7 +344,10 @@ function normalizeSavePayload(parsed) {
         prestigeUpgradeLevels: normalizePrestigeUpgradeLevels(migrated.prestigeUpgradeLevels),
         prestigeTalentPoints: normalizeNumber(migrated.prestigeTalentPoints, 0, 0),
         prestigeTalentLevels: normalizePrestigeTalentLevels(migrated.prestigeTalentLevels),
-        achievementsUnlocked: normalizeAchievementsUnlocked(migrated.achievementsUnlocked || migrated.milestonesClaimed),
+        achievementsUnlocked: normalizeAchievementsUnlocked({
+            ...(migrated.milestonesClaimed || {}),
+            ...(migrated.achievementsUnlocked || {})
+        }),
         questsClaimed: normalizeBooleanMap(migrated.questsClaimed, allowedQuestIds),
         prestigeTrackClaimed: normalizeBooleanMap(migrated.prestigeTrackClaimed, allowedPrestigeLevels),
         inventoryUnlocked: normalizeBooleanMap(migrated.inventoryUnlocked, allowedInventoryIds),

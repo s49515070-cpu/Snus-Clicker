@@ -752,9 +752,9 @@ function testAutoBuyerSmartestWaitsForBestBuyBudget() {
 
   const purchases = runAutoBuyerTick();
 
-  assert.equal(purchases, 0, 'smartest strategy should wait when the best-buy building is not affordable yet');
-  assert.equal(gameState.buildingData.farm.owned, 0, 'smartest strategy should wait when the best-buy target is still too expensive');
-  assert.equal(gameState.buildingData.cursor.owned, 0, 'smartest strategy should avoid cheapest fallback purchases');
+  assert.equal(purchases, 3, 'smartest strategy should keep buying affordable value options even before farm is affordable');
+  assert.equal(gameState.buildingData.farm.owned, 0, 'farm should remain unbought until enough budget is available');
+  assert.equal(gameState.buildingData.cursor.owned, 3, 'smartest strategy should invest in cursor upgrades as fallback value purchases');
 }
 
 function testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias() {

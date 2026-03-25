@@ -1319,15 +1319,17 @@ function getAutoBuyerChoice() {
         ), null);
     }
 
-    const smartestCandidate = candidates.reduce((best, candidate) => {
+    const affordableCandidates = candidates.filter((candidate) => candidate.affordable);
+    if (!affordableCandidates.length) return null;
+
+    const smartestCandidate = affordableCandidates.reduce((best, candidate) => {
         if (!best) return candidate;
         if (candidate.valueScore > best.valueScore) return candidate;
         if (candidate.valueScore < best.valueScore) return best;
         return isCandidateBetterForStrategy(candidate, best, strategy) ? candidate : best;
     }, null);
 
-    if (!smartestCandidate || !smartestCandidate.affordable) return null;
-    return smartestCandidate;
+    return smartestCandidate || null;
 }
 
 export function runAutoBuyerTick() {

@@ -28,6 +28,16 @@ const BONUS_CONFIG = {
     treasure: { id: "treasure", label: "Treasure at the End of the Rainbow", freeSpins: 12, preserveGoldenBetweenSpins: true, keepGoldenAfterActivation: true, guaranteedRainbow: true, allowBronze: false }
 };
 
+const RTP_PROFILE = Object.freeze({
+    houseEdgeFactor: 0.57,
+    lossChance: 0.64,
+    nearMissChance: 0.14,
+    smallWinChance: 0.16,
+    mediumWinChance: 0.045,
+    bigWinChance: 0.013,
+    topWinChance: 0.002
+});
+
 function cloneCell(cell) {
     return { ...cell };
 }
@@ -490,6 +500,55 @@ function runBonusGame(stake, rng = Math.random, startingConfig = BONUS_CONFIG.lu
     };
 }
 
+function randomBetween(min, max, rng = Math.random) {
+    return min + ((max - min) * rng());
+}
+
+function applyHouseEdge(rawMultiplier, rng = Math.random) {
+    const normalizedRaw = Math.max(0, Number(rawMultiplier) || 0);
+    const dampenedRaw = normalizedRaw * RTP_PROFILE.houseEdgeFactor;
+    const roll = rng();
+    const nearMiss = roll >= RTP_PROFILE.lossChance && roll < RTP_PROFILE.lossChance + RTP_PROFILE.nearMissChance;
+
+    if (roll < RTP_PROFILE.lossChance || nearMiss) {
+        return {
+            finalMultiplier: 0,
+            nearMiss,
+            economyTier: nearMiss ? "near-miss" : "loss"
+        };
+    }
+
+    const thresholds = [
+        RTP_PROFILE.lossChance + RTP_PROFILE.nearMissChance + RTP_PROFILE.smallWinChance,
+        RTP_PROFILE.lossChance + RTP_PROFILE.nearMissChance + RTP_PROFILE.smallWinChance + RTP_PROFILE.mediumWinChance,
+        RTP_PROFILE.lossChance + RTP_PROFILE.nearMissChance + RTP_PROFILE.smallWinChance + RTP_PROFILE.mediumWinChance + RTP_PROFILE.bigWinChance,
+        RTP_PROFILE.lossChance + RTP_PROFILE.nearMissChance + RTP_PROFILE.smallWinChance + RTP_PROFILE.mediumWinChance + RTP_PROFILE.bigWinChance + RTP_PROFILE.topWinChance
+    ];
+
+    let targetMultiplier = 0;
+    let economyTier = "small";
+    if (roll < thresholds[0]) {
+        targetMultiplier = randomBetween(0.2, 1.1, rng);
+        economyTier = "small";
+    } else if (roll < thresholds[1]) {
+        targetMultiplier = randomBetween(1.2, 4.8, rng);
+        economyTier = "medium";
+    } else if (roll < thresholds[2]) {
+        targetMultiplier = randomBetween(5, 15, rng);
+        economyTier = "big";
+    } else {
+        targetMultiplier = randomBetween(15, 42, rng);
+        economyTier = "top";
+    }
+
+    const blended = (dampenedRaw * 0.55) + (targetMultiplier * 0.45);
+    return {
+        finalMultiplier: Number(Math.max(0, blended).toFixed(2)),
+        nearMiss: false,
+        economyTier
+    };
+}
+
 export function runLeSnusRound(stakeInput, rng = Math.random, options = {}) {
     const stake = Math.max(0, Math.floor(Number(stakeInput) || 0));
     if (stake <= 0) {
@@ -515,7 +574,8 @@ export function runLeSnusRound(stakeInput, rng = Math.random, options = {}) {
         const forcedConfig = BONUS_CONFIG[options.forcedFeature];
         const bonusResult = runBonusGame(stake, rng, forcedConfig);
         const finalSpin = bonusResult.spins[bonusResult.spins.length - 1];
-        const totalMultiplier = Math.min(MAX_TOTAL_MULTIPLIER, Number(bonusResult.totalMultiplier.toFixed(2)));
+        const economy = applyHouseEdge(Math.min(MAX_TOTAL_MULTIPLIER, Number(bonusResult.totalMultiplier.toFixed(2))), rng);
+        const totalMultiplier = economy.finalMultiplier;
         const totalPayout = Math.floor(stake * totalMultiplier);
         return {
             stake,
@@ -527,7 +587,12 @@ export function runLeSnusRound(stakeInput, rng = Math.random, options = {}) {
             timeline: bonusResult.spins.flatMap((spin) => spin.timeline),
             triggeredBonus: forcedConfig,
             bonusResult,
-            summaryLines: [`Bought Feature: ${forcedConfig.label}`, `Total: ${totalMultiplier.toFixed(2)}x = ${totalPayout.toLocaleString("de-DE")} Diamanten`],
+            summaryLines: [
+                `Bought Feature: ${forcedConfig.label}`,
+                economy.nearMiss ? "Beinahe-Gewinn: Walzen stoppten knapp ohne Auszahlung." : `RTP-Profil: ${economy.economyTier}`,
+                `Total: ${totalMultiplier.toFixed(2)}x = ${totalPayout.toLocaleString("de-DE")} Diamanten`
+            ],
+            economy,
             fsCount: 0
         };
     }
@@ -569,8 +634,14 @@ export function runLeSnusRound(stakeInput, rng = Math.random, options = {}) {
         });
     }
 
-    totalMultiplier = Math.min(MAX_TOTAL_MULTIPLIER, Number(totalMultiplier.toFixed(2)));
+    const economy = applyHouseEdge(Math.min(MAX_TOTAL_MULTIPLIER, Number(totalMultiplier.toFixed(2))), rng);
+    totalMultiplier = economy.finalMultiplier;
     const totalPayout = Math.floor(stake * totalMultiplier);
+    if (economy.nearMiss) {
+        summaryLines.push("Beinahe-Gewinn: gute Symbole knapp verpasst.");
+    } else {
+        summaryLines.push(`RTP-Profil: ${economy.economyTier}`);
+    }
     summaryLines.push(`Total: ${totalMultiplier.toFixed(2)}x = ${totalPayout.toLocaleString("de-DE")} Diamanten`);
 
     return {
@@ -584,6 +655,7 @@ export function runLeSnusRound(stakeInput, rng = Math.random, options = {}) {
         triggeredBonus,
         bonusResult,
         summaryLines,
+        economy,
         fsCount
     };
 }

@@ -1,9 +1,23 @@
 import { awardDiamonds, gameState, spendDiamonds } from "./engine.js";
 import { renderUI, showToast } from "./ui.js";
 import { getLeSnusFeatureRules, runLeSnusRound } from "./le-snus-logic.js";
+import { playSlotSpinSound, playSlotStopSound } from "./audio.js";
 
 const BET_STEPS = [1, 2, 5, 10];
 const DIAMOND_DOLLAR_VALUE = 10;
+const REEL_SYMBOLS = [
+    { icon: "🔟", label: "10" },
+    { icon: "🃏", label: "J" },
+    { icon: "👑", label: "Q" },
+    { icon: "🤴", label: "K" },
+    { icon: "🅰️", label: "A" },
+    { icon: "🧀", label: "Cheese" },
+    { icon: "🍺", label: "Beer" },
+    { icon: "🥖", label: "Baguette" },
+    { icon: "🎩", label: "Top Hat" },
+    { icon: "📷", label: "FS", special: true },
+    { icon: "🌈", label: "Rainbow", special: true }
+];
 const MODE_CONFIG = {
     base: { label: "Base Spin", costMultiplier: 1, options: {} },
     bonusHunt: { label: "BonusHunt FeatureSpins", costMultiplier: 3, options: { bonusHunt: true } },
@@ -26,6 +40,10 @@ function formatDollarEquivalent(amount) {
 
 function wait(ms) {
     return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function nextFrame() {
+    return new Promise((resolve) => window.requestAnimationFrame(resolve));
 }
 
 function createSet(positions = []) {
@@ -57,6 +75,18 @@ function renderBoard(boardEl, board, goldenPositions = [], winningPositions = []
             </div>
         `;
     }).join("")).join("");
+}
+
+function randomReelBoard(rows = 5, columns = 6) {
+    return Array.from({ length: rows }, () => Array.from({ length: columns }, () => {
+        const symbol = REEL_SYMBOLS[Math.floor(Math.random() * REEL_SYMBOLS.length)] || REEL_SYMBOLS[0];
+        return {
+            id: symbol.label.toLowerCase(),
+            icon: symbol.icon,
+            label: symbol.label,
+            special: Boolean(symbol.special)
+        };
+    }));
 }
 
 function renderFeatureRules(listEl) {
@@ -178,6 +208,39 @@ export function initSlotMachine() {
         renderBoard(boardEl, round.board, round.goldenPositions);
     };
 
+    const animateSpinReels = async () => {
+        if (!boardEl) return;
+        boardEl.classList.add("is-spinning");
+        let lastTick = performance.now();
+        const startTime = performance.now();
+        const totalDuration = 1750;
+        playSlotSpinSound();
+
+        while (true) {
+            const now = performance.now();
+            const progress = Math.min(1, (now - startTime) / totalDuration);
+            const speedWindow = progress < 0.22
+                ? 180 - (progress / 0.22) * 120
+                : progress > 0.72
+                    ? 58 + ((progress - 0.72) / 0.28) * 190
+                    : 58;
+
+            if (now - lastTick >= speedWindow) {
+                renderBoard(boardEl, randomReelBoard());
+                lastTick = now;
+            }
+
+            if (progress >= 1) break;
+            await nextFrame();
+        }
+
+        boardEl.classList.remove("is-spinning");
+        boardEl.classList.add("is-stop-flash");
+        playSlotStopSound();
+        await wait(430);
+        boardEl.classList.remove("is-stop-flash");
+    };
+
     const handleSpin = async (mode = "base") => {
         if (isSpinning) return;
         const cost = getModeCost(mode);
@@ -195,6 +258,7 @@ export function initSlotMachine() {
         setStatus(`${MODE_CONFIG[mode].label} läuft mit Einsatz ${formatDiamondAmount(currentBet)} / ${formatDollarEquivalent(currentBet)} (Kosten ${formatDiamondAmount(spent)}).`);
 
         const round = runLeSnusRound(currentBet, Math.random, MODE_CONFIG[mode].options);
+        await animateSpinReels();
         await animateRound(round);
 
         if (round.totalPayout > 0) {
@@ -205,6 +269,11 @@ export function initSlotMachine() {
         isSpinning = false;
         renderTimeline(logEl, round);
         setStatus(round.summaryLines.join(" · "));
+        if (round.economy?.nearMiss) {
+            boardEl.classList.add("is-near-miss");
+            await wait(500);
+            boardEl.classList.remove("is-near-miss");
+        }
         syncBalances();
         renderUI();
 

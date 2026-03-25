@@ -663,27 +663,10 @@ function rollGoldenSnusReward() {
 }
 
 function tickGoldenSnus(now = Date.now()) {
-    const availableUntil = Number(gameState.goldenSnusAvailableUntil || 0);
-    if (availableUntil > 0 && now > availableUntil) {
-        gameState.goldenSnusAvailableUntil = 0;
-        gameState.goldenSnusReward = 0;
-        scheduleNextGoldenSnus(now);
-        return;
-    }
-
-    if (availableUntil > now) return;
-
-    const cooldownUntil = Number(gameState.goldenSnusCooldownUntil || 0);
-    if (cooldownUntil <= 0) {
-        scheduleNextGoldenSnus(now);
-        return;
-    }
-
-    if (now >= cooldownUntil) {
-        gameState.goldenSnusReward = rollGoldenSnusReward();
-        gameState.goldenSnusAvailableUntil = now + GOLDEN_SNUS_DURATION_MS;
-        gameState.goldenSnusCooldownUntil = now + GOLDEN_SNUS_DURATION_MS;
-    }
+    // Golden-Snus-Bonus deaktiviert.
+    gameState.goldenSnusAvailableUntil = 0;
+    gameState.goldenSnusCooldownUntil = 0;
+    gameState.goldenSnusReward = 0;
 }
 
 function resetBuildingData() {
@@ -1086,8 +1069,8 @@ export function getActiveBonuses() {
         streakBonusPercent: Math.round(streakBonus * 100),
         skillPowerPercent: Math.round((getSkillPowerMultiplier() - 1) * 100),
         autoBuyerExtraPurchases: getUpgradeLevel("automationCore"),
-        goldenSnusAvailable: Date.now() < Number(gameState.goldenSnusAvailableUntil || 0),
-        goldenSnusReward: Math.max(0, Math.floor(Number(gameState.goldenSnusReward || 0))),
+        goldenSnusAvailable: false,
+        goldenSnusReward: 0,
         comboBonusPercent: Math.round((computeComboMultiplier() - 1) * 100),
         earlyGameBoostPercent: Math.max(0, Math.round((getEarlyGameRampMultiplier() - 1) * 100)),
         inventoryIncomeBoostPercent: Math.max(0, Math.round((getInventoryEffectBonuses().incomeMultiplier - 1) * 100)),
@@ -1110,13 +1093,10 @@ export function getClickComboState(now = Date.now()) {
 }
 
 export function getGoldenSnusState() {
-    const now = Date.now();
-    const availableUntil = Number(gameState.goldenSnusAvailableUntil || 0);
-    const available = availableUntil > now;
     return {
-        available,
-        remainingMs: available ? Math.max(0, availableUntil - now) : 0,
-        reward: Math.max(0, Math.floor(Number(gameState.goldenSnusReward || 0)))
+        available: false,
+        remainingMs: 0,
+        reward: 0
     };
 }
 

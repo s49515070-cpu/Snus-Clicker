@@ -17,6 +17,30 @@ body {
     display: none !important;
 }
 
+button {
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(226, 232, 240, 0.92));
+    color: #0f172a;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.14);
+    transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+button:hover {
+    filter: brightness(1.02);
+    box-shadow: 0 5px 14px rgba(15, 23, 42, 0.2);
+}
+
+button:active {
+    transform: translateY(1px) scale(0.99);
+}
+
+button:focus-visible {
+    outline: 2px solid rgba(99, 102, 241, 0.45);
+    outline-offset: 2px;
+}
+
 
 /* ===============================
    GLASS EFFECT
@@ -32,7 +56,7 @@ body {
 
 .highlight-panel {
     background: rgba(244, 248, 255, 0.34);
-    border: 1px solid rgba(99, 102, 241, 0.16);
+    border: 1px solid rgba(99, 102, 241, 0.1);
 }
 
 /* ===============================
@@ -43,7 +67,7 @@ body {
     justify-content: space-between;
     align-items: center;
     margin: 15px;
-    border: 1px solid rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.12);
 }
 
 .stats div {
@@ -662,7 +686,7 @@ body.high-contrast {
 
 
 .building-card:focus-visible {
-    outline: 2px solid #ffffff;
+    outline: 2px solid rgba(99, 102, 241, 0.45);
     outline-offset: 2px;
 }
 

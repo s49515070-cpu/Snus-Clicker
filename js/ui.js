@@ -163,7 +163,7 @@ function renderAchievements() {
 
     getAchievementsStatus().forEach((achievement) => {
         const item = document.createElement("article");
-        item.className = "achievement-item";
+        item.className = `achievement-item rarity-${achievement.rarity}`;
         item.classList.toggle("is-unlocked", achievement.unlocked);
         item.classList.toggle("is-locked", !achievement.unlocked);
 
@@ -180,7 +180,12 @@ function renderAchievements() {
                 <div class="achievement-description">${t(achievement.descriptionKey, { target })}</div>
                 <div class="achievement-meta">
                     <span class="achievement-tier">${t("achievementTierLabel", { tier: achievement.tier })}</span>
-                    <span class="achievement-difficulty">${achievement.difficulty}</span>
+                    <span class="achievement-difficulty rarity-${achievement.rarity}">${t(`achievementRarity${achievement.rarity[0].toUpperCase()}${achievement.rarity.slice(1)}`)}</span>
+                </div>
+                <div class="achievement-reward-preview">
+                    ${achievement.rewardItems.length > 0
+                        ? achievement.rewardItems.map((reward) => `<span class="achievement-reward-chip">${reward.icon} ${t(reward.nameKey)}</span>`).join("")
+                        : `<span class="achievement-reward-chip is-empty">${t("achievementRewardNone")}</span>`}
                 </div>
                 <div class="achievement-progress-row">
                     <div class="achievement-progress">${current} / ${target}</div>

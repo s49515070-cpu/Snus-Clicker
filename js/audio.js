@@ -159,3 +159,35 @@ export function playRewardPingSound() {
         { frequency: 988, duration: 0.08, gain: 0.09, type: "sine", delay: 0.04 }
     ]);
 }
+
+
+export function playAchievementRaritySound(rarity = "common") {
+    const key = String(rarity || "common").toLowerCase();
+    if (key === "legendary") {
+        playToneSequence([
+            { frequency: 330, duration: 0.1, gain: 0.08, type: "triangle", delay: 0.00 },
+            { frequency: 494, duration: 0.12, gain: 0.1, type: "triangle", delay: 0.08 },
+            { frequency: 659, duration: 0.14, gain: 0.12, type: "sine", delay: 0.18 },
+            { frequency: 988, duration: 0.2, gain: 0.14, type: "sine", delay: 0.34 }
+        ]);
+        return;
+    }
+    if (key === "epic") {
+        playToneSequence([
+            { frequency: 320, duration: 0.08, gain: 0.07, type: "triangle", delay: 0.00 },
+            { frequency: 480, duration: 0.1, gain: 0.09, type: "triangle", delay: 0.08 },
+            { frequency: 720, duration: 0.13, gain: 0.11, type: "sine", delay: 0.18 }
+        ]);
+        return;
+    }
+    if (key === "rare") {
+        playToneSequence([
+            { frequency: 460, duration: 0.08, gain: 0.07, type: "triangle", delay: 0.00 },
+            { frequency: 640, duration: 0.1, gain: 0.09, type: "sine", delay: 0.08 }
+        ]);
+        return;
+    }
+    playToneSequence([
+        { frequency: 640, duration: 0.055, gain: 0.05, type: "triangle", delay: 0.00 }
+    ]);
+}

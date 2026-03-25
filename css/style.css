@@ -2685,3 +2685,142 @@ body.high-contrast {
         min-width: 58px;
     }
 }
+
+.achievement-item .achievement-difficulty.rarity-common { color: #2563eb; }
+.achievement-item .achievement-difficulty.rarity-rare { color: #ca8a04; }
+.achievement-item .achievement-difficulty.rarity-epic { color: #7e22ce; }
+.achievement-item .achievement-difficulty.rarity-legendary { color: #b45309; }
+
+.achievement-item.rarity-common.is-unlocked { border-color: rgba(96, 165, 250, 0.7); }
+.achievement-item.rarity-rare.is-unlocked { border-color: rgba(250, 204, 21, 0.78); }
+.achievement-item.rarity-epic.is-unlocked { border-color: rgba(168, 85, 247, 0.78); }
+.achievement-item.rarity-legendary.is-unlocked { border-color: rgba(245, 158, 11, 0.88); }
+
+.achievement-reward-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.achievement-reward-chip {
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    background: rgba(255, 255, 255, 0.7);
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.achievement-reward-chip.is-empty {
+    opacity: 0.7;
+}
+
+.achievement-celebration-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 95;
+    overflow: hidden;
+}
+
+.achievement-celebration-card {
+    position: absolute;
+    left: 50%;
+    top: 12%;
+    transform: translateX(-50%);
+    width: min(620px, calc(100vw - 28px));
+    border-radius: 18px;
+    padding: 16px;
+    background: radial-gradient(circle at top, color-mix(in srgb, var(--rarity-color) 22%, #fff), rgba(255, 255, 255, 0.94));
+    border: 2px solid color-mix(in srgb, var(--rarity-color) 85%, #fff);
+    box-shadow: 0 22px 45px rgba(15, 23, 42, 0.28);
+    animation: achievement-pop 0.44s ease;
+}
+
+.achievement-celebration-card.is-leaving {
+    animation: achievement-leave 0.65s ease forwards;
+}
+
+.achievement-celebration-headline {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.achievement-celebration-title {
+    font-size: clamp(1.05rem, 1.6vw, 1.35rem);
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+.achievement-celebration-meta {
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+    color: #475569;
+    font-weight: 700;
+}
+
+.achievement-celebration-rewards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+}
+
+.achievement-celebration-reward {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.74);
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    padding: 8px;
+}
+
+.achievement-celebration-reward-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    background: rgba(15, 23, 42, 0.06);
+}
+
+.achievement-celebration-reward-title { font-weight: 700; font-size: 0.85rem; }
+.achievement-celebration-reward-description { font-size: 0.74rem; color: #475569; }
+
+.achievement-particle {
+    position: absolute;
+    left: var(--particle-x);
+    top: 28%;
+    width: var(--particle-size);
+    height: var(--particle-size);
+    border-radius: 999px;
+    background: var(--particle-color);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--particle-color) 70%, #fff);
+    animation: achievement-particle-fly 1.8s ease forwards;
+    animation-delay: var(--particle-delay);
+}
+
+body.achievement-camera-active #gameShell {
+    transform: scale(var(--achievement-camera-zoom, 1.03));
+    transform-origin: center top;
+    transition: transform 0.4s ease;
+}
+
+@keyframes achievement-pop {
+    from { opacity: 0; transform: translateX(-50%) translateY(-16px) scale(0.95); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@keyframes achievement-leave {
+    from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    to { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.98); }
+}
+
+@keyframes achievement-particle-fly {
+    0% { opacity: 0; transform: translate(0, 0) scale(0.7); }
+    20% { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--particle-drift), -180px) scale(1.25); }
+}

@@ -41,7 +41,10 @@ import {
     claimGoldenSnus,
     getClickComboState,
     getPrestigeProgressState,
-    AUTO_BUYER_UNLOCK_COST
+    AUTO_BUYER_UNLOCK_COST,
+    getInventoryStatus,
+    getActiveInventoryEffects,
+    useInventoryItem
 } from "./engine.js";
 import { buildings, getBuildingCost, getPurchaseCost, getMaxAffordableSummary } from "./buildings.js";
 import { worlds, getWorldById, isWorldUnlocked, getWorldUnlockDetails } from "./worlds.js";
@@ -67,6 +70,8 @@ const prestigeTalentTreeEl = document.getElementById("prestigeTalentTree");
 const diamondShopListEl = document.getElementById("diamondShopList");
 const diamondShopBalanceEl = document.getElementById("diamondShopBalance");
 const achievementsListEl = document.getElementById("achievementsList");
+const inventoryListEl = document.getElementById("inventoryList");
+const inventoryActiveEffectsEl = document.getElementById("inventoryActiveEffects");
 const leftColumn = document.getElementById("leftBuildings");
 const rightColumn = document.getElementById("rightBuildings");
 const cookieClickArea = document.getElementById("cookieClickArea");
@@ -186,6 +191,64 @@ function renderAchievements() {
 
         achievementsListEl.appendChild(item);
     });
+}
+
+function renderInventory() {
+    if (!inventoryListEl) return;
+
+    const items = getInventoryStatus();
+    inventoryListEl.innerHTML = "";
+
+    items.forEach((item) => {
+        const entry = document.createElement("article");
+        entry.className = "achievement-item inventory-item";
+        entry.classList.toggle("is-unlocked", item.unlocked);
+        entry.classList.toggle("is-locked", !item.unlocked);
+        entry.classList.toggle("is-consumed", item.consumed);
+        entry.dataset.itemId = item.id;
+
+        let status = t("inventoryLocked");
+        if (item.activeMs > 0) {
+            status = t("inventoryActive", { seconds: Math.ceil(item.activeMs / 1000) });
+        } else if (item.consumed) {
+            status = t("inventoryConsumed");
+        } else if (item.cooldownMs > 0) {
+            status = t("inventoryCooldown", { seconds: Math.ceil(item.cooldownMs / 1000) });
+        } else if (item.canUse) {
+            status = t("inventoryReady");
+        }
+
+        entry.innerHTML = `
+            <div class="achievement-icon">${item.icon}</div>
+            <div class="achievement-content">
+                <div class="achievement-top-row">
+                    <div class="achievement-title">${t(item.nameKey)}</div>
+                    <div class="achievement-status">${status}</div>
+                </div>
+                <div class="achievement-description">${t(item.descriptionKey)}</div>
+                <div class="achievement-meta">
+                    <span class="achievement-tier">${t("inventoryEffectLabel")}</span>
+                    <span class="achievement-difficulty">${t(item.effectTextKey)}</span>
+                </div>
+                <div class="inventory-actions">
+                    <button class="inventory-use-button" type="button" data-item-id="${item.id}" ${item.canUse ? "" : "disabled"}>${t("inventoryUseButton")}</button>
+                </div>
+            </div>
+        `;
+
+        inventoryListEl.appendChild(entry);
+    });
+
+    if (inventoryActiveEffectsEl) {
+        const activeEffects = getActiveInventoryEffects();
+        if (activeEffects.length === 0) {
+            inventoryActiveEffectsEl.textContent = t("inventoryNoActiveEffects");
+        } else {
+            inventoryActiveEffectsEl.textContent = activeEffects
+                .map((item) => `${item.icon} ${t(item.nameKey)} (${Math.ceil(item.activeMs / 1000)}s)`)
+                .join(" • ");
+        }
+    }
 }
 
 function renderQuests() {
@@ -397,6 +460,8 @@ function renderActiveBonusesPanel() {
     if (bonuses.goldenSnusAvailable && bonuses.goldenSnusReward > 0) lines.push(t("bonusGoldenSnusReady", { reward: formatNumber(bonuses.goldenSnusReward) }));
     if (bonuses.comboBonusPercent > 0) lines.push(`🔥 Hype-Combo +${bonuses.comboBonusPercent}%`);
     if (bonuses.earlyGameBoostPercent > 0) lines.push(`🚀 Start-Boost +${bonuses.earlyGameBoostPercent}%`);
+    if (bonuses.inventoryIncomeBoostPercent > 0) lines.push(`🎒 Item: Einkommen +${bonuses.inventoryIncomeBoostPercent}%`);
+    if (bonuses.inventoryCritBoostPercent > 0) lines.push(`🎒 Item: Crit +${bonuses.inventoryCritBoostPercent}%`);
 
     activeBonusesPanelEl.innerHTML = `
         <div class="goal-hints-title">${t("activeBonuses")}</div>
@@ -561,6 +626,7 @@ export function renderUI(options = {}) {
         renderActiveBonusesPanel();
         renderDiamondShop();
         renderAchievements();
+        renderInventory();
         renderTrophyPath();
         renderPrestigeTalentTree();
         lastSlowPanelRenderAt = now;
@@ -580,6 +646,7 @@ export function refreshAllUI() {
     renderBuildings();
     renderDiamondShop();
     renderAchievements();
+    renderInventory();
     renderQuests();
     renderTrophyPath();
     renderUI({ forceFull: true });
@@ -595,12 +662,15 @@ export function applyStaticTranslations() {
         ["worldPickerTitle", t("worldPickerTitle")],
         ["settingsToggleButton", t("settingsOpen")],
         ["achievementsToggleButton", t("achievementsTitle")],
+        ["inventoryToggleButton", t("inventoryTitle")],
         ["settingsTitle", t("settingsTitle")],
         ["achievementsTitle", t("achievementsTitle")],
+        ["inventoryTitle", t("inventoryTitle")],
         ["questTitle", t("questTitle")],
         ["trophyPathButton", t("trophyPathButton")],
         ["trophyPathTitle", t("trophyPathTitle")],
         ["trophyPathIntro", t("trophyPathIntro")],
+        ["inventoryIntro", t("inventoryIntro")],
         ["trophyResetWarning", t("trophyResetWarning")],
         ["trophyPrestigeButton", t("trophyPrestigeButton")],
         ["diamondShopTitle", t("diamondShopTitle")],
@@ -853,6 +923,23 @@ if (goldenSnusButton) {
             showToast(t("goldenSnusClaimed", { reward: formatNumber(reward) }), 1500, "success");
             renderUI();
         }
+    });
+}
+
+if (inventoryListEl) {
+    inventoryListEl.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target.closest(".inventory-use-button") : null;
+        const itemId = target?.dataset.itemId;
+        if (!itemId) return;
+
+        const used = useInventoryItem(itemId);
+        if (!used.success) {
+            showToast(t("inventoryCannotUse"), 1200, "warning");
+            return;
+        }
+
+        showToast(t("inventoryActivated", { item: t(used.item.nameKey) }), 1500, "success");
+        renderUI({ forceFull: true });
     });
 }
 

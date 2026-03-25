@@ -5,6 +5,7 @@
 
 import { buildings, getPurchaseCost, getBuildingCps } from "./buildings.js";
 import { getWorldById, worlds, isWorldUnlocked } from "./worlds.js";
+import { inventoryItems } from "./items.js";
 
 export const PRESTIGE_THRESHOLD = 2_000_000;
 export const PRESTIGE_STEP_COST = 800_000;
@@ -479,6 +480,10 @@ export const gameState = {
     goldenSnusCooldownUntil: 0,
     goldenSnusReward: 0,
     prestigeTrackClaimed: {},
+    inventoryUnlocked: {},
+    inventoryConsumed: {},
+    inventoryActiveUntil: {},
+    inventoryCooldownUntil: {},
     clickCombo: 0,
     maxClickCombo: 0,
     lastClickAt: 0,
@@ -715,6 +720,20 @@ function resetPrestigeTrack() {
     });
 }
 
+function resetInventory() {
+    gameState.inventoryUnlocked = {};
+    gameState.inventoryConsumed = {};
+    gameState.inventoryActiveUntil = {};
+    gameState.inventoryCooldownUntil = {};
+
+    inventoryItems.forEach((item) => {
+        gameState.inventoryUnlocked[item.id] = false;
+        gameState.inventoryConsumed[item.id] = false;
+        gameState.inventoryActiveUntil[item.id] = 0;
+        gameState.inventoryCooldownUntil[item.id] = 0;
+    });
+}
+
 function resetAchievements() {
     achievements.forEach((achievement) => {
         gameState.achievementsUnlocked[achievement.id] = false;
@@ -779,6 +798,7 @@ export function resetGameState() {
     resetPrestigeUpgrades();
     resetPrestigeTalents();
     resetPrestigeTrack();
+    resetInventory();
     resetAchievements();
     resetQuests();
 }
@@ -949,11 +969,45 @@ function getClickBurstMultiplier() {
     return isClickBurstActive() ? CLICK_BURST_MULTIPLIER * getSkillPowerMultiplier() : 1;
 }
 
+function getInventoryEffectBonuses(now = Date.now()) {
+    const result = {
+        incomeMultiplier: 1,
+        critChanceBonus: 0,
+        prestigeCostMultiplier: 1,
+        upgradeDiscountRatio: 0
+    };
+
+    inventoryItems.forEach((item) => {
+        const activeUntil = Number(gameState.inventoryActiveUntil?.[item.id] || 0);
+        if (activeUntil <= now) return;
+
+        const effect = item.effect || {};
+        if (effect.type === "income_multiplier") {
+            result.incomeMultiplier *= Math.max(1, Number(effect.multiplier || 1));
+        }
+        if (effect.type === "crit_chance_bonus") {
+            result.critChanceBonus += Math.max(0, Number(effect.critBonus || 0));
+        }
+        if (effect.type === "prestige_cost_discount") {
+            const discountRatio = Math.max(0, Math.min(0.8, Number(effect.discountPercent || 0) / 100));
+            result.prestigeCostMultiplier *= Math.max(0.2, 1 - discountRatio);
+        }
+        if (effect.type === "upgrade_discount") {
+            const discountRatio = Math.max(0, Math.min(0.8, Number(effect.discountPercent || 0) / 100));
+            result.upgradeDiscountRatio += discountRatio;
+        }
+    });
+
+    result.upgradeDiscountRatio = Math.min(0.8, result.upgradeDiscountRatio);
+    return result;
+}
+
 function getBuildingDiscountMultiplier() {
     const worldDiscount = getWorldModifiers().buildingDiscount;
     const burstDiscount = isDiscountBurstActive() ? DISCOUNT_BURST_RATIO : 0;
     const talentDiscount = getPrestigeTalentEffects().discountBonusPercent / 100;
-    return Math.max(0.55, 1 - worldDiscount - burstDiscount - talentDiscount);
+    const itemDiscount = getInventoryEffectBonuses().upgradeDiscountRatio;
+    return Math.max(0.4, 1 - worldDiscount - burstDiscount - talentDiscount - itemDiscount);
 }
 
 export function getEffectivePurchasePreview(building, owned, mode, cookies = gameState.cookies) {
@@ -1026,7 +1080,9 @@ export function getActiveBonuses() {
         goldenSnusAvailable: Date.now() < Number(gameState.goldenSnusAvailableUntil || 0),
         goldenSnusReward: Math.max(0, Math.floor(Number(gameState.goldenSnusReward || 0))),
         comboBonusPercent: Math.round((computeComboMultiplier() - 1) * 100),
-        earlyGameBoostPercent: Math.max(0, Math.round((getEarlyGameRampMultiplier() - 1) * 100))
+        earlyGameBoostPercent: Math.max(0, Math.round((getEarlyGameRampMultiplier() - 1) * 100)),
+        inventoryIncomeBoostPercent: Math.max(0, Math.round((getInventoryEffectBonuses().incomeMultiplier - 1) * 100)),
+        inventoryCritBoostPercent: Math.max(0, Math.round(getInventoryEffectBonuses().critChanceBonus * 100))
     };
 }
 
@@ -1310,7 +1366,9 @@ export function getPrestigeUpgradeCost(upgradeId) {
     if (!upgrade) return Infinity;
 
     const level = getUpgradeLevel(upgrade.id);
-    return Math.floor(upgrade.baseCost * Math.pow(upgrade.growth, level));
+    const baseCost = Math.floor(upgrade.baseCost * Math.pow(upgrade.growth, level));
+    const priceMultiplier = Math.max(0.2, 1 - getInventoryEffectBonuses().upgradeDiscountRatio);
+    return Math.floor(baseCost * priceMultiplier);
 }
 
 export function getPotentialPrestigeGain() {
@@ -1322,7 +1380,8 @@ export function getPrestigeCostForLevel(currentPrestigeLevel) {
     const level = Math.max(0, Math.floor(Number(currentPrestigeLevel) || 0));
     const growthMultiplier = Math.pow(1.15, level);
     const linearRamp = level * PRESTIGE_STEP_COST;
-    return Math.floor((PRESTIGE_THRESHOLD * growthMultiplier) + linearRamp);
+    const baseCost = Math.floor((PRESTIGE_THRESHOLD * growthMultiplier) + linearRamp);
+    return Math.floor(baseCost * getInventoryEffectBonuses().prestigeCostMultiplier);
 }
 
 export function getPrestigeProgressState() {
@@ -1470,6 +1529,7 @@ export function calculateCps() {
     total *= getCpsUpgradeMultiplier();
     total *= getActiveBoostMultiplier();
     total *= 1 + (getPrestigeTalentEffects().cpsBonusPercent / 100);
+    total *= getInventoryEffectBonuses().incomeMultiplier;
 
     return total;
 }
@@ -1526,6 +1586,67 @@ export function getAchievementsStatus() {
         .filter(Boolean);
 }
 
+function syncInventoryUnlocks() {
+    inventoryItems.forEach((item) => {
+        if (gameState.inventoryUnlocked[item.id]) return;
+        if (gameState.achievementsUnlocked[item.unlockAchievementId]) {
+            gameState.inventoryUnlocked[item.id] = true;
+        }
+    });
+}
+
+export function getInventoryStatus() {
+    syncInventoryUnlocks();
+    const now = Date.now();
+    return inventoryItems.map((item) => {
+        const activeMs = Math.max(0, Number(gameState.inventoryActiveUntil?.[item.id] || 0) - now);
+        const cooldownMs = Math.max(0, Number(gameState.inventoryCooldownUntil?.[item.id] || 0) - now);
+        const unlocked = Boolean(gameState.inventoryUnlocked?.[item.id]);
+        const consumed = Boolean(gameState.inventoryConsumed?.[item.id]);
+        const canUse = unlocked && !consumed && activeMs <= 0 && cooldownMs <= 0;
+        return {
+            ...item,
+            unlocked,
+            collected: unlocked,
+            consumed,
+            activeMs,
+            cooldownMs,
+            canUse
+        };
+    });
+}
+
+export function getActiveInventoryEffects() {
+    return getInventoryStatus().filter((item) => item.activeMs > 0);
+}
+
+export function useInventoryItem(itemId) {
+    const now = Date.now();
+    const item = inventoryItems.find((entry) => entry.id === itemId);
+    if (!item) return { success: false, reason: "missing" };
+    syncInventoryUnlocks();
+
+    if (!gameState.inventoryUnlocked[item.id] || gameState.inventoryConsumed[item.id]) {
+        return { success: false, reason: "locked_or_consumed" };
+    }
+
+    const activeUntil = Number(gameState.inventoryActiveUntil?.[item.id] || 0);
+    const cooldownUntil = Number(gameState.inventoryCooldownUntil?.[item.id] || 0);
+    if (activeUntil > now || cooldownUntil > now) return { success: false, reason: "cooldown" };
+
+    const effect = item.effect || {};
+    if (effect.type === "instant_cookie_bonus") {
+        const instantGain = Math.max(5_000, Math.floor((Number(gameState.cookies || 0) * 0.2) + (calculateCps() * 45)));
+        addCookies(instantGain);
+    } else {
+        gameState.inventoryActiveUntil[item.id] = now + Math.max(0, Number(effect.durationMs || 0));
+        gameState.inventoryCooldownUntil[item.id] = now + Math.max(0, Number(effect.cooldownMs || 0));
+    }
+
+    gameState.inventoryConsumed[item.id] = true;
+    return { success: true, item };
+}
+
 export function unlockAvailableAchievements() {
     const unlockedNow = [];
 
@@ -1536,6 +1657,7 @@ export function unlockAvailableAchievements() {
         unlockedNow.push(progress);
     });
 
+    syncInventoryUnlocks();
     return unlockedNow;
 }
 
@@ -1613,7 +1735,7 @@ export function clickCookie() {
     const comboMultiplier = computeComboMultiplier(gameState.clickCombo);
     const worldModifiers = getWorldModifiers();
     const worldMultiplier = worldModifiers.worldMultiplier * (1 + worldModifiers.clickBonus);
-    const crit = Math.random() < (0.12 + computeComboCritBonus(gameState.clickCombo));
+    const crit = Math.random() < Math.min(0.9, 0.12 + computeComboCritBonus(gameState.clickCombo) + getInventoryEffectBonuses().critChanceBonus);
     const cpsSupport = calculateCps() * getLateGameClickShare();
 
     const base = gameState.clickPower
@@ -1623,7 +1745,8 @@ export function clickCookie() {
         * getClickBurstMultiplier()
         * comboMultiplier
         * getEarlyGameRampMultiplier()
-        * (1 + (getPrestigeTalentEffects().clickBonusPercent / 100));
+        * (1 + (getPrestigeTalentEffects().clickBonusPercent / 100))
+        * getInventoryEffectBonuses().incomeMultiplier;
     const amount = (base + cpsSupport) * (crit ? 2 : 1);
 
     addCookies(amount);

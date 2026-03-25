@@ -6,6 +6,7 @@
 import { gameState, prestigeUpgrades, prestigeTalents, achievements, resetGameState, AUTO_BUYER_STRATEGIES, quests, getPrestigeMultiplierForLevel } from "./engine.js";
 import { buildings } from "./buildings.js";
 import { worlds } from "./worlds.js";
+import { inventoryItems } from "./items.js";
 
 function normalizeUnlockedWorldIds(rawUnlockedWorldIds) {
     const validWorldIds = worlds.map((world) => world.id);
@@ -323,6 +324,7 @@ function normalizeSavePayload(parsed) {
     const buyMode = migrated.buyMode === "max" ? "max" : Number(migrated.buyMode);
 
     const allowedQuestIds = quests.map((quest) => quest.id);
+    const allowedInventoryIds = inventoryItems.map((item) => item.id);
     const allowedPrestigeLevels = prestigeUpgrades
         ? Array.from({ length: 100 }, (_, index) => String(index + 1))
         : [];
@@ -345,6 +347,16 @@ function normalizeSavePayload(parsed) {
         achievementsUnlocked: normalizeAchievementsUnlocked(migrated.achievementsUnlocked || migrated.milestonesClaimed),
         questsClaimed: normalizeBooleanMap(migrated.questsClaimed, allowedQuestIds),
         prestigeTrackClaimed: normalizeBooleanMap(migrated.prestigeTrackClaimed, allowedPrestigeLevels),
+        inventoryUnlocked: normalizeBooleanMap(migrated.inventoryUnlocked, allowedInventoryIds),
+        inventoryConsumed: normalizeBooleanMap(migrated.inventoryConsumed, allowedInventoryIds),
+        inventoryActiveUntil: allowedInventoryIds.reduce((acc, key) => {
+            acc[key] = normalizeNumber(migrated.inventoryActiveUntil?.[key], 0, 0);
+            return acc;
+        }, {}),
+        inventoryCooldownUntil: allowedInventoryIds.reduce((acc, key) => {
+            acc[key] = normalizeNumber(migrated.inventoryCooldownUntil?.[key], 0, 0);
+            return acc;
+        }, {}),
         activeBoostUntil: normalizeNumber(migrated.activeBoostUntil, 0, 0),
         activeBoostCooldownUntil: normalizeNumber(migrated.activeBoostCooldownUntil, 0, 0),
         clickBurstUntil: normalizeNumber(migrated.clickBurstUntil, 0, 0),

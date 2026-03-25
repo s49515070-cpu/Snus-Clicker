@@ -39,6 +39,32 @@ function formatDollarEquivalent(amount) {
     return `$${formatNumber((Number(amount) || 0) * DIAMOND_DOLLAR_VALUE)}`;
 }
 
+
+function setModalVisibility(modalEl, open, durationMs = 240) {
+    if (!modalEl) return;
+
+    if (open) {
+        modalEl.hidden = false;
+        
+        const raf = typeof globalThis.requestAnimationFrame === "function"
+            ? globalThis.requestAnimationFrame.bind(globalThis)
+            : null;
+        if (raf) {
+            raf(() => modalEl.classList.add("is-open"));
+        } else {
+            modalEl.classList.add("is-open");
+        }
+        return;
+    }
+
+    modalEl.classList.remove("is-open");
+    window.setTimeout(() => {
+        if (!modalEl.classList.contains("is-open")) {
+            modalEl.hidden = true;
+        }
+    }, durationMs);
+}
+
 function wait(ms) {
     return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
@@ -173,7 +199,7 @@ export function initSlotMachine() {
     };
 
     const openModal = () => {
-        modal.hidden = false;
+        setModalVisibility(modal, true, 240);
         launcherButton.setAttribute("aria-expanded", "true");
         renderFeatureRules(featureListEl);
         if (lastRound) {
@@ -190,7 +216,7 @@ export function initSlotMachine() {
     };
 
     const closeModal = () => {
-        modal.hidden = true;
+        setModalVisibility(modal, false, 240);
         launcherButton.setAttribute("aria-expanded", "false");
     };
 
@@ -231,12 +257,12 @@ export function initSlotMachine() {
     const openInfoModal = () => {
         if (!infoModal) return;
         renderSymbolInfo();
-        infoModal.hidden = false;
+        setModalVisibility(infoModal, true, 200);
     };
 
     const closeInfoModal = () => {
         if (!infoModal) return;
-        infoModal.hidden = true;
+        setModalVisibility(infoModal, false, 200);
     };
 
     const animateRound = async (round) => {

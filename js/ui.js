@@ -734,15 +734,18 @@ function renderWorldPicker() {
 
     worlds.forEach((world) => {
         const purchased = isWorldPurchased(world.id);
-        const unlockDetails = getWorldUnlockDetails(world, gameState.cookies, {
+        const totalBuildings = buildings.reduce((sum, b) => sum + Number(gameState.buildingData[b.id]?.owned || 0), 0);
+        const worldProgress = {
             lifetimeCookies: gameState.lifetimeCookies,
-            totalBuildings: buildings.reduce((sum, b) => sum + Number(gameState.buildingData[b.id]?.owned || 0), 0)
+            totalBuildings,
+            prestigeCookies: gameState.prestigeCookies
+        };
+        const unlockDetails = getWorldUnlockDetails(world, gameState.cookies, {
+            ...worldProgress
         });
         const unlocked = purchased || isWorldUnlocked(world, gameState.cookies, {
-            lifetimeCookies: gameState.lifetimeCookies,
-            totalBuildings: buildings.reduce((sum, b) => sum + Number(gameState.buildingData[b.id]?.owned || 0), 0)
+            ...worldProgress
         });
-        const missing = unlockDetails.missingCost;
         const button = document.createElement("button");
         button.type = "button";
         button.className = "world-picker-item";
@@ -755,7 +758,8 @@ function renderWorldPicker() {
             <div class="world-picker-item-status">${purchased ? (world.id === gameState.currentWorld ? t("worldCurrent") : t("worldUnlocked")) : unlockDetails.unlocked ? t("worldReadyToUnlock") : [
                 unlockDetails.missingCost > 0 ? t("worldMissingSnus", { missing: formatNumber(unlockDetails.missingCost) }) : "",
                 unlockDetails.missingLifetime > 0 ? t("worldMissingLifetime", { missing: formatNumber(unlockDetails.missingLifetime) }) : "",
-                unlockDetails.missingBuildings > 0 ? t("worldMissingBuildings", { missing: formatNumber(unlockDetails.missingBuildings) }) : ""
+                unlockDetails.missingBuildings > 0 ? t("worldMissingBuildings", { missing: formatNumber(unlockDetails.missingBuildings) }) : "",
+                unlockDetails.missingPrestige > 0 ? t("worldMissingPrestige", { missing: formatNumber(unlockDetails.missingPrestige) }) : ""
             ].filter(Boolean).join(" · ")}</div>
         `;
 
@@ -767,7 +771,8 @@ function renderWorldPicker() {
                         reasons: [
                             unlockDetails.missingCost > 0 ? t("worldMissingSnus", { missing: formatNumber(unlockDetails.missingCost) }) : "",
                             unlockDetails.missingLifetime > 0 ? t("worldMissingLifetime", { missing: formatNumber(unlockDetails.missingLifetime) }) : "",
-                            unlockDetails.missingBuildings > 0 ? t("worldMissingBuildings", { missing: formatNumber(unlockDetails.missingBuildings) }) : ""
+                            unlockDetails.missingBuildings > 0 ? t("worldMissingBuildings", { missing: formatNumber(unlockDetails.missingBuildings) }) : "",
+                            unlockDetails.missingPrestige > 0 ? t("worldMissingPrestige", { missing: formatNumber(unlockDetails.missingPrestige) }) : ""
                         ].filter(Boolean).join(" · ")
                     }), 2000, "warning");
                     return;

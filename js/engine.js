@@ -6,8 +6,8 @@
 import { buildings, getPurchaseCost, getBuildingCps } from "./buildings.js";
 import { getWorldById, worlds, isWorldUnlocked } from "./worlds.js";
 
-export const PRESTIGE_THRESHOLD = 1_000_000;
-export const PRESTIGE_STEP_COST = 250_000;
+export const PRESTIGE_THRESHOLD = 2_000_000;
+export const PRESTIGE_STEP_COST = 800_000;
 const ACTIVE_BOOST_DURATION_MS = 30_000;
 const ACTIVE_BOOST_COOLDOWN_MS = 30_000;
 const ACTIVE_BOOST_MULTIPLIER = 3;
@@ -33,7 +33,7 @@ export const prestigeUpgrades = [
     {
         id: "clickMastery",
         name: "Click Mastery",
-        description: "+25% Klickstärke pro Level",
+        description: "+12% Klickstärke pro Level",
         baseCost: 5,
         growth: 1.9,
         maxLevel: 10,
@@ -42,7 +42,7 @@ export const prestigeUpgrades = [
     {
         id: "snusAlchemy",
         name: "Snus Alchemy",
-        description: "+5% CPS pro Level",
+        description: "+3% CPS pro Level",
         baseCost: 8,
         growth: 2.1,
         maxLevel: 10,
@@ -53,14 +53,14 @@ export const prestigeUpgrades = [
         name: "Automation Core",
         description: "+1 Auto-Buyer Kauf pro Tick",
         baseCost: 15,
-        growth: 2.25,
+        growth: 2.45,
         maxLevel: 6,
         type: "automation"
     },
     {
         id: "boostOverdrive",
         name: "Boost Overdrive",
-        description: "+10% Skillstärke pro Level",
+        description: "+6% Skillstärke pro Level",
         baseCost: 18,
         growth: 2.3,
         maxLevel: 8,
@@ -69,7 +69,7 @@ export const prestigeUpgrades = [
     {
         id: "worldAttunement",
         name: "World Attunement",
-        description: "+3% Welteneffekte pro Level",
+        description: "+2% Welteneffekte pro Level",
         baseCost: 22,
         growth: 2.35,
         maxLevel: 8,
@@ -860,17 +860,17 @@ export function buyPrestigeTalent(talentId) {
 
 export function getPrestigeMultiplierForLevel(prestigeLevel) {
     const safeLevel = Math.max(0, Math.floor(Number(prestigeLevel) || 0));
-    return 1 + safeLevel * 0.01;
+    return 1 + (Math.log10(1 + safeLevel) * 0.16);
 }
 
 function getCpsUpgradeMultiplier() {
     const level = getUpgradeLevel("snusAlchemy");
-    return 1 + level * 0.05;
+    return 1 + level * 0.03;
 }
 
 function getClickUpgradeMultiplier() {
     const level = getUpgradeLevel("clickMastery");
-    return 1 + level * 0.25;
+    return 1 + level * 0.12;
 }
 
 function getOwnedCount(buildingId) {
@@ -896,7 +896,7 @@ function getBuildingSynergyMultiplier(targetId) {
 
 function getWorldModifiers() {
     const world = getWorldById(gameState.currentWorld);
-    const attunement = 1 + getUpgradeLevel("worldAttunement") * 0.03;
+    const attunement = 1 + getUpgradeLevel("worldAttunement") * 0.02;
 
     return {
         worldMultiplier: world?.multiplier || 1,
@@ -909,7 +909,7 @@ function getWorldModifiers() {
 function getSkillPowerMultiplier() {
     const level = getUpgradeLevel("boostOverdrive");
     const talentBonus = getPrestigeTalentEffects().skillPowerBonusPercent / 100;
-    return 1 + level * 0.1 + talentBonus;
+    return 1 + level * 0.06 + talentBonus;
 }
 
 function computeComboMultiplier(comboLevel = Number(gameState.clickCombo || 0)) {
@@ -1320,7 +1320,9 @@ export function getPotentialPrestigeGain() {
 
 export function getPrestigeCostForLevel(currentPrestigeLevel) {
     const level = Math.max(0, Math.floor(Number(currentPrestigeLevel) || 0));
-    return PRESTIGE_THRESHOLD + (level * PRESTIGE_STEP_COST);
+    const growthMultiplier = Math.pow(1.15, level);
+    const linearRamp = level * PRESTIGE_STEP_COST;
+    return Math.floor((PRESTIGE_THRESHOLD * growthMultiplier) + linearRamp);
 }
 
 export function getPrestigeProgressState() {
@@ -1672,7 +1674,8 @@ export function buyWorld(worldId) {
 
     const canUnlock = isWorldUnlocked(world, gameState.cookies, {
         lifetimeCookies: gameState.lifetimeCookies,
-        totalBuildings: getTotalBuildingsOwned()
+        totalBuildings: getTotalBuildingsOwned(),
+        prestigeCookies: gameState.prestigeCookies
     });
 
     if (!canUnlock) return false;

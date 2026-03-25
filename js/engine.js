@@ -232,6 +232,25 @@ export const achievements = achievementBlueprints.flatMap((blueprint) => (
     }))
 ));
 
+const ACHIEVEMENT_RARITY_BY_TIER = {
+    1: "common",
+    2: "rare",
+    3: "epic"
+};
+
+export function getAchievementRarity(achievement) {
+    const tier = Number(achievement?.tier || 1);
+    const difficulty = String(achievement?.difficulty || "").toUpperCase();
+    if (tier >= 4 || difficulty === "LEGENDARY") return "legendary";
+    if (difficulty === "HARD") return "epic";
+    if (difficulty === "MEDIUM") return "rare";
+    return ACHIEVEMENT_RARITY_BY_TIER[tier] || "common";
+}
+
+export function getAchievementRewardItems(achievementId) {
+    return inventoryItems.filter((item) => item.unlockAchievementId === achievementId);
+}
+
 export const quests = [
     {
         id: "daily_clicks_200",
@@ -1578,7 +1597,9 @@ export function getAchievementProgress(achievementId) {
         current,
         target,
         progressRatio,
-        unlocked
+        unlocked,
+        rarity: getAchievementRarity(achievement),
+        rewardItems: getAchievementRewardItems(achievement.id)
     };
 }
 

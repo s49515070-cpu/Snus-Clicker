@@ -11,12 +11,18 @@ import { t } from "./i18n.js";
 import { initWordle } from "./wordle.js";
 import { initSlotMachine } from "./slot-machine.js";
 import { playUiClickSound, playUiHoverSound } from "./audio.js";
+import { createAchievementCelebrationController } from "./ui-achievement-effects.js";
 
 // ===============================
 // INITIALISIERUNG
 // ===============================
 
 let autosaveTimerId;
+const achievementCelebrationLayer = document.getElementById("achievementCelebrationLayer");
+const achievementCelebrationController = createAchievementCelebrationController({
+    layerEl: achievementCelebrationLayer,
+    onComplete: () => {}
+});
 
 function initOfflineRewardModal() {
     const modal = document.getElementById("offlineRewardModal");
@@ -541,7 +547,8 @@ function uiLoop(timestamp = 0) {
         const claimedQuests = claimAvailableQuests();
         if (unlockedAchievements.length > 0 || claimedQuests.length > 0) {
             unlockedAchievements.forEach((entry) => {
-                showToast(`🏅 ${t(entry.titleKey)} (${t("achievementTierLabel", { tier: entry.tier })})`, 1800, "success");
+                achievementCelebrationController.celebrate(entry);
+                showToast(`🏅 ${t(entry.titleKey)} (${t("achievementTierLabel", { tier: entry.tier })})`, 1200, "success");
             });
             claimedQuests.forEach((entry) => {
                 const rewards = [];

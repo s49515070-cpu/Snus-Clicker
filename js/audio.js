@@ -152,3 +152,10 @@ export function playSlotBigWinSound() {
         { frequency: 988, duration: 0.2, gain: 0.15, type: "triangle", delay: 0.32 }
     ]);
 }
+
+export function playRewardPingSound() {
+    playToneSequence([
+        { frequency: 740, duration: 0.06, gain: 0.07, type: "triangle", delay: 0.00 },
+        { frequency: 988, duration: 0.08, gain: 0.09, type: "sine", delay: 0.04 }
+    ]);
+}

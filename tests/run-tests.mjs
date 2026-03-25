@@ -1530,14 +1530,19 @@ function testWordleWinAwardsDiamondsAndStartsNextRound() {
   resetEngineState();
   localStorage.clear();
   const ui = installWordleDocumentMock();
+  const normalizedSolutions = normalizeWordList(WORDLE_SOLUTIONS);
+  const dailySeed = createDailySeed(new Date());
+  const firstSolution = getWordForSeed(dailySeed, normalizedSolutions);
 
   localStorage.setItem('snus_clicker_wordle_state_v1', JSON.stringify({
-    seed: 0,
-    mode: 'practice',
-    solution: 'APFEL',
+    seed: dailySeed,
+    mode: 'daily',
+    solution: firstSolution,
     guesses: [],
-    currentGuess: 'APFEL',
+    currentGuess: firstSolution,
     status: 'playing',
+    dailyRoundIndex: 0,
+    dailySolvedCount: 0,
     hardMode: false,
     statistics: {
       played: 0,
@@ -1568,16 +1573,17 @@ function testWordleWinAwardsDiamondsAndStartsNextRound() {
       }
     });
 
-    assert.equal(gameState.diamonds, 0, 'practice wins should not award diamonds');
-    assert.match(ui.wordleStatus.textContent, /Trainingsrunde gewonnen/, 'practice win message should stay reward-free');
+    assert.equal(gameState.diamonds, 5, 'wins should award exactly 5 diamonds');
+    assert.match(ui.wordleStatus.textContent, /\+5 Diamanten/, 'win message should include the 5-diamond reward');
     assert.equal(scheduledTimers.length, 1, 'winning should schedule the next round automatically');
 
     scheduledTimers[0].callback();
 
     const persisted = JSON.parse(localStorage.getItem('snus_clicker_wordle_state_v1'));
-    assert.equal(persisted.mode, 'practice', 'after a win the next round should continue in practice mode');
-    assert.notEqual(persisted.seed, 0, 'after a win the next round should roll a fresh random seed');
-    assert.notEqual(persisted.solution, 'APFEL', 'after a win the next round should use a fresh solution');
+    assert.equal(persisted.mode, 'daily', 'after a win the next round should stay in daily mode');
+    assert.equal(persisted.seed, dailySeed, 'after a win the day seed should remain stable');
+    assert.equal(persisted.dailyRoundIndex, 1, 'after a win the daily round index should advance');
+    assert.notEqual(persisted.solution, firstSolution, 'after a win the next round should use a fresh daily-chain solution');
   } finally {
     globalThis.setTimeout = realSetTimeout;
     globalThis.clearTimeout = realClearTimeout;
@@ -1592,7 +1598,7 @@ function testWordleHintCostsDiamondsAndRevealsLetterOnly() {
 
   localStorage.setItem('snus_clicker_wordle_state_v1', JSON.stringify({
     seed: 123,
-    mode: 'practice',
+    mode: 'daily',
     solution: 'APFEL',
     guesses: [],
     currentGuess: '',
@@ -1697,12 +1703,15 @@ function testWordleDailyWinAwardsDiamondsWithoutAutoPracticeRound() {
       }
     });
 
-    assert.equal(gameState.diamonds, 10, 'daily wins should still award diamonds');
-    assert.equal(scheduledTimers.length, 0, 'daily wins should not auto-start a practice round');
+    assert.equal(gameState.diamonds, 5, 'daily wins should award 5 diamonds');
+    assert.equal(scheduledTimers.length, 1, 'daily wins should auto-start the next daily word');
+
+    scheduledTimers[0].callback();
 
     const persisted = JSON.parse(localStorage.getItem('snus_clicker_wordle_state_v1'));
     assert.equal(persisted.mode, 'daily', 'daily wins should remain on the daily puzzle');
-    assert.equal(persisted.status, 'won', 'daily win state should persist as won');
+    assert.equal(persisted.status, 'playing', 'after auto-advance a fresh daily round should be active');
+    assert.equal(persisted.dailyRoundIndex, 1, 'auto-advance should move to the next daily word index');
   } finally {
     globalThis.setTimeout = realSetTimeout;
     globalThis.clearTimeout = realClearTimeout;

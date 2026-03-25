@@ -15,13 +15,14 @@ import {
     submitGuess
 } from "./wordle-logic.js";
 import { awardDiamonds, gameState, spendDiamonds } from "./engine.js";
+import { animateDiamondReward } from "./ui-rewards.js";
 
 const KEYBOARD_ROWS = [
     ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
     ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
     ["ENTER", "Z", "X", "C", "V", "B", "N", "M", "⌫"]
 ];
-const WORDLE_WIN_DIAMONDS = 10;
+const WORDLE_WIN_DIAMONDS = 5;
 const WORDLE_HINT_COST = 8;
 const WORDLE_WIN_ADVANCE_DELAY_MS = 1500;
 const WORDLE_MAX_HINTS_PER_ROUND = 1;
@@ -53,30 +54,21 @@ function createNewDailyState() {
     return {
         ...createInitialGameState(solution),
         seed,
-        mode: "daily"
+        mode: "daily",
+        dailyRoundIndex: 0,
+        dailySolvedCount: 0
     };
 }
 
-function createPracticeState(seed = Date.now()) {
-    const safeSeed = Math.abs(Math.trunc(Number(seed) || Date.now()));
+function createDailyRoundState(seed, roundIndex) {
+    const safeSeed = Math.abs(Math.trunc(Number(seed) || 0));
+    const safeRoundIndex = Math.max(0, Math.trunc(Number(roundIndex) || 0));
     return {
-        ...createInitialGameState(getWordForSeed(safeSeed, solutionWords)),
+        ...createInitialGameState(getWordForSeed(safeSeed + safeRoundIndex, solutionWords)),
         seed: safeSeed,
-        mode: "practice"
+        mode: "daily",
+        dailyRoundIndex: safeRoundIndex
     };
-}
-
-function createRandomPracticeSeed(excludedSolution = "") {
-    const blockedSolution = String(excludedSolution || "").toUpperCase();
-    for (let attempt = 0; attempt < 12; attempt += 1) {
-        const seed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-        if (!blockedSolution || getWordForSeed(seed, solutionWords) !== blockedSolution) {
-            return seed;
-        }
-    }
-
-    const fallbackIndex = solutionWords.findIndex((word) => word !== blockedSolution);
-    return fallbackIndex >= 0 ? fallbackIndex : 0;
 }
 
 function createStateCarryover(rawPersisted) {
@@ -101,33 +93,30 @@ function loadWordleState() {
     const rawPersisted = safeStorageRead();
     const persisted = hydratePersistedState(rawPersisted, dailyState.solution);
     const persistedSeed = Number(rawPersisted?.seed);
-    const persistedMode = rawPersisted?.mode === "practice" ? "practice" : "daily";
+    const persistedRoundIndex = Math.max(0, Math.trunc(Number(rawPersisted?.dailyRoundIndex) || 0));
+    const persistedSolvedCount = Math.max(0, Math.trunc(Number(rawPersisted?.dailySolvedCount) || 0));
     const carryover = createStateCarryover(rawPersisted);
 
-    if (persistedMode === "daily" && persistedSeed === dailyState.seed) {
+    if (persistedSeed === dailyState.seed) {
+        const roundState = createDailyRoundState(dailyState.seed, persistedRoundIndex);
+        const hydratedRoundState = hydratePersistedState(rawPersisted, roundState.solution);
         return {
-            ...persisted,
-            solution: dailyState.solution,
+            ...hydratedRoundState,
+            solution: roundState.solution,
             seed: dailyState.seed,
             mode: "daily",
-            hardMode: carryover.hardMode
-        };
-    }
-
-    if (persistedMode === "practice") {
-        const practiceState = createPracticeState(persistedSeed);
-        const hydratedPracticeState = hydratePersistedState(rawPersisted, practiceState.solution);
-        return {
-            ...hydratedPracticeState,
-            seed: practiceState.seed,
-            mode: "practice"
+            hardMode: carryover.hardMode,
+            dailyRoundIndex: persistedRoundIndex,
+            dailySolvedCount: persistedSolvedCount
         };
     }
 
     return {
         ...dailyState,
         ...carryover,
-        hardMode: carryover.hardMode
+        hardMode: carryover.hardMode,
+        dailyRoundIndex: 0,
+        dailySolvedCount: 0
     };
 }
 
@@ -160,7 +149,6 @@ export function initWordle() {
     }
 
     let state = loadWordleState();
-    let practiceSeed = state.mode === "practice" ? state.seed : createRandomPracticeSeed(state.solution);
     let autoAdvanceTimerId = null;
 
     const persist = () => safeStorageWrite(state);
@@ -177,6 +165,12 @@ export function initWordle() {
         if (diamondCountEl) {
             diamondCountEl.textContent = String(Math.max(0, Math.floor(Number(value) || 0)));
         }
+    };
+
+    const getLastResolvedRowElement = () => {
+        if (!boardEl || typeof boardEl.querySelector !== "function") return null;
+        const rowIndex = Math.max(0, Math.min(MAX_ATTEMPTS - 1, state.guesses.length - 1));
+        return boardEl.querySelector(`.wordle-row[data-row="${rowIndex}"]`);
     };
 
     const getDiscoveredSolutionLetters = () => {
@@ -245,11 +239,13 @@ export function initWordle() {
     };
 
     const createNextSolvedRoundState = () => {
-        practiceSeed = createRandomPracticeSeed(state.solution);
+        const nextRoundIndex = Math.max(0, Math.trunc(Number(state.dailyRoundIndex) || 0)) + 1;
         return {
-            ...createPracticeState(practiceSeed),
+            ...createDailyRoundState(state.seed, nextRoundIndex),
             statistics: state.statistics,
             hardMode: state.hardMode,
+            dailyRoundIndex: nextRoundIndex,
+            dailySolvedCount: state.dailySolvedCount,
             message: "Neue Runde gestartet."
         };
     };
@@ -307,10 +303,8 @@ export function initWordle() {
 
         const summary = computeStatsSummary(state);
         const hintableLetters = getHintableLetters();
-        badgeEl.textContent = state.mode === "daily" ? "Tagesrätsel" : "Freies Spiel";
-        subtitleEl.textContent = state.mode === "daily"
-            ? `Heute wartet ein neues 5-Buchstaben-Wort. Versuche ${MAX_ATTEMPTS} stabile Züge.`
-            : "Trainingsrunde mit zufälligem Wort. Du kannst beliebig oft neu starten.";
+        badgeEl.textContent = "Tagesmodus";
+        subtitleEl.textContent = `Heute: Wort #${Math.max(1, state.dailyRoundIndex + 1)} · ${MAX_ATTEMPTS} Versuche · 5 Buchstaben.`;
         statusEl.textContent = state.message || (state.status === "playing"
             ? `Zeile ${Math.min(state.guesses.length + 1, MAX_ATTEMPTS)} von ${MAX_ATTEMPTS} · ${WORD_LENGTH} Buchstaben.`
             : state.status === "won"
@@ -357,10 +351,11 @@ export function initWordle() {
 
         if (hardModeInput) hardModeInput.checked = Boolean(state.hardMode);
         if (resetButton) {
-            resetButton.disabled = state.mode === "daily";
-            resetButton.title = state.mode === "daily"
-                ? "Tagesrätsel kann nicht zurückgesetzt werden."
-                : "";
+            resetButton.disabled = true;
+            resetButton.title = "Tagesrätsel kann nicht zurückgesetzt werden.";
+        }
+        if (practiceButton) {
+            practiceButton.textContent = "➡️ Nächstes Tageswort";
         }
         persist();
     };
@@ -378,22 +373,20 @@ export function initWordle() {
             return;
         }
         if (state.status === "won") {
-            if (state.mode === "daily") {
-                const nextDiamondTotal = awardDiamonds(WORDLE_WIN_DIAMONDS);
-                refreshDiamondCount(nextDiamondTotal);
-            }
+            const nextDiamondTotal = awardDiamonds(WORDLE_WIN_DIAMONDS);
+            animateDiamondReward({
+                amount: WORDLE_WIN_DIAMONDS,
+                sourceEl: getLastResolvedRowElement(),
+                targetEl: diamondCountEl,
+                finalTotal: nextDiamondTotal
+            });
             state = {
                 ...state,
-                message: state.mode === "daily"
-                    ? `Du hast gewonnen! Jetzt bekommst du ${WORDLE_WIN_DIAMONDS} Diamanten.`
-                    : "Du hast die Trainingsrunde gewonnen!"
+                dailySolvedCount: Math.max(0, Number(state.dailySolvedCount) || 0) + 1,
+                message: `Du hast gewonnen! +${WORDLE_WIN_DIAMONDS} Diamanten. Heute gelöst: ${Math.max(0, Number(state.dailySolvedCount) || 0) + 1}.`
             };
             render();
-            if (state.mode === "practice") {
-                queueNextSolvedRound();
-            } else {
-                clearAutoAdvanceTimer();
-            }
+            queueNextSolvedRound();
             return;
         }
         render();
@@ -441,12 +434,7 @@ export function initWordle() {
 
     practiceButton?.addEventListener("click", () => {
         clearAutoAdvanceTimer();
-        practiceSeed = createRandomPracticeSeed(state.solution);
-        state = {
-            ...createPracticeState(practiceSeed),
-            statistics: state.statistics,
-            hardMode: state.hardMode
-        };
+        state = createNextSolvedRoundState();
         render();
     });
 
@@ -462,9 +450,7 @@ export function initWordle() {
             render();
             return;
         }
-        state = state.mode === "practice"
-            ? { ...createPracticeState(state.seed), statistics: state.statistics, hardMode: state.hardMode }
-            : { ...createNewDailyState(), statistics: state.statistics, hardMode: state.hardMode };
+        state = { ...createNewDailyState(), statistics: state.statistics, hardMode: state.hardMode };
         render();
     });
 

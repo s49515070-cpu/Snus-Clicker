@@ -145,7 +145,7 @@ const achievementBlueprints = [
         icon: "💸",
         titleKey: "achievementLifetimeSnusTitle",
         descriptionKey: "achievementLifetimeSnusDescription",
-        thresholds: [100_000, 1_000_000, 10_000_000],
+        thresholds: [250_000, 2_500_000, 25_000_000],
         progress: (state) => Number(state.lifetimeCookies || 0)
     },
     {
@@ -153,7 +153,7 @@ const achievementBlueprints = [
         icon: "🖱️",
         titleKey: "achievementTotalClicksTitle",
         descriptionKey: "achievementTotalClicksDescription",
-        thresholds: [500, 5_000, 20_000],
+        thresholds: [1_000, 10_000, 50_000],
         progress: (state) => Number(state.totalClicks || 0)
     },
     {
@@ -161,7 +161,7 @@ const achievementBlueprints = [
         icon: "🏗️",
         titleKey: "achievementTotalBuildingsTitle",
         descriptionKey: "achievementTotalBuildingsDescription",
-        thresholds: [25, 75, 150],
+        thresholds: [40, 120, 240],
         progress: (state) => Number(state.achievementStats?.maxTotalBuildings || 0)
     },
     {
@@ -169,7 +169,7 @@ const achievementBlueprints = [
         icon: "🌟",
         titleKey: "achievementPrestigeTitle",
         descriptionKey: "achievementPrestigeDescription",
-        thresholds: [5, 15, 35],
+        thresholds: [8, 24, 60],
         progress: (state) => Number(state.prestigeCookies || 0)
     },
     {
@@ -177,7 +177,7 @@ const achievementBlueprints = [
         icon: "💎",
         titleKey: "achievementDiamondSpendTitle",
         descriptionKey: "achievementDiamondSpendDescription",
-        thresholds: [50, 300, 1_200],
+        thresholds: [100, 600, 2_400],
         progress: (state) => Number(state.achievementStats?.diamondsSpent || 0)
     },
     {
@@ -185,10 +185,34 @@ const achievementBlueprints = [
         icon: "⚙️",
         titleKey: "achievementUpgradesTitle",
         descriptionKey: "achievementUpgradesDescription",
-        thresholds: [8, 20, 40],
+        thresholds: [12, 30, 60],
         progress: (state) => Object.values(state.prestigeUpgradeLevels || {}).reduce((sum, level) => (
             sum + Math.max(0, Number(level) || 0)
         ), 0)
+    },
+    {
+        key: "max_click_combo",
+        icon: "🔥",
+        titleKey: "achievementComboTitle",
+        descriptionKey: "achievementComboDescription",
+        thresholds: [25, 75, 150],
+        progress: (state) => Number(state.maxClickCombo || 0)
+    },
+    {
+        key: "unlocked_worlds",
+        icon: "🌍",
+        titleKey: "achievementWorldsTitle",
+        descriptionKey: "achievementWorldsDescription",
+        thresholds: [3, 5, 7],
+        progress: (state) => (Array.isArray(state.unlockedWorldIds) ? state.unlockedWorldIds.length : 0)
+    },
+    {
+        key: "claimed_trophies",
+        icon: "🏆",
+        titleKey: "achievementTrophiesTitle",
+        descriptionKey: "achievementTrophiesDescription",
+        thresholds: [3, 12, 30],
+        progress: (state) => Object.values(state.prestigeTrackClaimed || {}).filter(Boolean).length
     }
 ];
 

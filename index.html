@@ -98,6 +98,7 @@
     </div>
 
         <button id="achievementsToggleButton" class="achievements-toggle-button glass" type="button">🏅 Achievements</button>
+        <button id="inventoryToggleButton" class="inventory-toggle-button glass" type="button">🎒 Inventar</button>
 
     <!-- Achievements -->
     <div id="achievementsModal" class="achievements-modal" hidden>
@@ -107,6 +108,18 @@
                 <button id="achievementsCloseButton" type="button" aria-label="Achievements schließen">✕</button>
             </div>
             <div id="achievementsList" class="achievements-list"></div>
+        </div>
+    </div>
+
+    <div id="inventoryModal" class="achievements-modal" hidden>
+        <div id="inventoryPanel" class="achievements-panel inventory-panel glass highlight-panel is-collapsed" role="dialog" aria-modal="true" aria-labelledby="inventoryTitle">
+            <div class="achievements-header">
+                <h3 id="inventoryTitle">🎒 Inventar</h3>
+                <button id="inventoryCloseButton" type="button" aria-label="Inventar schließen">✕</button>
+            </div>
+            <div id="inventoryIntro" class="inventory-intro">Sammle Item-Belohnungen über Achievements und aktiviere sie gezielt.</div>
+            <div id="inventoryActiveEffects" class="inventory-active-effects" aria-live="polite"></div>
+            <div id="inventoryList" class="achievements-list inventory-list"></div>
         </div>
     </div>
 

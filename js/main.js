@@ -376,6 +376,60 @@ function initAchievementsControls() {
     }
 }
 
+function initInventoryControls() {
+    const inventoryToggleButton = document.getElementById("inventoryToggleButton");
+    const inventoryModal = document.getElementById("inventoryModal");
+    const inventoryPanel = document.getElementById("inventoryPanel");
+    const inventoryCloseButton = document.getElementById("inventoryCloseButton");
+
+    const animationDurationMs = 220;
+    let closeTimerId = null;
+
+    const setPanelVisibility = (visible) => {
+        if (!inventoryModal || !inventoryPanel) return;
+
+        if (closeTimerId) {
+            window.clearTimeout(closeTimerId);
+            closeTimerId = null;
+        }
+        if (visible) {
+            inventoryModal.hidden = false;
+            requestAnimationFrame(() => {
+                inventoryPanel.classList.remove("is-collapsed");
+            });
+        } else {
+            inventoryPanel.classList.add("is-collapsed");
+            closeTimerId = window.setTimeout(() => {
+                if (inventoryPanel.classList.contains("is-collapsed")) {
+                    inventoryModal.hidden = true;
+                }
+            }, animationDurationMs);
+        }
+
+        if (inventoryToggleButton) {
+            inventoryToggleButton.setAttribute("aria-expanded", visible ? "true" : "false");
+        }
+    };
+
+    if (inventoryToggleButton) {
+        inventoryToggleButton.setAttribute("aria-controls", "inventoryModal");
+        inventoryToggleButton.setAttribute("aria-expanded", "false");
+        inventoryToggleButton.addEventListener("click", () => {
+            setPanelVisibility(Boolean(inventoryModal?.hidden));
+        });
+    }
+
+    if (inventoryCloseButton) {
+        inventoryCloseButton.addEventListener("click", () => setPanelVisibility(false));
+    }
+
+    if (inventoryModal) {
+        inventoryModal.addEventListener("click", (event) => {
+            if (event.target === inventoryModal) setPanelVisibility(false);
+        });
+    }
+}
+
 function initSaveSyncListener() {
     if (typeof window === "undefined") return;
 
@@ -424,6 +478,7 @@ function init() {
     initSaveControls();
     initSettingsControls();
     initAchievementsControls();
+    initInventoryControls();
     initTrophyPathControls();
     initSaveSyncListener();
     initSlotMachine();

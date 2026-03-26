@@ -251,6 +251,12 @@ export function getAchievementRewardItems(achievementId) {
     return inventoryItems.filter((item) => item.unlockAchievementId === achievementId);
 }
 
+export function getAchievementDiamondReward(achievement) {
+    const tier = Math.max(1, Number(achievement?.tier || 1));
+    if (tier <= 1) return 0;
+    return tier === 2 ? 25 : 80;
+}
+
 export const quests = [
     {
         id: "daily_clicks_200",
@@ -1607,6 +1613,7 @@ export function getAchievementProgress(achievementId) {
     const target = Math.max(1, Number(achievement.target) || 1);
     const progressRatio = Math.min(1, current / target);
     const unlocked = Boolean(gameState.achievementsUnlocked[achievement.id]);
+    const rewardDiamonds = getAchievementDiamondReward(achievement);
 
     return {
         ...achievement,
@@ -1615,7 +1622,8 @@ export function getAchievementProgress(achievementId) {
         progressRatio,
         unlocked,
         rarity: getAchievementRarity(achievement),
-        rewardItems: getAchievementRewardItems(achievement.id)
+        rewardItems: getAchievementRewardItems(achievement.id),
+        rewardDiamonds
     };
 }
 
@@ -1694,7 +1702,13 @@ export function unlockAvailableAchievements() {
         const progress = getAchievementProgress(achievement.id);
         if (!progress || progress.unlocked || progress.current < progress.target) return;
         gameState.achievementsUnlocked[achievement.id] = true;
-        unlockedNow.push(progress);
+        if (progress.rewardDiamonds > 0) {
+            gameState.diamonds += progress.rewardDiamonds;
+        }
+        unlockedNow.push({
+            ...progress,
+            unlocked: true
+        });
     });
 
     syncInventoryUnlocks();

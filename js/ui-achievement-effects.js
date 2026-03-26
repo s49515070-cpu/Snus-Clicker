@@ -28,6 +28,7 @@ export function createAchievementCelebrationController({ layerEl, onComplete } =
         const rarity = String(data.rarity || "common").toLowerCase();
         const theme = RARITY_THEME[rarity] || RARITY_THEME.common;
         const rewardItems = Array.isArray(data.rewardItems) ? data.rewardItems : [];
+        const rewardDiamonds = Math.max(0, Number(data.rewardDiamonds || 0));
 
         playAchievementRaritySound(rarity);
 
@@ -45,7 +46,9 @@ export function createAchievementCelebrationController({ layerEl, onComplete } =
                     </div>
                 </div>
             `).join("")
-            : `<div class="achievement-celebration-reward-empty">${t("achievementRewardNone")}</div>`;
+            : rewardDiamonds > 0
+                ? `<div class="achievement-celebration-reward"><div class="achievement-celebration-reward-icon">💎</div><div><div class="achievement-celebration-reward-title">+${rewardDiamonds} ${t("diamonds")}</div></div></div>`
+                : `<div class="achievement-celebration-reward-empty">${t("achievementRewardNone")}</div>`;
 
         card.innerHTML = `
             <div class="achievement-celebration-headline">🏅 ${t("achievementUnlockedHeadline")}</div>

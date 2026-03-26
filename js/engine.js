@@ -35,7 +35,7 @@ export const prestigeUpgrades = [
     {
         id: "clickMastery",
         name: "Click Mastery",
-        description: "+12% Klickstärke pro Level",
+        description: "Skalierende Klickstärke pro Level",
         baseCost: PRESTIGE_UPGRADE_BALANCE.clickMastery.baseCost,
         growth: PRESTIGE_UPGRADE_BALANCE.clickMastery.growth,
         maxLevel: PRESTIGE_UPGRADE_BALANCE.clickMastery.maxLevel,
@@ -44,7 +44,7 @@ export const prestigeUpgrades = [
     {
         id: "snusAlchemy",
         name: "Snus Alchemy",
-        description: "+3% CPS pro Level",
+        description: "Skalierende CPS-Stärke pro Level",
         baseCost: PRESTIGE_UPGRADE_BALANCE.snusAlchemy.baseCost,
         growth: PRESTIGE_UPGRADE_BALANCE.snusAlchemy.growth,
         maxLevel: PRESTIGE_UPGRADE_BALANCE.snusAlchemy.maxLevel,
@@ -908,12 +908,27 @@ export function getPrestigeMultiplierForLevel(prestigeLevel) {
 
 function getCpsUpgradeMultiplier() {
     const level = getUpgradeLevel("snusAlchemy");
-    return 1 + level * 0.03;
+    const linearStep = Math.max(0, Number(ECONOMY_BALANCE.snusAlchemyLinearStep || 0.03));
+    const scaleStep = Math.max(0, Number(ECONOMY_BALANCE.snusAlchemyScaleStep || 0));
+    const exponent = Math.max(1, Number(ECONOMY_BALANCE.snusAlchemyScaleExponent || 1));
+    return 1 + (level * linearStep) + (Math.pow(level, exponent) * scaleStep);
 }
 
 function getClickUpgradeMultiplier() {
     const level = getUpgradeLevel("clickMastery");
-    return 1 + level * 0.12;
+    const linearStep = Math.max(0, Number(ECONOMY_BALANCE.clickMasteryLinearStep || 0.12));
+    const scaleStep = Math.max(0, Number(ECONOMY_BALANCE.clickMasteryScaleStep || 0));
+    const exponent = Math.max(1, Number(ECONOMY_BALANCE.clickMasteryScaleExponent || 1));
+    return 1 + (level * linearStep) + (Math.pow(level, exponent) * scaleStep);
+}
+
+function getCpsMilestoneMultiplier() {
+    const totalBuildings = getTotalBuildingsOwned();
+    const milestoneEvery = Math.max(1, Math.floor(Number(ECONOMY_BALANCE.cpsMilestoneEveryOwned || 25)));
+    const step = Math.max(0, Number(ECONOMY_BALANCE.cpsMilestoneStep || 0));
+    const cap = Math.max(0, Number(ECONOMY_BALANCE.cpsMilestoneCap || 0));
+    const milestones = Math.floor(totalBuildings / milestoneEvery);
+    return 1 + Math.min(cap, milestones * step);
 }
 
 function getOwnedCount(buildingId) {
@@ -1597,6 +1612,7 @@ export function calculateCps() {
     total *= gameState.prestigeMultiplier;
     total *= getCpsUpgradeMultiplier();
     total *= getActiveBoostMultiplier();
+    total *= getCpsMilestoneMultiplier();
     total *= 1 + (getPrestigeTalentEffects().cpsBonusPercent / 100);
     total *= getInventoryEffectBonuses().incomeMultiplier;
     total *= Math.max(1, Number(ECONOMY_BALANCE.globalCpsMultiplier || 1));

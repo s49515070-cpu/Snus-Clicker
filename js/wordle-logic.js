@@ -152,8 +152,11 @@ export function hydratePersistedState(rawState, fallbackSolution) {
 
     const status = rawState.status === "won" || rawState.status === "lost" ? rawState.status : "playing";
 
+    const persistedSolution = sanitizeWord(rawState.solution);
+    const safeSolution = persistedSolution.length === WORD_LENGTH ? persistedSolution : safeFallback;
+
     return {
-        solution: sanitizeWord(rawState.solution) || safeFallback,
+        solution: safeSolution,
         guesses: sanitizedGuesses,
         currentGuess: sanitizeWord(rawState.currentGuess).slice(0, WORD_LENGTH),
         status,

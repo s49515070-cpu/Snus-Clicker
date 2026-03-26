@@ -12,7 +12,8 @@ import {
     hydratePersistedState,
     normalizeWordList,
     scoreKeyboard,
-    submitGuess
+    submitGuess,
+    validateHardMode
 } from "./wordle-logic.js";
 import { awardDiamonds, gameState, spendDiamonds } from "./engine.js";
 import { animateDiamondReward } from "./ui-rewards.js";
@@ -85,6 +86,19 @@ function createStateCarryover(rawPersisted) {
     return {
         statistics: safeStatistics,
         hardMode: Boolean(rawPersisted?.hardMode)
+    };
+}
+
+function ensureValidStateSolution(state, fallbackSeed) {
+    const safeSolution = typeof state?.solution === "string" ? state.solution : "";
+    if (safeSolution.length === WORD_LENGTH) return state;
+    const repairedRound = createDailyRoundState(fallbackSeed, Math.max(0, Math.trunc(Number(state?.dailyRoundIndex) || 0)));
+    return {
+        ...repairedRound,
+        statistics: state?.statistics || repairedRound.statistics,
+        hardMode: Boolean(state?.hardMode),
+        dailySolvedCount: Math.max(0, Math.trunc(Number(state?.dailySolvedCount) || 0)),
+        message: "Runde wurde repariert, weil gespeicherte Daten ungültig waren."
     };
 }
 
@@ -302,6 +316,7 @@ export function initWordle() {
     };
 
     const render = () => {
+        state = ensureValidStateSolution(state, state.seed);
         const board = buildBoard(state);
         boardEl.innerHTML = "";
 
@@ -408,6 +423,15 @@ export function initWordle() {
     };
 
     const submitCurrentGuess = () => {
+        if (state.hardMode) {
+            const previousRows = state.guesses.map((guess) => evaluateGuess(guess, state.solution));
+            const hardModeError = validateHardMode(state.currentGuess, previousRows);
+            if (hardModeError) {
+                setMessage(hardModeError);
+                return;
+            }
+        }
+
         const result = submitGuess(state, allowedWords);
         state = result.state;
         if (!result.accepted) {

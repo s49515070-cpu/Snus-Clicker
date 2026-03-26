@@ -622,7 +622,8 @@ function uiLoop(timestamp = 0) {
         if (unlockedAchievements.length > 0 || claimedQuests.length > 0) {
             unlockedAchievements.forEach((entry) => {
                 achievementCelebrationController.celebrate(entry);
-                showToast(`🏅 ${t(entry.titleKey)} (${t("achievementTierLabel", { tier: entry.tier })})`, 1200, "success");
+                const rewardSuffix = entry.rewardDiamonds > 0 ? ` · 💎 +${entry.rewardDiamonds}` : "";
+                showToast(`🏅 ${t(entry.titleKey)} (${t("achievementTierLabel", { tier: entry.tier })})${rewardSuffix}`, 1200, "success");
             });
             claimedQuests.forEach((entry) => {
                 const rewards = [];

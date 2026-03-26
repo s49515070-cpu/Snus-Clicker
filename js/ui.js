@@ -229,7 +229,9 @@ function renderAchievements() {
                 <div class="achievement-reward-preview">
                     ${achievement.rewardItems.length > 0
                         ? achievement.rewardItems.map((reward) => `<span class="achievement-reward-chip">${reward.icon} ${t(reward.nameKey)}</span>`).join("")
-                        : `<span class="achievement-reward-chip is-empty">${t("achievementRewardNone")}</span>`}
+                        : achievement.rewardDiamonds > 0
+                            ? `<span class="achievement-reward-chip">💎 +${achievement.rewardDiamonds} ${t("diamonds")}</span>`
+                            : `<span class="achievement-reward-chip is-empty">${t("achievementRewardNone")}</span>`}
                 </div>
                 <div class="achievement-progress-row">
                     <div class="achievement-progress">${current} / ${target}</div>

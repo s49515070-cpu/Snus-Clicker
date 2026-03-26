@@ -111,6 +111,22 @@ function loadWordleState() {
         };
     }
 
+    const canResumePreviousRound = persisted.status === "playing"
+        && persisted.guesses.length < MAX_ATTEMPTS
+        && persisted.solution.length === WORD_LENGTH;
+
+    if (canResumePreviousRound) {
+        return {
+            ...persisted,
+            seed: dailyState.seed,
+            mode: "daily",
+            hardMode: carryover.hardMode,
+            dailyRoundIndex: persistedRoundIndex,
+            dailySolvedCount: persistedSolvedCount,
+            message: persisted.message || "Deine letzte Runde wurde fortgesetzt."
+        };
+    }
+
     return {
         ...dailyState,
         ...carryover,

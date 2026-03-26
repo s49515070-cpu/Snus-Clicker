@@ -1721,6 +1721,9 @@ export function useInventoryItem(itemId) {
     if (effect.type === "instant_cookie_bonus") {
         const instantGain = Math.max(5_000, Math.floor((Number(gameState.cookies || 0) * 0.2) + (calculateCps() * 45)));
         addCookies(instantGain);
+    } else if (effect.type === "ten_minute_income_bonus") {
+        const instantGain = Math.max(0, Math.floor(calculateCps() * 600));
+        addCookies(instantGain);
     } else {
         gameState.inventoryActiveUntil[item.id] = now + Math.max(0, Number(effect.durationMs || 0));
         gameState.inventoryCooldownUntil[item.id] = now + Math.max(0, Number(effect.cooldownMs || 0));

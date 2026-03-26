@@ -53,7 +53,7 @@ import { initToastSystem, showAutosave, showToast } from "./ui-toast.js";
 import { createTrophyPathController } from "./ui-trophy.js";
 import { createDiamondShopController } from "./ui-shop.js";
 import { t } from "./i18n.js";
-import { getBackgroundColor, getBackgroundImage, getNumberFormat, getHighContrast, getReducedMotion, getOnboardingHintsEnabled } from "./config.js";
+import { getBackgroundColor, getBackgroundImage, getNumberFormat, getHighContrast, getReducedMotion, getOnboardingHintsEnabled, getItemCustomImage, updateItemCustomImage } from "./config.js";
 import { playClickSound } from "./audio.js";
 
 const cookieCountEl = document.getElementById("cookieCount");
@@ -109,6 +109,32 @@ const SLOW_PANEL_REFRESH_MS = 600;
 const clickEffectPool = [];
 const activeClickEffects = new Set();
 const pendingActionButtons = new WeakSet();
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#39;");
+}
+
+function getItemIconHtml(item) {
+    const customImage = item?.customImageUpload ? getItemCustomImage(item.id) : "";
+    const imageSource = customImage || item?.image;
+    if (typeof imageSource === "string" && imageSource.trim()) {
+        const safeName = escapeHtml(t(item.nameKey));
+        const safeSrc = escapeHtml(imageSource.trim());
+        return `<img class="item-icon-image" src="${safeSrc}" alt="${safeName}" loading="lazy">`;
+    }
+    return escapeHtml(item?.icon || "🎁");
+}
+
+function getItemIconText(item) {
+    const customImage = item?.customImageUpload ? getItemCustomImage(item.id) : "";
+    if (customImage || item?.image) return "🖼️";
+    return String(item?.icon || "🎁");
+}
 
 const { renderBuildings, refreshBuildingsIfNeeded } = createBuildingsUIController({
     gameState,
@@ -270,7 +296,7 @@ function renderInventory() {
         }
 
         entry.innerHTML = `
-            <div class="achievement-icon">${item.icon}</div>
+            <div class="achievement-icon">${getItemIconHtml(item)}</div>
             <div class="achievement-content">
                 <div class="achievement-top-row">
                     <div class="achievement-title">${t(item.nameKey)}</div>
@@ -284,6 +310,13 @@ function renderInventory() {
                 <div class="inventory-actions">
                     <button class="inventory-use-button" type="button" data-item-id="${item.id}" ${item.canUse ? "" : "disabled"}>${t("inventoryUseButton")}</button>
                 </div>
+                ${item.customImageUpload ? `
+                    <div class="inventory-custom-image-row">
+                        <button class="inventory-upload-button" type="button" data-item-id="${item.id}">${t("inventoryUploadImageButton")}</button>
+                        <input class="inventory-upload-input" type="file" data-item-id="${item.id}" accept="image/*">
+                        <span class="inventory-custom-image-hint">${t("inventoryUploadImageHint")}</span>
+                    </div>
+                ` : ""}
             </div>
         `;
 
@@ -296,7 +329,7 @@ function renderInventory() {
             inventoryActiveEffectsEl.textContent = t("inventoryNoActiveEffects");
         } else {
             inventoryActiveEffectsEl.textContent = activeEffects
-                .map((item) => `${item.icon} ${t(item.nameKey)} (${Math.ceil(item.activeMs / 1000)}s)`)
+                .map((item) => `${getItemIconText(item)} ${t(item.nameKey)} (${Math.ceil(item.activeMs / 1000)}s)`)
                 .join(" • ");
         }
     }
@@ -1012,6 +1045,45 @@ if (goldenSnusButton) {
 }
 
 if (inventoryListEl) {
+    inventoryListEl.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target.closest(".inventory-upload-button") : null;
+        const itemId = target?.dataset.itemId;
+        if (!itemId) return;
+        const input = inventoryListEl.querySelector(`.inventory-upload-input[data-item-id="${itemId}"]`);
+        input?.click();
+    });
+
+    inventoryListEl.addEventListener("change", (event) => {
+        const target = event.target instanceof HTMLInputElement ? event.target : null;
+        if (!target?.classList.contains("inventory-upload-input")) return;
+
+        const itemId = target.dataset.itemId;
+        const file = target.files?.[0];
+        if (!itemId || !file || !file.type.startsWith("image/")) {
+            showToast(t("inventoryImageUploadInvalid"), 1500, "warning");
+            target.value = "";
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+            const result = typeof reader.result === "string" ? reader.result : "";
+            if (!result) {
+                showToast(t("inventoryImageUploadInvalid"), 1500, "warning");
+                return;
+            }
+            updateItemCustomImage(itemId, result);
+            const itemEntry = getInventoryStatus().find((item) => item.id === itemId);
+            showToast(t("inventoryImageUploaded", { item: itemEntry ? t(itemEntry.nameKey) : itemId }), 1800, "success");
+            renderUI({ forceFull: true });
+        });
+        reader.addEventListener("error", () => {
+            showToast(t("inventoryImageUploadInvalid"), 1500, "warning");
+        });
+        reader.readAsDataURL(file);
+        target.value = "";
+    });
+
     inventoryListEl.addEventListener("click", (event) => {
         const target = event.target instanceof Element ? event.target.closest(".inventory-use-button") : null;
         const itemId = target?.dataset.itemId;

@@ -12,6 +12,7 @@ const DEFAULT_CONFIG = {
     language: "de",
     backgroundColor: "",
     backgroundImage: "",
+    itemCustomImages: {},
     reducedMotion: false,
     highContrast: false,
     numberFormat: "short",
@@ -37,6 +38,15 @@ function saveConfig() {
     }
 }
 
+function sanitizePlainObject(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    const source = Object.assign({}, value);
+    delete source.__proto__;
+    delete source.constructor;
+    delete source.prototype;
+    return source;
+}
+
 export function loadConfig() {
     try {
         const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
@@ -52,6 +62,7 @@ export function loadConfig() {
         runtimeConfig.language = parsed.language === "en" ? "en" : "de";
         runtimeConfig.backgroundColor = typeof parsed.backgroundColor === "string" ? parsed.backgroundColor : DEFAULT_CONFIG.backgroundColor;
         runtimeConfig.backgroundImage = typeof parsed.backgroundImage === "string" ? parsed.backgroundImage : DEFAULT_CONFIG.backgroundImage;
+        runtimeConfig.itemCustomImages = sanitizePlainObject(parsed.itemCustomImages);
         runtimeConfig.cookieHorizontalOffset = clampConfigNumber(parsed.cookieHorizontalOffset, -260, 260, DEFAULT_CONFIG.cookieHorizontalOffset);
         runtimeConfig.reducedMotion = typeof parsed.reducedMotion === "boolean" ? parsed.reducedMotion : DEFAULT_CONFIG.reducedMotion;
         runtimeConfig.highContrast = typeof parsed.highContrast === "boolean" ? parsed.highContrast : DEFAULT_CONFIG.highContrast;
@@ -93,6 +104,7 @@ export function resetRuntimeConfig() {
     runtimeConfig.language = DEFAULT_CONFIG.language;
     runtimeConfig.backgroundColor = DEFAULT_CONFIG.backgroundColor;
     runtimeConfig.backgroundImage = DEFAULT_CONFIG.backgroundImage;
+    runtimeConfig.itemCustomImages = { ...DEFAULT_CONFIG.itemCustomImages };
     runtimeConfig.cookieHorizontalOffset = DEFAULT_CONFIG.cookieHorizontalOffset;
     runtimeConfig.reducedMotion = DEFAULT_CONFIG.reducedMotion;
     runtimeConfig.highContrast = DEFAULT_CONFIG.highContrast;
@@ -147,6 +159,28 @@ export function updateBackgroundImage(value) {
 
 export function getBackgroundImage() {
     return runtimeConfig.backgroundImage;
+}
+
+export function updateItemCustomImage(itemId, imageDataUrl) {
+    if (typeof itemId !== "string" || !itemId.trim()) return "";
+    const normalizedId = itemId.trim();
+    const normalizedImage = typeof imageDataUrl === "string" ? imageDataUrl.trim() : "";
+    runtimeConfig.itemCustomImages = sanitizePlainObject(runtimeConfig.itemCustomImages);
+    if (!normalizedImage) {
+        delete runtimeConfig.itemCustomImages[normalizedId];
+    } else {
+        runtimeConfig.itemCustomImages[normalizedId] = normalizedImage;
+    }
+    saveConfig();
+    return runtimeConfig.itemCustomImages[normalizedId] || "";
+}
+
+export function getItemCustomImage(itemId) {
+    if (typeof itemId !== "string" || !itemId.trim()) return "";
+    const normalizedId = itemId.trim();
+    const store = sanitizePlainObject(runtimeConfig.itemCustomImages);
+    const value = store[normalizedId];
+    return typeof value === "string" ? value : "";
 }
 
 export function updateCookieHorizontalOffset(value) {

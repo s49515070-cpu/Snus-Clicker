@@ -711,8 +711,8 @@ function testAutoBuyerPrioritizesBestValuePurchases() {
   const purchases = runAutoBuyerTick();
 
   assert.equal(purchases, 3, 'auto-buyer should spend up to purchase cap while value targets remain affordable');
-  assert.equal(gameState.buildingData.farm.owned, 1, 'auto-buyer should still include the best ROI farm purchase early');
-  assert.equal(gameState.buildingData.cursor.owned, 2, 'remaining budget should be invested into follow-up cursor purchases');
+  assert.equal(gameState.buildingData.farm.owned, 2, 'auto-buyer should aggressively invest into high-ROI farm purchases early');
+  assert.equal(gameState.buildingData.cursor.owned, 1, 'remaining budget should still be invested into a cursor follow-up purchase');
 }
 
 
@@ -739,13 +739,13 @@ function testAutoBuyerSmartestMatchesBestBuyHighlight() {
   const purchases = runAutoBuyerTick();
 
   assert.equal(purchases, 3, 'smartest strategy should continue while efficient follow-up purchases stay affordable');
-  assert.equal(gameState.buildingData.farm.owned, 1, 'smartest strategy should include the highlighted best-buy farm');
-  assert.equal(gameState.buildingData.cursor.owned, 2, 'smartest strategy can use leftover budget on efficient cursor follow-up buys');
+  assert.equal(gameState.buildingData.farm.owned, 2, 'smartest strategy should include two highlighted best-buy farm purchases');
+  assert.equal(gameState.buildingData.cursor.owned, 1, 'smartest strategy can use leftover budget on an efficient cursor follow-up buy');
 }
 
 function testAutoBuyerSmartestWaitsForBestBuyBudget() {
   resetEngineState();
-  gameState.cookies = 84;
+  gameState.cookies = 70;
   gameState.autoBuyerUnlocked = true;
   gameState.autoBuyerEnabled = true;
   setAutoBuyerStrategy('schlauste');
@@ -767,8 +767,8 @@ function testAutoBuyerStrategyValueUsesEfficiencyAliasesAndIgnoresCheapestBias()
   const purchases = runAutoBuyerTick();
 
   assert.equal(purchases, 3, 'localized efficiency alias should still allow the auto-buyer purchase loop to run');
-  assert.equal(gameState.buildingData.farm.owned, 1, 'efficiency strategy should still include the best ROI farm purchase');
-  assert.equal(gameState.buildingData.cursor.owned, 2, 'efficiency strategy may chain efficient cursor follow-up purchases');
+  assert.equal(gameState.buildingData.farm.owned, 2, 'efficiency strategy should aggressively include the best ROI farm purchases');
+  assert.equal(gameState.buildingData.cursor.owned, 1, 'efficiency strategy may still chain one efficient cursor follow-up purchase');
 }
 
 function testAutoBuyerLegacyStrategiesFallBackToSmartestMode() {
@@ -781,7 +781,7 @@ function testAutoBuyerLegacyStrategiesFallBackToSmartestMode() {
   const purchases = runAutoBuyerTick();
 
   assert.equal(purchases, 3, 'legacy strategies should still allow the auto-buyer loop to run');
-  assert.equal(gameState.buildingData.farm.owned, 1, 'legacy strategies should still fall back to the smartest mode plan');
+  assert.equal(gameState.buildingData.farm.owned, 2, 'legacy strategies should still fall back to the smartest mode plan');
 }
 
 function testAutoBuyerChoicePersistsDecisionForUiTransparency() {

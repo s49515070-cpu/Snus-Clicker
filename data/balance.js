@@ -4,22 +4,22 @@
 // =====================================
 
 export const BUILDING_BALANCE = [
-    { id: "cursor", name: "Cursor", baseCost: 10, baseCps: 0.095, growth: 1.155, icon: "assets/buildings/cursor.png", side: "left" },
-    { id: "farm", name: "Snus Farm", baseCost: 90, baseCps: 0.9, growth: 1.185, icon: "assets/buildings/farm.png", side: "right" },
-    { id: "factory", name: "Snus Factory", baseCost: 1_050, baseCps: 6.7, growth: 1.176, icon: "assets/buildings/factory.png", side: "left" },
-    { id: "temple", name: "Snus Temple", baseCost: 13_500, baseCps: 57, growth: 1.186, icon: "assets/buildings/temple.png", side: "right" },
-    { id: "lab", name: "Snus Lab", baseCost: 165_000, baseCps: 480, growth: 1.196, icon: "assets/buildings/factory.png", side: "left" },
-    { id: "exchange", name: "Snus Exchange", baseCost: 2_150_000, baseCps: 3_550, growth: 1.206, icon: "assets/buildings/temple.png", side: "right" },
-    { id: "orbital", name: "Orbital Refinery", baseCost: 30_000_000, baseCps: 25_500, growth: 1.216, icon: "assets/buildings/temple.png", side: "left" }
+    { id: "cursor", name: "Cursor", baseCost: 8, baseCps: 0.14, growth: 1.148, icon: "assets/buildings/cursor.png", side: "left" },
+    { id: "farm", name: "Snus Farm", baseCost: 72, baseCps: 1.35, growth: 1.175, icon: "assets/buildings/farm.png", side: "right" },
+    { id: "factory", name: "Snus Factory", baseCost: 860, baseCps: 10.4, growth: 1.17, icon: "assets/buildings/factory.png", side: "left" },
+    { id: "temple", name: "Snus Temple", baseCost: 10_900, baseCps: 88, growth: 1.178, icon: "assets/buildings/temple.png", side: "right" },
+    { id: "lab", name: "Snus Lab", baseCost: 132_000, baseCps: 760, growth: 1.188, icon: "assets/buildings/factory.png", side: "left" },
+    { id: "exchange", name: "Snus Exchange", baseCost: 1_720_000, baseCps: 5_900, growth: 1.198, icon: "assets/buildings/temple.png", side: "right" },
+    { id: "orbital", name: "Orbital Refinery", baseCost: 22_000_000, baseCps: 44_500, growth: 1.208, icon: "assets/buildings/temple.png", side: "left" }
 ];
 
 export const BUILDING_SYNERGY_BALANCE = [
-    { sourceId: "farm", targetId: "cursor", bonusPerSource: 0.0035, maxBonus: 0.32 },
-    { sourceId: "factory", targetId: "farm", bonusPerSource: 0.0032, maxBonus: 0.35 },
-    { sourceId: "temple", targetId: "factory", bonusPerSource: 0.0029, maxBonus: 0.34 },
-    { sourceId: "lab", targetId: "temple", bonusPerSource: 0.0025, maxBonus: 0.32 },
-    { sourceId: "exchange", targetId: "lab", bonusPerSource: 0.0022, maxBonus: 0.3 },
-    { sourceId: "orbital", targetId: "exchange", bonusPerSource: 0.0019, maxBonus: 0.26 }
+    { sourceId: "farm", targetId: "cursor", bonusPerSource: 0.0046, maxBonus: 0.46 },
+    { sourceId: "factory", targetId: "farm", bonusPerSource: 0.0042, maxBonus: 0.48 },
+    { sourceId: "temple", targetId: "factory", bonusPerSource: 0.0038, maxBonus: 0.5 },
+    { sourceId: "lab", targetId: "temple", bonusPerSource: 0.0034, maxBonus: 0.5 },
+    { sourceId: "exchange", targetId: "lab", bonusPerSource: 0.003, maxBonus: 0.52 },
+    { sourceId: "orbital", targetId: "exchange", bonusPerSource: 0.0027, maxBonus: 0.55 }
 ];
 
 export const WORLD_BALANCE = [
@@ -75,34 +75,45 @@ export const ECONOMY_BALANCE = {
     prestigeCostGrowth: 1.175,
     prestigeLevelMultiplierLogFactor: 0.125,
 
-    activeBoostMultiplier: 2.35,
-    clickBurstMultiplier: 2.75,
+    activeBoostMultiplier: 2.6,
+    clickBurstMultiplier: 3.1,
     discountBurstRatio: 0.16,
 
-    earlyRampMaxClicks: 260,
-    earlyRampMaxMultiplier: 2.35,
-    globalCpsMultiplier: 1.5,
-    globalClickMultiplier: 1.95,
+    earlyRampMaxClicks: 420,
+    earlyRampMaxMultiplier: 2.6,
+    globalCpsMultiplier: 1.85,
+    globalClickMultiplier: 2.45,
+
+    clickMasteryLinearStep: 0.1,
+    clickMasteryScaleStep: 0.018,
+    clickMasteryScaleExponent: 1.35,
+    snusAlchemyLinearStep: 0.05,
+    snusAlchemyScaleStep: 0.01,
+    snusAlchemyScaleExponent: 1.28,
+
+    cpsMilestoneEveryOwned: 25,
+    cpsMilestoneStep: 0.03,
+    cpsMilestoneCap: 1.2,
 
     comboBonusPerLevel: 0.015,
     comboBonusCap: 1,
     comboCritPerLevel: 0.0014,
     comboCritCap: 0.13,
 
-    lateGameClickBaseShare: 0.014,
-    lateGameClickBuildingSharePerBuilding: 0.00009,
-    lateGameClickBuildingShareCap: 0.018,
-    lateGameClickPrestigeSharePerLevel: 0.00035,
-    lateGameClickPrestigeShareCap: 0.013,
-    lateGameClickShareCap: 0.05,
+    lateGameClickBaseShare: 0.02,
+    lateGameClickBuildingSharePerBuilding: 0.00013,
+    lateGameClickBuildingShareCap: 0.03,
+    lateGameClickPrestigeSharePerLevel: 0.0005,
+    lateGameClickPrestigeShareCap: 0.02,
+    lateGameClickShareCap: 0.08,
 
-    legacyRelevanceMaxBonus: 0.45,
-    legacyRelevancePrestigeWeight: 0.012,
-    legacyRelevanceTotalBuildingsWeight: 0.00125,
+    legacyRelevanceMaxBonus: 0.58,
+    legacyRelevancePrestigeWeight: 0.015,
+    legacyRelevanceTotalBuildingsWeight: 0.0015,
 
-    buildingSoftcapStart: 35,
-    buildingSoftcapStrength: 0.0065,
-    buildingSoftcapMinMultiplier: 0.38,
+    buildingSoftcapStart: 60,
+    buildingSoftcapStrength: 0.005,
+    buildingSoftcapMinMultiplier: 0.6,
 
     minBuildingDiscountMultiplier: 0.48
 };

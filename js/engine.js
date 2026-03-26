@@ -112,6 +112,17 @@ const prestigeTrackMilestoneRewards = new Map([
     [90, { rewardDiamonds: 254, title: "Omega Trophy" }],
     [100, { rewardDiamonds: 30000, title: "Centurion Trophy" }]
 ]);
+const prestigeTrackItemRotation = [
+    "upgrade_coupon",
+    "lucky_charm",
+    "income_rush",
+    "instant_capital",
+    "prestige_pass",
+    "item_crack",
+    "item_crystal_meth",
+    "item_koks",
+    "item_heroin"
+];
 
 function isPrestigeTrackDiamondLevel(level) {
     if (level <= 10) return true;
@@ -121,10 +132,20 @@ function isPrestigeTrackDiamondLevel(level) {
 
 function getGeneratedPrestigeTrackReward(level) {
     const previousLevel = Math.max(0, level - 1);
+    const rewardDiamonds = isPrestigeTrackDiamondLevel(level)
+        ? Math.round(5 + (level * 2.1) + (previousLevel * 0.85))
+        : 0;
+    const rewardCookies = rewardDiamonds > 0
+        ? 0
+        : Math.round(1_250 + (Math.pow(level, 1.55) * 180));
+    const rewardItemId = rewardDiamonds > 0 || level % 3 !== 0
+        ? null
+        : prestigeTrackItemRotation[Math.floor(level / 3) % prestigeTrackItemRotation.length];
+
     return {
-        rewardDiamonds: isPrestigeTrackDiamondLevel(level)
-            ? Math.round(5 + (level * 2.1) + (previousLevel * 0.85))
-            : 0,
+        rewardDiamonds,
+        rewardCookies: rewardItemId ? 0 : rewardCookies,
+        rewardItemId,
         title: `Prestige ${level} Trophy`
     };
 }
@@ -1472,6 +1493,17 @@ function claimPrestigeTrackRewards(previousLevel, newLevel) {
 
         gameState.prestigeTrackClaimed[reward.level] = true;
         if (reward.rewardDiamonds) gameState.diamonds += Number(reward.rewardDiamonds);
+        if (reward.rewardCookies) addCookies(Number(reward.rewardCookies || 0));
+        if (reward.rewardItemId) {
+            gameState.inventoryUnlocked = gameState.inventoryUnlocked || {};
+            gameState.inventoryConsumed = gameState.inventoryConsumed || {};
+            gameState.inventoryActiveUntil = gameState.inventoryActiveUntil || {};
+            gameState.inventoryCooldownUntil = gameState.inventoryCooldownUntil || {};
+            gameState.inventoryUnlocked[reward.rewardItemId] = true;
+            gameState.inventoryConsumed[reward.rewardItemId] = false;
+            gameState.inventoryActiveUntil[reward.rewardItemId] = 0;
+            gameState.inventoryCooldownUntil[reward.rewardItemId] = 0;
+        }
         claimedNow.push(reward);
     });
 
@@ -1484,6 +1516,8 @@ export function getPrestigeTrackStatus() {
         .map((reward) => ({
             ...reward,
             rewardDiamonds: Number(reward.rewardDiamonds || 0),
+            rewardCookies: Number(reward.rewardCookies || 0),
+            rewardItemId: reward.rewardItemId || null,
             unlocked: gameState.prestigeCookies >= reward.level,
             claimed: Boolean(gameState.prestigeTrackClaimed[reward.level])
         }));
@@ -1565,6 +1599,7 @@ export function calculateCps() {
     total *= getActiveBoostMultiplier();
     total *= 1 + (getPrestigeTalentEffects().cpsBonusPercent / 100);
     total *= getInventoryEffectBonuses().incomeMultiplier;
+    total *= Math.max(1, Number(ECONOMY_BALANCE.globalCpsMultiplier || 1));
 
     return total;
 }
@@ -1793,6 +1828,7 @@ export function clickCookie() {
     const cpsSupport = calculateCps() * getLateGameClickShare();
 
     const base = gameState.clickPower
+        * Math.max(1, Number(ECONOMY_BALANCE.globalClickMultiplier || 1))
         * getClickUpgradeMultiplier()
         * worldMultiplier
         * gameState.prestigeMultiplier

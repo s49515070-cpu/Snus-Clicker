@@ -75,24 +75,26 @@ export const ECONOMY_BALANCE = {
     prestigeCostGrowth: 1.175,
     prestigeLevelMultiplierLogFactor: 0.125,
 
-    activeBoostMultiplier: 2.05,
-    clickBurstMultiplier: 2.35,
+    activeBoostMultiplier: 2.35,
+    clickBurstMultiplier: 2.75,
     discountBurstRatio: 0.16,
 
     earlyRampMaxClicks: 260,
-    earlyRampMaxMultiplier: 1.75,
+    earlyRampMaxMultiplier: 2.1,
+    globalCpsMultiplier: 1.28,
+    globalClickMultiplier: 1.35,
 
-    comboBonusPerLevel: 0.011,
+    comboBonusPerLevel: 0.0135,
     comboBonusCap: 0.5,
     comboCritPerLevel: 0.0014,
     comboCritCap: 0.13,
 
-    lateGameClickBaseShare: 0.006,
+    lateGameClickBaseShare: 0.0085,
     lateGameClickBuildingSharePerBuilding: 0.000055,
     lateGameClickBuildingShareCap: 0.012,
     lateGameClickPrestigeSharePerLevel: 0.00024,
     lateGameClickPrestigeShareCap: 0.009,
-    lateGameClickShareCap: 0.022,
+    lateGameClickShareCap: 0.03,
 
     legacyRelevanceMaxBonus: 0.45,
     legacyRelevancePrestigeWeight: 0.012,

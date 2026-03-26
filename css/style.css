@@ -1024,6 +1024,14 @@ body.high-contrast {
     font-size: 1.1rem;
 }
 
+.item-icon-image {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+    display: block;
+}
+
 .achievement-content {
     display: grid;
     gap: 5px;
@@ -1109,6 +1117,34 @@ body.high-contrast {
 .inventory-actions {
     display: flex;
     justify-content: flex-end;
+}
+
+.inventory-custom-image-row {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.inventory-upload-button {
+    border: 1px solid rgba(15, 23, 42, 0.22);
+    border-radius: 8px;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.72);
+    cursor: pointer;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.inventory-upload-input {
+    display: none;
+}
+
+.inventory-custom-image-hint {
+    font-size: 0.72rem;
+    color: #475569;
+    font-weight: 600;
 }
 
 .inventory-use-button {

@@ -1,5 +1,17 @@
 export const inventoryItems = [
     {
+        id: "lars_onlyfans",
+        icon: "📸",
+        unlockAchievementId: "lifetime_snus_tier_1",
+        nameKey: "itemLarsOnlyfansName",
+        descriptionKey: "itemLarsOnlyfansDescription",
+        effectTextKey: "itemLarsOnlyfansEffect",
+        customImageUpload: true,
+        effect: {
+            type: "ten_minute_income_bonus"
+        }
+    },
+    {
         id: "instant_capital",
         icon: "🚬",
         unlockAchievementId: "lifetime_snus_tier_1",
